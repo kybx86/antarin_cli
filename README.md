@@ -1,2 +1,2 @@
-# antarin_systems
+# Antarin BRAIN
 Main repository for the antarin system development. 

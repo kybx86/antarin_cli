@@ -1,0 +1,33 @@
+.header{
+	margin:10px;
+	font-family: 'verdana';
+	font-size: 14px;
+	
+}
+
+#header-right{
+	float:right;
+	font-size:12px;
+}
+
+.logo{
+	width:35px;
+	height:35px;
+	padding:5px;
+	float: left;
+}
+
+.content{
+	margin-left:500px;
+	margin-top:150px;
+}
+
+h1.content_title{
+
+}
+
+.submit_section{
+	padding:10px;
+	float:left;
+	text-align:center;
+}

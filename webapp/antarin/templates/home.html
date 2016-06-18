@@ -5,13 +5,13 @@
     {% if  sum %}
 	 	<p>Sum of these two numbers is {{sum}}</p>
 	{% endif %}
-	 <form method = "get">{% csrf_token %}
+	 <form method = "get"> {% csrf_token %}
 	  <div class = "submit_section">
-	 Enter 2 numbers.<br/>
+	 	Enter 2 numbers.<br/>
         Number1	<input type = "number" name= "num1"/><br/>
         Number 2<input type = "number" name = "num2"/><br/><br/>
        
-        	<input type = "submit" value = "Calculate Sum"/>
+        <input type = "submit" value = "Calculate Sum"/>
         </div>
     </form>
 {% endblock %}

@@ -3,7 +3,14 @@ import datetime
 from django import forms
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
-from django.contrib.admin.widgets import AdminDateWidget
+from django.contrib.auth.forms import AuthenticationForm
+from django.forms.widgets import PasswordInput, TextInput
+
+class CustomizedAuthenticationForm(AuthenticationForm):
+	def __init__(self, *args, **kwargs):
+		super(CustomizedAuthenticationForm, self).__init__(*args, **kwargs)
+		self.base_fields['username'].widget.attrs['placeholder'] = 'Email'
+		self.base_fields['password'].widget.attrs['placeholder'] = 'Password'
 
 class RegistrationForm(forms.Form):
 	username = forms.RegexField(regex = r'^\w+$', 

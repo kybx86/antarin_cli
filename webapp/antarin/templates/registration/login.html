@@ -1,21 +1,30 @@
 {% extends "base.html" %}
 {% block title %}LoginPage{% endblock %}
 {% block head %}Login{% endblock %}
+
+
 {% block content %}
+ <div class="login-error">
     {% if form.errors %}
-        <p>Your username and password didn't match. Please try again.</p>
+        <p>Invalid email or password,<br/>
+        please try again<p>
     {% endif %}
+</div>
+
+<div class = "login-form">
     <form method="post" action=".">{% csrf_token %}
-        <table border="0">
-            <tr><th><label for="id_username">Username:</label></th><td>{{ form.username }}</td></tr>
-            <tr><th><label for="id_password">Password:</label></th><td>{{ form.password }}</td></tr>
-        </table>
-        <div class="submit_section">
-            <input type="submit" value="Login" />
-            <input type="hidden" name="next" value="/home" />
-            
-            <a href="/signup">Signup</a>
-        </div>
+        {{ form.username }}
+        <br/><br/>
+        {{ form.password }}
+        <br/>
+        <br/>
+        <br/>
+        <input type="submit" value="Login" id="submit-button"/>
+        <input type="hidden" name="next" value="/home" />   
+        <br/> 
+        <a href="/signup" id="signup-link">Sign Up</a>
+        <a href="#" id="forgot-password">forgot password?</a>
+        
     </form>
-    
+</div> 
 {% endblock %}

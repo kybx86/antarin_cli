@@ -14,12 +14,10 @@
 <div class = "login-form">
     <form method="post" action=".">{% csrf_token %}
         {{ form.username }}
-        <br/><br/>
+        
         {{ form.password }}
-        <br/>
-        <br/>
-        <br/>
-        <input type="submit" value="Login" id="submit-button"/>
+        <br/><br/>
+        <input type="submit" value="Log In" id="submit-button"/>
         <input type="hidden" name="next" value="/home" />   
         <br/> 
         <a href="/signup" id="signup-link">Sign Up</a>

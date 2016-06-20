@@ -7,30 +7,18 @@ from django.template import RequestContext
 from django.views.decorators.csrf import csrf_protect
 from datetime import datetime
 
-def index(request):
-    form = AuthenticationForm(request)
-    form.fields['username'].widget.attrs.update({
-            'placeholder': 'Email'
-        })
-    form.fields['password'].widget.attrs.update({
-            'placeholder': 'Password'
-        })
-    context = RequestContext(request, {
-        'form' : form,
-    })
-    return render_to_response('registration/login.html',context,)
-
 @csrf_protect
 def signup(request):
 	if request.method == 'POST':
 		form = RegistrationForm(request.POST)
 		if form.is_valid():
 			user = User.objects.create_user(
-
 				username = form.cleaned_data['username'],
-				password = form.cleaned_data['password1'],
-				email    = form.cleaned_data['email']
+				password = form.cleaned_data['password'],
 				)
+			user.first_name = form.cleaned_data['firstname']
+			user.last_name = form.cleaned_data['lastname']
+			user.save()
 			return HttpResponseRedirect('./success')
 	else:
 		form = RegistrationForm()
@@ -39,10 +27,6 @@ def signup(request):
 
 def signup_success(request):
 	return render_to_response('registration/success.html',)
-
-#def logout(request):
-#	logout(request)
-#	return HttpResponseRedirect('./success')
 
 @login_required
 def userHomepage(request):

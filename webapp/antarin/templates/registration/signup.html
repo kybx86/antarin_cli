@@ -2,14 +2,21 @@
 {% block title %}SignUp Page{% endblock %}
 {% block head %}Sign-Up{% endblock %}
 {% block content %}
-    <form method="post" action=".">{% csrf_token %}
-        <table border="0">
-            {{ form.as_table }}
-        </table>
-        <div class="submit_section">
-        	<input type="submit" value="Signup" />
-        	<a href="/">Login</a>
-        </div>
+	<p class="section-header"> Create your Antarin profile. </p>
+<div class = "signup-form">
+	<form method="post" action=".">{% csrf_token %}
+		{% for field in form %}
+	        {{ field }}
+	        {{ field.errors }}
+	        {% if field.help_text %}
+	        	<p class="help">{{ field.help_text|safe }}</p>
+	        {% endif %}
+		{% endfor %}
+        <br/><br/>
+        <input type="submit" value="Create Account" />
+         <a href="/" id="signup-link">Login</a>
+        <a href="#" id="forgot-password">forgot password?</a>
     </form>
-    
+</div>
+
 {% endblock %}

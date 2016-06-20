@@ -14,7 +14,7 @@
             </a>
     		<div id="header-right">
 	    		{% if user.is_authenticated %}
-				    <p>Welcome, {{ user.username }}</p>
+				    <p>Welcome, {{ user.first_name }}</p>
 	    			<a href="/logout/">Logout</a>
 				{% endif %}
 			</div>

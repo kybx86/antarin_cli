@@ -6,6 +6,11 @@ from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.forms import AuthenticationForm
 from django.forms.widgets import PasswordInput, TextInput
 from django.utils.safestring import mark_safe
+from antarin.models import UserProfile
+from django.template import Context,Template
+from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import get_template
 
 class CustomizedAuthenticationForm(AuthenticationForm):
 	def __init__(self, *args, **kwargs):
@@ -33,7 +38,34 @@ class RegistrationForm(forms.Form):
 			raise forms.ValidationError(_(mark_safe('Password does not meet requirements, <br/> Please try again')))
 		return self.cleaned_data['password']
 
+	def save(self,userdata):
+		user = User.objects.create_user(
+				username = userdata['username'],
+				password = userdata['password'],
+				)
+		user.first_name = userdata['firstname']
+		user.last_name = userdata['lastname']
+		user.is_active = False
+		user.save()
+
+		user_profile = UserProfile()
+		user_profile.user = user
+		user_profile.activation_key = userdata['activation_key']
+		user_profile.key_expires = datetime.datetime.strftime(datetime.datetime.now() + datetime.timedelta(days=2), "%Y-%m-%d %H:%M:%S")
+		user_profile.save()
+
+	def sendEmail(self,userdata):
+		url = "/" + userdata['activation_key']
+		context = Context({'activation_url':url,'firstname':userdata['firstname']})
+		#print( './media/' + userdata['email_path'])
+		#file = open(settings.MEDIA_ROOT + userdata['email_path'],'r')
+		template = get_template('activationEmail.html')
+		#file.close()
+		email_message = template.render(context)
+		send_mail(userdata['email_subject'],email_message,'Antarin Technologies<noreply@antarintechnolgies.com>',[userdata['username']],fail_silently = False)
+
 	def __init__(self, *args, **kwargs):
 		super(RegistrationForm, self).__init__(*args, **kwargs)
 		for fieldname in ['firstname','lastname','username','password']:
 			self.fields[fieldname].label = ''
+

@@ -1,10 +1,18 @@
 {% extends "base.html" %}
 {% block title %}UserHomepage{% endblock %}
 {% block head %}{% endblock %}
+
 {% block content %}
+    <ul class="menu">
+        <li><a href="#">LOAD DATA</a></li>
+        <li><a href="#">BUTTON 2 </a></li>
+        <li><a href="#">BUTTON 3 </a></li>
+    </ul>
+    <hr align="center"/>
     {% if  sum %}
 	 	<p>Sum of these two numbers is {{sum}}</p>
 	{% endif %}
+    <br/><br/><br/>
 	 <form method = "get"> {% csrf_token %}
 	  <div class = "submit_section">
 	 	Enter 2 numbers.<br/>

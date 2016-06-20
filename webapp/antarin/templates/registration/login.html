@@ -1,28 +1,26 @@
 {% extends "base.html" %}
 {% block title %}LoginPage{% endblock %}
-{% block head %}Login{% endblock %}
-
 
 {% block content %}
- <div class="login-error">
-    {% if form.errors %}
-        <p>Invalid email or password,<br/>
-        please try again<p>
-    {% endif %}
-</div>
+     <div class="login-error">
+        {% if form.errors %}
+            <p>Invalid email or password,<br/>
+            please try again<p>
+        {% endif %}
+    </div>
 
-<div class = "login-form">
-    <form method="post" action=".">{% csrf_token %}
-        {{ form.username }}
-        
-        {{ form.password }}
-        <br/><br/>
-        <input type="submit" value="Log In" id="submit-button"/>
-        <input type="hidden" name="next" value="/home" />   
-        <br/> 
-        <a href="/signup" id="signup-link">Sign Up</a>
-        <a href="#" id="forgot-password">forgot password?</a>
-        
-    </form>
-</div> 
+    <div class = "login-form">
+        <form method="post" action=".">{% csrf_token %}
+            {{ form.username }}
+            
+            {{ form.password }}
+            <br/><br/>
+            <input type="submit" value="Log In" id="submit-button"/>
+            <input type="hidden" name="next" value="/home" />   
+            <br/> 
+            <a href="/signup" id="signup-link">Sign Up</a>
+            <a href="#" id="forgot-password">forgot password?</a>
+            
+        </form>
+    </div> 
 {% endblock %}

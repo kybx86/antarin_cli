@@ -1,6 +1,5 @@
 #header-right{
 	float:right;
-	font-size:12px;
 }
 
 .logo{
@@ -110,8 +109,6 @@ a:link{
 	color:#000000;
 }
 
-
-
 a:visited{
 	color:#000000;
 }
@@ -132,3 +129,54 @@ a:visited{
 	text-align: center;
 	margin-bottom: 0px;
 }
+
+.thank-you
+{
+	text-align: center;
+	font-family: "Helvetica Neue";
+	font-size:25px;
+	font-weight:normal;
+	padding: 10px 12px 10px 12px;
+}
+
+.user-firstname
+{
+	font-family: "Helvetica Neue";
+	font-size:25px;
+	margin: 40px 0px 0px 90px;
+	padding-right:30px;
+	font-weight:normal;
+	color:#000000;
+}
+
+.logout-button
+{
+	float:right;
+	font-family: "Helvetica Neue";
+	font-size:15px;
+	margin: 0px 40px 10px 50px;
+	font-weight:bolder;
+	color:#000000;
+}
+
+.menu{
+	list-style-type: none;
+	margin: auto;
+	font-size:20px;
+}
+
+.menu li
+{
+	display:inline;
+	padding:5px 15px 5px 10px;
+}
+
+hr { 
+	display: block;
+    height: 2px;
+    border: 0;
+    border-top: 1px solid #000000;
+    margin: 1em 0;
+    padding: 0;
+}
+

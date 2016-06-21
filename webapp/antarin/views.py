@@ -1,4 +1,4 @@
-from django.shortcuts import render_to_response
+from django.shortcuts import render_to_response, get_object_or_404,render
 from antarin.forms import *
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -8,6 +8,7 @@ from django.views.decorators.csrf import csrf_protect
 from datetime import datetime
 import hashlib,random
 from antarin.models import UserProfile
+from django.utils import timezone
 
 @csrf_protect
 def signup(request):
@@ -38,6 +39,7 @@ def signup(request):
 	return render_to_response('registration/signup.html',variables,)
 
 def activation(request,key):
+	print(key)
 	activation_expired=False
 	active = False
 	userprofile = get_object_or_404(UserProfile, activation_key=key)
@@ -50,6 +52,7 @@ def activation(request,key):
 			userprofile.user.save()
 	else:
 		active = True
+	return render(request, 'activation.html', locals())
 
 def signup_success(request):
 	return render_to_response('registration/success.html',)

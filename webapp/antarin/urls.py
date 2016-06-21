@@ -13,5 +13,7 @@ urlpatterns = [
 	url(r'^signup/$', antarin_views.signup),
 	url(r'^signup/success/$',antarin_views.signup_success),
 	url(r'^home/$',antarin_views.userHomepage),
+	url(r'^activate/(?P<key>.+)$', antarin_views.activation),
+	#url(r'^new-activation-link/(?P<user_id>\d+)/$', antarin_views.new_activation_link),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

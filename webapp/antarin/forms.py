@@ -19,8 +19,8 @@ class CustomizedAuthenticationForm(AuthenticationForm):
 		self.base_fields['password'].widget.attrs['placeholder'] = 'Password'
 
 class RegistrationForm(forms.Form):
-	firstname = forms.CharField(widget = forms.TextInput(attrs=dict(required=True,max_length=30,placeholder = 'Firstname')))
-	lastname = forms.CharField(widget = forms.TextInput(attrs=dict(required=True,max_length=30,placeholder = 'Lastname')))
+	firstname = forms.CharField(widget = forms.TextInput(attrs=dict(required=True,max_length=30,placeholder = 'First name')))
+	lastname = forms.CharField(widget = forms.TextInput(attrs=dict(required=True,max_length=30,placeholder = 'Last name')))
 	username = forms.EmailField(widget = forms.TextInput(attrs=dict(required=True,max_length=30,placeholder='Email')))
 	password = forms.CharField(help_text= "must be atleast six characters in length and contain letters and numbers",widget = forms.PasswordInput(attrs=dict(required = True, max_length=20,placeholder = 'Password',render_value=False)))
 

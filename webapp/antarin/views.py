@@ -1,7 +1,7 @@
 from django.shortcuts import render_to_response, get_object_or_404,render
 from antarin.forms import *
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
+from django.contrib.auth import logout,login
 from django.http import HttpResponseRedirect
 from django.template import RequestContext
 from django.views.decorators.csrf import csrf_protect
@@ -9,6 +9,18 @@ from datetime import datetime
 import hashlib,random
 from antarin.models import UserProfile
 from django.utils import timezone
+
+@csrf_protect
+def login_view(request):
+	form = AuthenticationForm(request.POST or None)
+	if request.method == 'POST' and form.is_valid():
+		user = form.login(request)
+		if user:
+			login(request,user)
+			return HttpResponseRedirect("/home")		
+
+	variables = RequestContext(request,{'form':form})
+	return render_to_response('registration/login.html',variables,)
 
 @csrf_protect
 def signup(request):

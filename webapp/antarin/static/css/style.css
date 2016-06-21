@@ -41,6 +41,7 @@
 	font-family: "Helvetica Neue";
 	color: #D0021B;
 	font-size:20px;
+	font-weight: lighter;
 }
 
 .login-form,.signup-form{
@@ -113,12 +114,12 @@ a:visited{
 	color:#000000;
 }
 #signup-link{
-	padding-left: 10px;
+	padding-right: 20px;
 	float:right;
 }
 
 #forgot-password{
-	padding-right: 10px;
+	padding-left: 22px;
 	float:left;
 }
 
@@ -136,7 +137,7 @@ a:visited{
 {
 	text-align: center;
 	font-family: "Helvetica Neue";
-	font-size:25px;
+	font-size:22px;
 	font-weight:normal;
 	padding: 10px 12px 10px 12px;
 }
@@ -182,3 +183,17 @@ hr {
     padding: 0;
 }
 
+.verification-text{
+	font-family: "Helvetica Neue";
+	font-size:25px;
+	font-weight:normal;
+	text-align: center;
+}
+
+#link-container{
+	text-align: center;
+}
+
+#verification-login{
+	font-weight: bold;
+}

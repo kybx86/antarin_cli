@@ -4,8 +4,9 @@
 {% block content %}
      <div class="login-error">
         {% if form.errors %}
-            <p>Invalid email or password,<br/>
-            please try again<p>
+            {% for error in form.non_field_errors %}
+                {{ error }}
+            {% endfor %}
         {% endif %}
     </div>
 

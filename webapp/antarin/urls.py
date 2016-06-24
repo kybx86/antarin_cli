@@ -20,5 +20,10 @@ urlpatterns = [
 	url(r'^home/$',antarin_views.userHomepage),
 	url(r'^activate/(?P<key>.+)$', antarin_views.activation),
 	#url(r'^new-activation-link/(?P<user_id>\d+)/$', antarin_views.new_activation_link),
+	url(r'passwordreset/$', antarin_views.password_reset),
+	url(r'^passwordreset/success/$',antarin_views.password_reset_success),
+	url(r'^passwordreset/activation/(?P<key>.+)$', antarin_views.password_key_activation),
+	url(r'^passwordreset/redirect/$', antarin_views.password_reset_redirect),
+	
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

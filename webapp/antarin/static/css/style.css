@@ -44,6 +44,17 @@
 	font-weight: lighter;
 }
 
+#password-reset-error{
+	padding-top: 10px;
+	height:20px;
+	width:100%;
+	text-align:center;
+	font-family: "Helvetica Neue";
+	color: #D0021B;
+	font-size:20px;
+	font-weight: lighter;
+}
+
 .login-form,.signup-form{
 	padding-top:10px;
 	height: 300px;

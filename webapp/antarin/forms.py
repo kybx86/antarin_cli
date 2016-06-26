@@ -187,7 +187,8 @@ class PasswordEntryForm(forms.Form):
 			raise forms.ValidationError("Your passwords do not match")
 
 
-
+class ImageUploadForm(forms.Form):
+	user_image = forms.ImageField()
 
 
 

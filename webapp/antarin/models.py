@@ -9,3 +9,5 @@ class UserProfile(models.Model):
     activation_key = models.CharField(max_length=60)
     key_expires = models.DateTimeField()
     password_reset_key = models.CharField(max_length=60)
+    user_image = models.ImageField(upload_to ='user_images',blank=True,null=True)
+    

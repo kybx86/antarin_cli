@@ -12,8 +12,7 @@ from datetime import datetime
 import hashlib,random
 from antarin.models import UserProfile
 from django.utils import timezone
-from django.conf import settings
-
+from django.conf import settings 
 
 '''
 To manage the data entered in AuthenticationForm. If the form was submitted(http POST) and returned without validation errors, then the user is authenticated and redirected to his homepage.
@@ -142,17 +141,35 @@ def password_reset_success(request):
 This view defines the customised user homepage that is rendered on a successful user login. The @login_required decorator ensurest that this view is
 only excuted when a user is logged in.
 '''
+
 @login_required
 def userHomepage(request):
-	if request.method == 'GET':
-		if request.GET.get('num1') and request.GET.get('num2'):
-			num1 = int(request.GET.get('num1'))
-			num2 = int(request.GET.get('num2'))
-			sum = calculate_sum(num1,num2)
-			variables = RequestContext(request,{'user':request.user,'sum':sum})	
-		else:
-			variables = RequestContext(request,{'user':request.user})	
-	return render_to_response('home.html',variables)	
+	if request.method == 'POST':
+		form = ImageUploadForm(request.POST,request.FILES)
+		if form.is_valid():
+			user = User.objects.get(username = request.user.username)
+			print(request.user.username)
+			user.userprofile.user_image = form.cleaned_data['user_image']
+			user.userprofile.save()
+			message = "File was uploaded successfully"
+			variables = RequestContext(request,{'form':form,'message':message,'media_url':settings.MEDIA_URL})
+			return render_to_response('home.html',variables)
+	else:
+		form = ImageUploadForm()
+	variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL})
+	return render_to_response('home.html',variables)
 
-def calculate_sum(num1,num2):
-    return num1+num2
+# @login_required
+# def userHomepage(request):
+# 	if request.method == 'GET':
+# 		if request.GET.get('num1') and request.GET.get('num2'):
+# 			num1 = int(request.GET.get('num1'))
+# 			num2 = int(request.GET.get('num2'))
+# 			sum = calculate_sum(num1,num2)
+# 			variables = RequestContext(request,{'user':request.user,'sum':sum})	
+# 		else:
+# 			variables = RequestContext(request,{'user':request.user})	
+# 	return render_to_response('home.html',variables)	
+
+# def calculate_sum(num1,num2):
+#     return num1+num2

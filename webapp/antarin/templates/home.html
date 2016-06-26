@@ -9,17 +9,21 @@
         <li><a href="#">BUTTON 3 </a></li>
     </ul>
     <hr align="center"/>
-    {% if  sum %}
-	 	<p>Sum of these two numbers is {{sum}}</p>
+    {% if message %}
+	 	<p>{{message}}</p>
 	{% endif %}
     <br/><br/><br/>
-	 <form method = "get"> {% csrf_token %}
+	 <form method = "post" action="#" enctype="multipart/form-data" class = "login-form"> {% csrf_token %}
 	  <div class = "submit_section">
-	 	Enter 2 numbers.<br/>
-        Number1	<input type = "number" name= "num1"/><br/>
-        Number 2<input type = "number" name = "num2"/><br/><br/>
-       
-        <input type = "submit" value = "Calculate Sum"/>
+     
+      {{form}}
+      <br/><br/>
+        <input id= "upload" type = "submit" value = "Upload Image"/>
         </div>
     </form>
+    {% if user.userprofile.user_image %}
+        <img class="user-uploaded" src="{{ user.userprofile.user_image.url }}"/>
+    {% endif %}
+    <img class="admin-uploaded" src="/static/images/picture1.jpeg" alt = "antarin logo"/> 
+    <img class="admin-uploaded" src="/static/images/picture2.jpeg" alt = "antarin logo"/> 
 {% endblock %}

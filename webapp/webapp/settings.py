@@ -110,7 +110,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = 'static'
 
-MEDIA_ROOT = '/Users/ruchikashivaswamy/Documents/django_projects/webapp/antarin/media/'
+MEDIA_ROOT = '/Users/ruchikashivaswamy/Desktop/webapp/antarin/media/'
 MEDIA_URL = '/media/'
 
 

@@ -1,25 +1,70 @@
 {% extends "base.html" %}
+
+{% block head %}
+    {% load static from staticfiles %}
+    <script src="{% static 'js/dropzone.js' %}"></script>
+    <script type="text/javascript">
+        Dropzone.options.myDropzone = {
+            autoProcessQueue : true, 
+
+            init:function()
+            {
+                myDropzone.dictDefaultMessage = "Drop Files!"
+                myDropzone.processQueue();
+            }
+        };
+    </script>
+{% endblock %}
+
 {% block title %}UserHomepage{% endblock %}
-{% block head %}{% endblock %}
+
+{% block header %}
+            <a href = "/">
+            {% load static from staticfiles %}
+              <img id="dashboard_logo" src="{% static 'images/antarinX_logo_only_square.png' %}" alt = "antarin logo"/> 
+            </a>
+            <div id="header-right">
+                {% if user.is_authenticated %}
+                    <div class="user-firstname">{{ user.first_name }}</div>
+                    <a class= "logout-button" href="/logout/">Logout</a>
+                {% endif %}
+            </div>
+{% endblock%}
 
 {% block content %}
+
     <ul class="menu">
         <li><a href="#">LOAD DATA</a></li>
         <li><a href="#">BUTTON 2 </a></li>
         <li><a href="#">BUTTON 3 </a></li>
     </ul>
+
     <hr align="center"/>
-    {% if  sum %}
-	 	<p>Sum of these two numbers is {{sum}}</p>
-	{% endif %}
+
+    {% if message %}
+        <p>{{ message }}</p>
+    {% endif %}
+
     <br/><br/><br/>
-	 <form method = "get"> {% csrf_token %}
-	  <div class = "submit_section">
-	 	Enter 2 numbers.<br/>
-        Number1	<input type = "number" name= "num1"/><br/>
-        Number 2<input type = "number" name = "num2"/><br/><br/>
-       
-        <input type = "submit" value = "Calculate Sum"/>
+     
+    <form method = "post" action="{% url "user_homepage" %}" enctype="multipart/form-data" class = "dropzone"> {% csrf_token %}
+                
+    
+        <div class="fallback">
+            <input name="file" type="file" multiple />
         </div>
-    </form>
+
+     <br/><br/>
+</form>
+ <br/><br/>
+    <div class = "file-summary" style="padding-top:15px;width:70%;margin-left:auto;margin:top:500px;text-align:center">
+        <table border="0">
+        {% for file in allfiles %}
+        <tr>
+            <td>{{ file.file.name }}</td>
+            <td>{{file.file.size}}bytes </td>
+        </tr>
+        {% endfor %}
+        </table>
+        </div>
 {% endblock %}

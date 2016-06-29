@@ -1,2 +1,10 @@
+branch-defaults:
+  default:
+    environment: weabpp-test
 global:
+  application_name: webapp
+  default_ec2_keyname: antarin-aws
+  default_platform: Python 3.4
+  default_region: us-west-2
   profile: eb-cli
+  sc: null

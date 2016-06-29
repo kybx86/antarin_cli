@@ -1,0 +1,210 @@
+#header-right{
+	float:right;
+}
+
+.logo{
+	width:325px;
+	height:75px;
+	padding:20px;
+	
+}
+
+.content{
+	width:450px;
+	margin-left: auto;
+	margin-right: auto;
+	height:500px;
+}
+
+.errorlist{
+	font-family: "Helvetica Neue";
+	font-weight: lighter;
+	font-size: 20px;
+	color:#D0021B;
+	display: block;
+	
+	list-style-type: none;
+}
+
+#email_error{
+	color:#D0021B;
+	font-size: 20px;
+	text-decoration: none;
+	font-weight: lighter;
+	cursor: pointer;
+}
+
+.login-error{
+	height:50px;
+	width:100%;
+	text-align:center;
+	font-family: "Helvetica Neue";
+	color: #D0021B;
+	font-size:20px;
+	font-weight: lighter;
+}
+
+#password-reset-error{
+	padding-top: 10px;
+	height:20px;
+	width:100%;
+	text-align:center;
+	font-family: "Helvetica Neue";
+	color: #D0021B;
+	font-size:20px;
+	font-weight: lighter;
+}
+
+.login-form,.signup-form{
+	padding-top:10px;
+	height: 300px;
+}
+
+input[type=text],input[type=password]{
+	width:80%;
+	display:block;
+	margin: 15px auto 3px auto;
+	padding: 12px 20px;
+	font-weight:lighter;
+	font-family: "Helvetica Neue";
+	font-size: 24px;
+	border:none;
+	border-bottom: 3px solid #000000;
+	outline:none;
+	background:none;
+	
+}
+
+input[type=submit]{
+	width:90%;
+	margin:auto;
+	font-family: "Helvetica Neue";
+	padding: 12px 20px;
+	font-weight: bold;
+	font-size: 20px;
+	border:2px solid #000000;
+    cursor:pointer;
+    -webkit-border-radius: 5px;
+    border-radius: 5px; 
+    height:54px;
+    background: none;
+    display:block;
+}
+
+input[type=submit]:hover{
+	background: #000000;
+	color: #ffffff;
+}
+
+.help{
+	font-family: "Helvetica Neue";
+	font-weight: normal;
+	color: #9B9B9B;
+	font-size: 12px;
+	text-align: center;
+	margin:3px auto 0px auto;
+}
+
+.form-error{
+	float:right;
+	font-family: "Helvetica Neue";
+	font-weight: lighter;
+	font-size: 20px;
+	color:#D0021B;
+}
+
+a:link{
+	font-weight:normal;
+	font-family: "Helvetica Neue";
+	font-size: 15px;
+	text-decoration: none;
+	color:#000000;
+}
+
+a:visited{
+	color:#000000;
+}
+#signup-link{
+	padding-right: 20px;
+	float:right;
+}
+
+#forgot-password{
+	padding-left: 22px;
+	float:left;
+}
+
+.section-header{
+	width:100%;
+	font-family: "Helvetica Neue";
+	font-size:30px;
+	font-weight:normal;
+	color:#000000;
+	text-align: center;
+	margin-bottom: 0px;
+}
+
+.thank-you
+{
+	text-align: center;
+	font-family: "Helvetica Neue";
+	font-size:22px;
+	font-weight:normal;
+	padding: 10px 12px 10px 12px;
+}
+
+.user-firstname
+{
+	font-family: "Helvetica Neue";
+	font-size:25px;
+	margin: 40px 0px 0px 90px;
+	padding-right:30px;
+	font-weight:normal;
+	color:#000000;
+}
+
+.logout-button
+{
+	float:right;
+	font-family: "Helvetica Neue";
+	font-size:15px;
+	margin: 0px 40px 10px 50px;
+	font-weight:bolder;
+	color:#000000;
+}
+
+.menu{
+	list-style-type: none;
+	margin: auto;s
+	font-size:20px;
+}
+
+.menu li
+{
+	display:inline;
+	padding:5px 15px 5px 10px;
+}
+
+hr { 
+	display: block;
+    height: 2px;
+    border: 0;
+    border-top: 1px solid #000000;
+    margin: 1em 0;
+    padding: 0;
+}
+
+.verification-text{
+	font-family: "Helvetica Neue";
+	font-size:25px;
+	font-weight:normal;
+	text-align: center;
+}
+
+#link-container{
+	text-align: center;
+}
+
+#verification-login{
+	font-weight: bold;
+}

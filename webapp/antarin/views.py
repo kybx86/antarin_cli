@@ -10,7 +10,7 @@ from django.template import RequestContext
 from django.views.decorators.csrf import csrf_protect
 from datetime import datetime
 import hashlib,random
-from antarin.models import UserProfile
+from antarin.models import UserProfile,UserUploadedFiles
 from django.utils import timezone
 from django.conf import settings
 
@@ -93,7 +93,7 @@ def password_reset(request):
 		form = PasswordResetForm(request.POST)
 		if form.is_valid():
 			userdata = {}
-			userdata['username'] = form.cleaned_data['username']
+			userdata['username'] = form.cleaned_data['username'].lower()
 			userdata['firstname'] = form.getFirstname(userdata['username'])
 			keyval = (hashlib.sha1((str(random.random())).encode('utf8')).hexdigest()[:9]).encode('utf8')
 			usernamekey = userdata['username']
@@ -144,15 +144,36 @@ only excuted when a user is logged in.
 '''
 @login_required
 def userHomepage(request):
-	if request.method == 'GET':
-		if request.GET.get('num1') and request.GET.get('num2'):
-			num1 = int(request.GET.get('num1'))
-			num2 = int(request.GET.get('num2'))
-			sum = calculate_sum(num1,num2)
-			variables = RequestContext(request,{'user':request.user,'sum':sum})	
-		else:
-			variables = RequestContext(request,{'user':request.user})	
-	return render_to_response('home.html',variables)	
+	user = User.objects.get(username = request.user.username)
+	all_files = user.useruploadedfiles.all()
+	if request.method == 'POST':
+		form = FileUploadForm(request.POST,request.FILES)
+		if form.is_valid():
+			print(request.FILES.get('file'))
+			#user = User.objects.get(username = request.user.username)
+			user_files = UserUploadedFiles()
+			user_files.user = user
+			user_files.file = request.FILES.get('file')
+			user_files.save()
+			message = "Files were uploaded successfully!"
+			variables = RequestContext(request,{'form':form,'message':message,'media_url':settings.MEDIA_URL,"allfiles":all_files})
+			return render_to_response('home.html',variables)
+	else:
+		form = FileUploadForm()
+	variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL,"allfiles":all_files})
+	return render_to_response('home.html',variables)
 
-def calculate_sum(num1,num2):
-    return num1+num2
+# @login_required
+# def userHomepage(request):
+# 	if request.method == 'GET':
+# 		if request.GET.get('num1') and request.GET.get('num2'):
+# 			num1 = int(request.GET.get('num1'))
+# 			num2 = int(request.GET.get('num2'))
+# 			sum = calculate_sum(num1,num2)
+# 			variables = RequestContext(request,{'user':request.user,'sum':sum})	
+# 		else:
+# 			variables = RequestContext(request,{'user':request.user})	
+# 	return render_to_response('home.html',variables)	
+
+# def calculate_sum(num1,num2):
+#     return num1+num2

@@ -1,31 +1,28 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
-        	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-    	<link href="/static/css/style.css" rel="stylesheet" type="text/css">
+        <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+        {% load static from staticfiles %}
+    	<link href="{% static 'css/style.css' %}" rel="stylesheet" type="text/css">
+        {% load static from staticfiles %}
+        <link href="{% static 'css/dropzone.css' %}" rel="stylesheet" type="text/css">
+        {% block head %}{% endblock %}
         <title>Antarin Technologies|
         {% block title %}{% endblock %}</title>
     </head>
+
     <body>
-
-    	<div class = "header">
-            <a href = "/">
-    		  <img class="logo" src="/static/images/antarinX_logo_full.png" alt = "antarin logo"/> 
-            </a>
-    		<div id="header-right">
-	    		{% if user.is_authenticated %}
-				    <div class="user-firstname">{{ user.first_name }}</div>
-	    			<a class= "logout-button" href="/logout/">Logout</a>
-				{% endif %}
-			</div>
-    	</div>
-
+            
+        <div class = "header">
+        	{% block header %}{% endblock %}
+        </div>
+        
     	<div class = "content" algin = "center" >
         	{% block content %}{% endblock %}
         </div>
 
  		<div class = "footer">
-
+            {% block footer %}{% endblock %}
  		</div>
 
     </body>

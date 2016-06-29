@@ -17,7 +17,7 @@ urlpatterns = [
 	url(r'^logout/$',auth_views.logout_then_login),
 	url(r'^signup/$', antarin_views.signup),
 	url(r'^signup/success/$',antarin_views.signup_success),
-	url(r'^home/$',antarin_views.userHomepage),
+	url(r'^home/$',antarin_views.userHomepage, name = "user_homepage"),
 	url(r'^activate/(?P<key>.+)$', antarin_views.activation),
 	#url(r'^new-activation-link/(?P<user_id>\d+)/$', antarin_views.new_activation_link),
 	url(r'passwordreset/$', antarin_views.password_reset),

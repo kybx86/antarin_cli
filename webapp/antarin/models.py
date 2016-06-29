@@ -9,3 +9,8 @@ class UserProfile(models.Model):
     activation_key = models.CharField(max_length=60)
     key_expires = models.DateTimeField()
     password_reset_key = models.CharField(max_length=60)
+    
+class UserUploadedFiles(models.Model):
+	user = models.ForeignKey(User,related_name='useruploadedfiles')
+	file = models.FileField(upload_to ='user_files',blank=True,null=True)
+    

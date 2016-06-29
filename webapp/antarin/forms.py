@@ -13,7 +13,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import get_template
 from django.contrib.auth import authenticate
-from antarin.models import UserProfile
+from antarin.models import UserProfile,UserUploadedFiles
 
 '''
 Custom login form with two form fields - username(is an emailField) and password
@@ -31,7 +31,8 @@ class AuthenticationForm(forms.Form):
 	'''
 	def clean(self):
 		if 'username' in self.cleaned_data and 'password' in self.cleaned_data:
-			username = self.cleaned_data['username']
+			username = self.cleaned_data['username'].lower()
+			print(self.cleaned_data['username'].lower())
 			password = self.cleaned_data['password']
 			user = authenticate(username=username,password=password)
 			if not user or not user.is_active:
@@ -46,7 +47,7 @@ class AuthenticationForm(forms.Form):
 	This method is called from its corresponding view only when the form submitted had no validation errors raised. It then authenticated the user and returns the respective user object.
 	'''
 	def login(self,request):
-		username = self.cleaned_data['username']
+		username = self.cleaned_data['username'].lower()
 		password = self.cleaned_data['password']
 		user = authenticate(username=username,password=password)
 		return user
@@ -62,9 +63,9 @@ class RegistrationForm(forms.Form):
 	'''This method ensures the usernames being stored in the User database is unique and a validation error is raised otherwise'''
 	def clean_username(self):
 		try:
-			user = User.objects.get(username__iexact = self.cleaned_data['username'])
+			user = User.objects.get(username__iexact = self.cleaned_data['username'].lower())
 		except User.DoesNotExist:
-			return self.cleaned_data['username']
+			return self.cleaned_data['username'].lower()
 		raise forms.ValidationError(_(mark_safe('Account with this email address already exists. <br/> <a href="/" id="email_error">Log In?</a>')))
 	
 	'''
@@ -124,7 +125,7 @@ class PasswordResetForm(forms.Form):
 	'''
 	def clean(self):
 		if 'username' in self.cleaned_data:
-			if User.objects.filter(username = self.cleaned_data['username']).exists():
+			if User.objects.filter(username = self.cleaned_data['username'].lower()).exists():
 				return self.cleaned_data
 			else:
 				raise forms.ValidationError(_(mark_safe('Account with this email address does not exist. Please try again')))
@@ -185,6 +186,18 @@ class PasswordEntryForm(forms.Form):
 		password2 = self.cleaned_data.get('password2')
 		if password1 and password1 != password2:
 			raise forms.ValidationError("Your passwords do not match")
+
+class FileUploadForm(forms.ModelForm):
+	class Meta:
+		fields = ('file',)
+		model = UserUploadedFiles
+
+	def __init__(self, *args, **kwargs):
+		super(FileUploadForm, self).__init__(*args, **kwargs)
+		for fieldname in ['file']:
+			self.fields[fieldname].label = ''
+			self.fields[fieldname].widget = forms.HiddenInput()
+
 
 
 

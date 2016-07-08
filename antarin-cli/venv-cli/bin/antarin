@@ -1,0 +1,10 @@
+#!/Users/ruchikashivaswamy/Desktop/antarin-cli/venv-cli/bin/python
+# EASY-INSTALL-ENTRY-SCRIPT: 'antarin','console_scripts','antarin'
+__requires__ = 'antarin'
+import sys
+from pkg_resources import load_entry_point
+
+if __name__ == '__main__':
+    sys.exit(
+        load_entry_point('antarin', 'console_scripts', 'antarin')()
+    )

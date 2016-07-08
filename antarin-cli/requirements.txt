@@ -1,0 +1,5 @@
+antarin==1.0.0
+boto==2.41.0
+docopt==0.6.2
+mycli==1.0.0
+requests==2.10.0

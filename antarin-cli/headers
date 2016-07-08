@@ -1,0 +1,6 @@
+HTTP/1.0 403 Forbidden
+Date: Sat, 02 Jul 2016 22:48:33 GMT
+Server: WSGIServer/0.2 CPython/3.5.1
+X-Frame-Options: SAMEORIGIN
+Content-Type: text/html
+

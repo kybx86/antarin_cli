@@ -1,0 +1,16 @@
+MANIFEST.in
+README.rst
+requirements.txt
+setup.cfg
+antarin/__init__.py
+antarin/cli.py
+antarin.egg-info/PKG-INFO
+antarin.egg-info/SOURCES.txt
+antarin.egg-info/dependency_links.txt
+antarin.egg-info/entry_points.txt
+antarin.egg-info/requires.txt
+antarin.egg-info/top_level.txt
+antarin/commands/__init__.py
+antarin/commands/base.py
+antarin/commands/hello.py
+antarin/commands/login.py

@@ -25,6 +25,12 @@ Usage:
  6. antarin --version
  	Shows the version of the CLI tool that is currently running on your machine
 
+ 7. antarin delete <file>
+ 	To delete a file that is stored in your antarin account. Provide the name of the file to be deleted as a positional argument to the command [antarin delete myfile.txt]
+
+ 8. antarin summary
+ 	Gives a summary of the user account/details
+
 Options:
   -h --help                         Show this screen.
   --version                         Show version.

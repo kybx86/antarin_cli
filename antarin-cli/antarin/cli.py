@@ -9,6 +9,7 @@ Usage:
   antarin ls
   antarin upload <file>
   antarin download <file>
+  antarin delete <file>
   antarin -h | --help
   antarin --version
 

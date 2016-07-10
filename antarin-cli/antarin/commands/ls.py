@@ -11,7 +11,7 @@ class Ls(Base):
 		token = config.get('user_details', 'token')
 		if token != "":
 			method = 'GET'
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-summary/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-ls/"
 			handler = urllib2.HTTPHandler()
 			opener = urllib2.build_opener(handler)
 			request = urllib2.Request(url,data=json.dumps(token))

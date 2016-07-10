@@ -1,3 +1,4 @@
+#AUTHOR : RUCHIKA SHIVASWAMY
 '''
 This file contains a mapping of different URLs to their respective views that are defined in views.py. The URLs defined here
 are for 'antarin' application specifically. This urlconf is included in the main urls.py file of the project folder - webapp.
@@ -10,6 +11,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from antarin import views as antarin_views
 from antarin import forms as antarin_forms
+from rest_framework.authtoken import views
 
 urlpatterns = [
 	url(r'^$', antarin_views.login_view),
@@ -24,6 +26,11 @@ urlpatterns = [
 	url(r'^passwordreset/success/$',antarin_views.password_reset_success),
 	url(r'^passwordreset/activation/(?P<key>.+)$', antarin_views.password_key_activation),
 	url(r'^passwordreset/redirect/$', antarin_views.password_reset_redirect),
-	
+	url(r'^rest-auth/', include('rest_auth.urls')),
+	url(r'^rest-summary/',antarin_views.UserSummaryView.as_view()),
+	url(r'^rest-ls/',antarin_views.ListFilesView.as_view()),
+	url(r'^rest-fileupload/(?P<filename>.+)$',antarin_views.UploadFileView.as_view()),
+	url(r'^rest-filedelete/(?P<filename>.+)$',antarin_views.DeleteFileView.as_view()),
+	url(r'^rest-filedownload/',antarin_views.DownloadFileView.as_view()),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

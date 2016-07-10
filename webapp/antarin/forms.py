@@ -1,3 +1,4 @@
+#AUTHOR : RUCHIKA SHIVASWAMY
 '''
 This file contains all forms used for 'antarin' application
 '''
@@ -89,6 +90,7 @@ class RegistrationForm(forms.Form):
 		user.first_name = userdata['firstname']
 		user.last_name = userdata['lastname']
 		user.is_active = False
+		user.total_data_storage = '5 GB'
 		user.save()
 
 		user_profile = UserProfile()

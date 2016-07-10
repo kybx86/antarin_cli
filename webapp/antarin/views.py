@@ -1,3 +1,5 @@
+#AUTHOR : RUCHIKA SHIVASWAMY
+
 '''
 This file contains all views defined for 'antarin' application
 '''
@@ -5,16 +7,28 @@ from django.shortcuts import render_to_response, get_object_or_404,render
 from antarin.forms import *
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout,login
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.template import RequestContext
 from django.views.decorators.csrf import csrf_protect
 from datetime import datetime
-import hashlib,random
+import hashlib,random,json,boto,os
 from antarin.models import UserProfile,UserUploadedFiles
 from django.utils import timezone
 from django.conf import settings
+from antarin.serializers import FetchFilesSerializer
+from rest_framework import generics
+from rest_framework.generics import RetrieveUpdateAPIView
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authtoken.models import Token
+from rest_framework.renderers import JSONRenderer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.decorators import parser_classes
+from rest_framework.parsers import FileUploadParser
+from hurry.filesize import size
 
-
+#from django.core.servers.basehttp import FileWrapper
+from wsgiref.util import FileWrapper
 '''
 To manage the data entered in AuthenticationForm. If the form was submitted(http POST) and returned without validation errors, then the user is authenticated and redirected to his homepage.
 '''
@@ -138,6 +152,11 @@ def password_reset_success(request):
 	return render_to_response('password_reset_success.html')
 
 
+def calculate_used_data_storage(all_files):
+	total_val = 0
+	for file in all_files:
+		total_val = total_val + file.file.size
+	return size(total_val)
 '''
 This view defines the customised user homepage that is rendered on a successful user login. The @login_required decorator ensurest that this view is
 only excuted when a user is logged in.
@@ -146,34 +165,95 @@ only excuted when a user is logged in.
 def userHomepage(request):
 	user = User.objects.get(username = request.user.username)
 	all_files = user.useruploadedfiles.all()
+	used_data_storage = calculate_used_data_storage(all_files)
+	user.data_storage_used = used_data_storage
+	user.save()
 	if request.method == 'POST':
 		form = FileUploadForm(request.POST,request.FILES)
 		if form.is_valid():
-			print(request.FILES.get('file'))
-			#user = User.objects.get(username = request.user.username)
 			user_files = UserUploadedFiles()
 			user_files.user = user
 			user_files.file = request.FILES.get('file')
 			user_files.save()
+			all_files = user.useruploadedfiles.all()
+			used_data_storage = calculate_used_data_storage(all_files)
+			user.data_storage_used = used_data_storage
+			user.save()
 			message = "Files were uploaded successfully!"
-			variables = RequestContext(request,{'form':form,'message':message,'media_url':settings.MEDIA_URL,"allfiles":all_files})
+			variables = RequestContext(request,{'form':form,'message':message,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
 			return render_to_response('home.html',variables)
 	else:
 		form = FileUploadForm()
-	variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL,"allfiles":all_files})
+	variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
 	return render_to_response('home.html',variables)
 
-# @login_required
-# def userHomepage(request):
-# 	if request.method == 'GET':
-# 		if request.GET.get('num1') and request.GET.get('num2'):
-# 			num1 = int(request.GET.get('num1'))
-# 			num2 = int(request.GET.get('num2'))
-# 			sum = calculate_sum(num1,num2)
-# 			variables = RequestContext(request,{'user':request.user,'sum':sum})	
-# 		else:
-# 			variables = RequestContext(request,{'user':request.user})	
-# 	return render_to_response('home.html',variables)	
+class ListFilesView(APIView):
+	def get(self,request):
+		try:
+			user_val = Token.objects.get(key = self.request.data)
+			all_files = user_val.user.useruploadedfiles.all()
+			return_val = [file.file.name for file in all_files]
+			print(return_val)
+			return Response(return_val)
+		except Token.DoesNotExist:
+			return None
+		
+class UploadFileView(APIView):
+	#parser_classes = (FileUploadParser,)
+	def put(self, request, filename, format=None):
+		file_object = request.data['file']
+		print (request.data)
+		token = request.data['token'].strip('"')
+		print(token)
 
-# def calculate_sum(num1,num2):
-#     return num1+num2
+		user_val = Token.objects.get(key = token)
+		user_files = UserUploadedFiles()
+		user_files.user = user_val.user
+		user_files.file = file_object
+		print(user_val.user.userprofile.data_storage_used)
+
+		all_files = user_val.user.useruploadedfiles.all()
+		used_data_storage = calculate_used_data_storage(all_files)
+		user_val.user.userprofile.data_storage_used = str(used_data_storage)
+		user_val.user.save()
+		user_val.user.userprofile.save()
+		user_files.save()
+		print("Success!")
+		print(user_val.user.userprofile.data_storage_used)
+		#catch error when save didn't work fine and return status 400
+		return Response(status=204)
+
+class DownloadFileView(APIView):
+	def get(self,request):
+		conn = boto.connect_s3(settings.AWS_ACCESS_KEY_ID,settings.AWS_SECRET_ACCESS_KEY)
+		bucket = conn.get_bucket(settings.AWS_STORAGE_BUCKET_NAME)
+		bucket_list = bucket.list()
+		key = bucket.get_key('media/user_files/'+request.data['file'].strip('"'))
+		filepath = os.path.join("/Users/ruchikashivaswamy/", request.data['file'].strip('"'))
+		key.get_contents_to_filename(filepath)
+		file = open(filepath)
+		response = HttpResponse(FileWrapper(file), content_type='application/text')
+		return response
+				
+
+class DeleteFileView(APIView):
+	def post(self,request,filename,format=None):
+		token = request.data['token'].strip('"')
+		filename = request.data['file'].strip('"')
+		print(token,filename)
+		user_val = Token.objects.get(key=token)
+		if 'user_files/' not in filename:
+			filename = 'user_files/' + filename
+		file = user_val.user.useruploadedfiles.filter(file=filename).first()
+		file.delete() 
+		return Response(status=204)
+
+class UserSummaryView(APIView):
+	def get(self,request):
+		try:
+			user_val = Token.objects.get(key = self.request.data)
+			user_data = (user_val.user.first_name,user_val.user.last_name,user_val.user.username,user_val.user.userprofile.total_data_storage,user_val.user.userprofile.data_storage_used)
+			#print(return_val)
+			return Response(user_data)
+		except Token.DoesNotExist:
+			return None

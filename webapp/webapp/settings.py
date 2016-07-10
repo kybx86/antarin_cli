@@ -1,3 +1,5 @@
+#AUTHOR : RUCHIKA SHIVASWAMY
+
 import os
 import django.contrib.auth
 
@@ -62,7 +64,18 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'antarin',
     'storages',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_auth',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    )
+}
 
 MIDDLEWARE_CLASSES = [
     'django.middleware.security.SecurityMiddleware',

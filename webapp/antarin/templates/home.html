@@ -21,14 +21,21 @@
 {% block header %}
             <a href = "/">
             {% load static from staticfiles %}
-              <img id="dashboard_logo" src="{% static 'images/antarinX_logo_only_square.png' %}" alt = "antarin logo"/> 
+              <img id="dashboard_logo" style="width:150px;height:150px;" src="{% static 'images/antarinX_logo_only_square.png' %}" alt = "antarin logo"/> 
             </a>
-            <div id="header-right">
-                {% if user.is_authenticated %}
-                    <div class="user-firstname">{{ user.first_name }}</div>
-                    <a class= "logout-button" href="/logout/">Logout</a>
-                {% endif %}
+            <div class="dropdown" style="float:right;">
+                  <button class="dropbtn" style="color:black;background-color:white;font-family:'Helvetica Neue';">
+                      {% if user.is_authenticated %}
+                            {{ user.first_name }}
+                      {% endif %}
+                  </button>
+                  <div class="dropdown-content">
+                        <a href="#">Account</a>
+                        <a href="#">Data Storage {{used_data_storage}}/{{total_data_storage}}</a>
+                        <a href="/logout/">Logout</a>
+                  </div>
             </div>
+           
 {% endblock%}
 
 {% block content %}
@@ -47,7 +54,7 @@
 
     <br/><br/><br/>
      
-    <form method = "post" action="{% url "user_homepage" %}" enctype="multipart/form-data" class = "dropzone"> {% csrf_token %}
+    <form method = "post" action="{% url "user_homepage" %}" enctype="multipart/form-data" class = "dropzone" style="width:100%"> {% csrf_token %}
                 
     
         <div class="fallback">
@@ -55,16 +62,16 @@
         </div>
 
      <br/><br/>
-</form>
+    </form>
  <br/><br/>
-    <div class = "file-summary" style="padding-top:15px;width:70%;margin-left:auto;margin:top:500px;text-align:center">
+    <div class = "file-summary" style="width:100%;margin-right:0px;font-family:'Helvetica Neue'">
         <table border="0">
-        {% for file in allfiles %}
-        <tr>
-            <td>{{ file.file.name }}</td>
-            <td>{{file.file.size}}bytes </td>
-        </tr>
-        {% endfor %}
+            {% for file in allfiles %}
+            <tr>
+                <td>{{ file.file.name }}</td>
+                <td>{{file.file.size}}bytes </td>
+            </tr>
+            {% endfor %}
         </table>
         </div>
 {% endblock %}

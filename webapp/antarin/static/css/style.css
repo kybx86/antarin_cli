@@ -9,13 +9,11 @@
 	
 }
 
-#dashboard_logo{
-	width:120px;
-	height:100px;
-	padding:10px;
-}
-
-.content{	
+.content{
+	width:450px;
+	margin-left: auto;
+	margin-right: auto;
+	height:500px;
 }
 
 .errorlist{
@@ -58,9 +56,6 @@
 }
 
 .login-form,.signup-form{
-	width:450px;
-	margin-left: auto;
-	margin-right: auto;
 	padding-top:10px;
 	height: 300px;
 }
@@ -89,6 +84,7 @@ input[type=submit]{
 	font-size: 20px;
 	border:2px solid #000000;
     cursor:pointer;
+    -webkit-border-radius: 5px;
     border-radius: 5px; 
     height:54px;
     background: none;
@@ -128,7 +124,6 @@ a:link{
 a:visited{
 	color:#000000;
 }
-
 #signup-link{
 	padding-right: 20px;
 	float:right;
@@ -180,16 +175,14 @@ a:visited{
 
 .menu{
 	list-style-type: none;
-	margin: auto;
+	margin: auto;s
 	font-size:20px;
-	text-align: center;
 }
 
 .menu li
 {
 	display:inline;
 	padding:5px 15px 5px 10px;
-	text-align: center;
 }
 
 hr { 
@@ -197,9 +190,8 @@ hr {
     height: 2px;
     border: 0;
     border-top: 1px solid #000000;
-    margin: auto;
-    padding-top: 10px;
-    width:70%;
+    margin: 1em 0;
+    padding: 0;
 }
 
 .verification-text{
@@ -236,7 +228,53 @@ hr {
 	margin-left:auto;
 	margin-right:auto;
 	margin:top:500px;
+	font-family: "Helvetica Neue";
 }
 
+#dashboard_logo{
+	width:150px;
+	height:150px;
+}
+
+.dropbtn {
+    background-color: white;
+    color: black;
+    padding: 12px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    font-family:"Helvetica Neue";
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: white;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+}
+
+.dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown-content a:hover {background-color: white}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown:hover .dropbtn {
+    background-color: #3e8e41;
+}
 
 

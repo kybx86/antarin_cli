@@ -2,7 +2,6 @@
 antarin
 
 Usage:
-  antarin hello
   antarin login
   antarin logout
   antarin summary
@@ -12,13 +11,7 @@ Usage:
   antarin delete <file>
   antarin -h | --help
   antarin --version
-
-Options:
-  -h --help                         Show this screen.
-  --version                         Show version.
-Examples:
-  antarin login
-  antarin summary
+  
 """
 
 from docopt import docopt
@@ -39,3 +32,18 @@ def main():
       command = [command[1] for command in commands if command[0] != 'Base' and command[0]!= 'SafeConfigParser'][0] 
       command = command(options)
       command.run()
+
+##Python 3.5
+  # import subprocess
+  # options = docopt(__doc__,version=VERSION)
+
+  # for key, value in options.items():
+  #   if hasattr(subprocess, key) and value:
+  #     module = getattr(subprocess, key)
+  #     #print module
+  #     commands = getmembers(module, isclass)
+  #     print commands
+  #     command = [command[1] for command in commands if command[0] != 'Base' and command[0]!= 'SafeConfigParser'][0] 
+  #     command = command(options)
+  #     command.run()
+

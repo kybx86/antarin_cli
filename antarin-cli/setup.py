@@ -34,7 +34,7 @@ setup(
     ],
     keywords = 'antarin',
     packages = find_packages(exclude=['docs', 'tests*']),
-    install_requires = ['docopt'],
+    install_requires = ['docopt','boto','requests'],
     extras_require = {
         'test': ['coverage', 'pytest', 'pytest-cov'],
     },

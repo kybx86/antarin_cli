@@ -34,4 +34,4 @@ class Download(Base):
 			# val = urlretrieve(url,"./downloads/"+filename)
 			# print val
 		else:
-			print "Looks like you have not verified your login credentials yet.Please try this command after authetication is compelete."
+			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"

@@ -12,7 +12,6 @@ class Login(Base):
 
 	def verify(self,userdict):
 		method = 'POST'
-		#url = "http://127.0.0.1:8000/rest-auth/login/"
 		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-auth/login/"
 		handler = urllib2.HTTPHandler()
 		opener = urllib2.build_opener(handler)
@@ -38,7 +37,9 @@ class Login(Base):
 			print '\nEnter your Antarin credentials'
 			try:
 				while 1 :
-					userdict['username'] = str(raw_input('Username:'))
+					
+					userdict['username'] = str(raw_input('Antarin ID:')) #changed
+					#userdict['username'] = str(raw_input('Username:'))
 					userdict['password'] = getpass.getpass('Password:(will be hidden as you type)')
 					connection = Login.verify(self,userdict)
 					data = json.load(connection)
@@ -69,14 +70,15 @@ class Login(Base):
 			print '\nEnter your Antarin credentials'
 			try:
 				while 1 :
-					userdict['username'] = str(raw_input('Username:'))
+					userdict['username'] = str(raw_input('Antarin ID:')) #changed 
+					#userdict['username'] = str(raw_input('Username:'))
 					userdict['password'] = getpass.getpass('Password:(will be hidden as you type)')
 					connection = Login.verify(self,userdict)
 					data = json.load(connection)
 					if connection.code == 200:
 						token = data['key']
 						print 'Logged in as: %s' %userdict['username']
-						print 'Token used for authentication : %s\n' %token
+						print 'Token used for authentication: %s\n' %token
 						write("username",userdict['username'])
 						write("token",token)
 						write("current_directory",'/')

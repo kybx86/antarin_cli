@@ -11,8 +11,8 @@ from .mkdir import MakeDirectory
 class Upload(Base):	        
 
 	def file_upload(self,token,filename,id_val=None):
-		url = "http://127.0.0.1:8000/rest-fileupload/"
-		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"		
+		#url = "http://127.0.0.1:8000/rest-fileupload/"
+		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"		
 		files = {
 			'token' : (None, json.dumps(token), 'application/json'),
 			'id_val' : (None, json.dumps(id_val), 'application/json'),

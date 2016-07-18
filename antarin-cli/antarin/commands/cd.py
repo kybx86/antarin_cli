@@ -8,8 +8,8 @@ class ChangeDirectory(Base):
 		foldername = json.loads(json.dumps(self.options))['<foldername>']
 		try:
 			#print foldername
-			url = "http://127.0.0.1:8000/rest-cd/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-cd/"
+			#url = "http://127.0.0.1:8000/rest-cd/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-cd/"
 			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val})
 		except requests.ConnectionError, e:
 			connection = e

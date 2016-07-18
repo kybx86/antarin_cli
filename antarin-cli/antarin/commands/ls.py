@@ -6,8 +6,8 @@ from os.path import expanduser
 class Ls(Base):
 
 	def send_request(self,token,id_val):
-		url = "http://127.0.0.1:8000/rest-ls/"
-		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-ls/"
+		#url = "http://127.0.0.1:8000/rest-ls/"
+		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-ls/"
 		payload = {'token':token,'id':id_val}
 		try:
 			connection = requests.post(url, data = payload)

@@ -6,8 +6,8 @@ from os.path import expanduser
 class Summary(Base):
 	def send_request(self,token):
 		method = 'GET'
-		url = "http://127.0.0.1:8000/rest-summary/"
-		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-summary/"
+		#url = "http://127.0.0.1:8000/rest-summary/"
+		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-summary/"
 		handler = urllib2.HTTPHandler()
 		opener = urllib2.build_opener(handler)
 		request = urllib2.Request(url,data=json.dumps(token))

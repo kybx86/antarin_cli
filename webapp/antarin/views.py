@@ -254,7 +254,7 @@ class UploadFileView(APIView):
 	#parser_classes = (FileUploadParser,)
 	def put(self, request,format=None):
 		file_object = request.data['file']
-		print (request.data)
+		#print (request.data)
 		token = request.data['token'].strip('"')
 		#print(token)
 		pk = request.data['id_val'].strip('"')
@@ -267,7 +267,7 @@ class UploadFileView(APIView):
 		user_files.user = user_val.user
 		user_files.file = file_object
 		user_files.folder = folder_object
-		print(user_val.user.userprofile.data_storage_used)
+		#print(user_val.user.userprofile.data_storage_used)
 
 		all_files = user_val.user.useruploadedfiles.all()
 		used_data_storage = calculate_used_data_storage(all_files)
@@ -276,7 +276,7 @@ class UploadFileView(APIView):
 		user_val.user.userprofile.save()
 		user_files.save()
 		#print("Success!")
-		print(user_val.user.userprofile.data_storage_used)
+		#print(user_val.user.userprofile.data_storage_used)
 		#catch error when save didn't work fine and return status 400
 		return Response(status=204)
 
@@ -346,7 +346,9 @@ class CreateDirectoryView(APIView):
 				folder_object = None
 			new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
 			new_folder_object.save()
-			return Response(status=204)
+			data = {'id':new_folder_object.pk}
+			print ("created directory {0} with pk {1} and parentfodler {2}" .format(new_folder_object.name,new_folder_object.pk,new_folder_object.parentfolder.name))
+			return Response(json.dumps(data))
 		except Token.DoesNotExist:
 			return Response(status=404)
 

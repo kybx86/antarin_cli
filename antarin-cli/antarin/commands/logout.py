@@ -7,7 +7,9 @@ class Logout(Base):
 
 	def send_request(self,token):
 		try:
-			connection = requests.post('http://webapp-test.us-west-2.elasticbeanstalk.com/rest-logout/', data = {'token':token})
+			url = "http://127.0.0.1:8000/rest-logout/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-logout/"
+			connection = requests.post(url, data = {'token':token})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection

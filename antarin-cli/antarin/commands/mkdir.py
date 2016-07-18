@@ -4,10 +4,12 @@ from os.path import expanduser
 import json,requests
 
 class MakeDirectory(Base):
-	def send_request(self,token,id_val):
-		foldername = json.loads(json.dumps(self.options))['<foldername>']
+	def send_request(self,token,id_val,foldername):
+		
 		try:
-			connection = requests.post('http://webapp-test.us-west-2.elasticbeanstalk.com/rest-mkdir/', data = {'token':token,'foldername':foldername,'id':id_val})
+			url = "http://127.0.0.1:8000/rest-mkdir/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-mkdir/"
+			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -20,8 +22,9 @@ class MakeDirectory(Base):
 		token = config.get('user_details', 'token')
 		id_val = config.get('user_details','id')
 		if token != "":
-			connection = MakeDirectory.send_request(self,token,id_val)
-			if connection.status_code != 204:
+			foldername = json.loads(json.dumps(self.options))['<foldername>']
+			connection = MakeDirectory.send_request(self,token,id_val,foldername)
+			if connection.status_code != 200:
 				print connection
 		else:
 			print "Looks like you have not verified your login credentials yet.Please try this command after authetication is compelete."

@@ -1,6 +1,7 @@
 from .base import Base
 from ConfigParser import SafeConfigParser
 import json, urllib2, urllib
+from os.path import expanduser
 
 class Summary(Base):
 	def send_request(self,token):
@@ -20,10 +21,13 @@ class Summary(Base):
 
 	def run(self):
 		config = SafeConfigParser()
-		config.read('config.ini')
+		home_path = expanduser("~")
+		filepath = home_path + '/.antarin_config.ini'
+		config.read(filepath)
 		token = config.get('user_details', 'token')
 		if token != "":
 			connection = Summary.send_request(self,token)
+			#print connection
 			if connection.code == 200:
 				data = connection.read()
 				for i in range(0,len(json.loads(data))):

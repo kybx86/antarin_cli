@@ -5,13 +5,16 @@ import json, urllib2, urllib,os
 import requests,sys
 import gzip
 import shutil
+from os.path import expanduser
 
 class Upload(Base):	        
 
-	def file_upload(self,token,filename):
+	def file_upload(self,token,filename,id_val=None):
+		print id_val
 		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"		
 		files = {
 			'token' : (None, json.dumps(token), 'application/json'),
+			'id_val' : (None, json.dumps(id_val), 'application/json'),
          	'file': (os.path.basename(filename), open(filename, 'rb'), 'application/octet-stream')
 		}
 		try:
@@ -66,17 +69,21 @@ class Upload(Base):
 
 	def run(self):
 		config = SafeConfigParser()
-		config.read('config.ini')
+		home_path = expanduser("~")
+		filepath = home_path + '/.antarin_config.ini'
+		config.read(filepath)
 		token = config.get('user_details', 'token')
+		id_val = config.get('user_details','id')
 		if token != "":
 			filename = json.loads(json.dumps(self.options))['<file>']
-
 			if os.path.isdir(filename):
 				Upload.folder_upload(self,token,filename)
 			else:
-				connection = Upload.file_upload(self,token,filename)
+				connection = Upload.file_upload(self,token,filename,id_val)
 				if connection.status_code == 204:
 					print "Uploaded file : %s" %filename
+				else:
+					print connection
 		else:
 			print "Looks like you have not verified your login credentials yet.Please try this command after authetication is compelete."
 

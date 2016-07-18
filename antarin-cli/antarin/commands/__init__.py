@@ -6,3 +6,6 @@ from .download import *
 from .logout import *
 from .delete import *
 from .summary import *
+from .pwd import *
+from .mkdir import *
+from .cd import *

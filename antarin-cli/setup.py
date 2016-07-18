@@ -32,7 +32,7 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
     ],
-    keywords = 'antarin',
+    keywords = 'ax',
     packages = find_packages(exclude=['docs', 'tests*']),
     install_requires = ['docopt','boto','requests'],
     extras_require = {
@@ -40,7 +40,7 @@ setup(
     },
     entry_points = {
         'console_scripts': [
-            'antarin=antarin.cli:main',
+            'ax=antarin.cli:main',
         ],
     },
    

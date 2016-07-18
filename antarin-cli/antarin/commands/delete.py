@@ -2,11 +2,12 @@ from .base import Base
 from ConfigParser import SafeConfigParser
 import json,os
 import requests
+from os.path import expanduser
 
 class Delete(Base):
 	def send_request(self,token):
 		filename = json.loads(json.dumps(self.options))['<file>']
-		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-filedelete/"			
+		url = "http://127.0.0.1:8000/rest-filedelete/"			
 		files = {
 			'token' : (None, json.dumps(token), 'application/json'),
          	'file': (None,json.dumps(filename),'application/json')
@@ -19,7 +20,9 @@ class Delete(Base):
 
 	def run(self):
 		config = SafeConfigParser()
-		config.read('config.ini')
+		home_path = expanduser("~")
+		filepath = home_path + '/.config.ini'
+		config.read(filepath)
 		token = config.get('user_details', 'token')
 		if token != "":
 			connection = Delete.send_request(self,token)

@@ -1,34 +1,32 @@
 from .base import Base
 from ConfigParser import SafeConfigParser
-import json, urllib2, urllib
+import json, requests
+from os.path import expanduser
 
 class Ls(Base):
 
-	def run(self):
-
-		config = SafeConfigParser()
-		config.read('config.ini')
-		token = config.get('user_details', 'token')
-		if token != "":
-			method = 'GET'
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-ls/"
-			handler = urllib2.HTTPHandler()
-			opener = urllib2.build_opener(handler)
-			request = urllib2.Request(url,data=json.dumps(token))
-			request.add_header("Content-Type",'application/json')
-			request.get_method = lambda:method
-			try:
-				connection = opener.open(request)
-			except urllib2.HTTPError,e:
-				connection = e
+	def send_request(self,token,id_val):
+		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-ls/"
+		payload = {'token':token,'id':id_val}
+		try:
+			connection = requests.post(url, data = payload)
+		except requests.ConnectionError, e:
+			connection = e
+		return connection
 		
-			if connection.code == 200:
-				data = connection.read()
-				#print len(json.loads(data))
+	def run(self):
+		config = SafeConfigParser()
+		home_path = expanduser("~")
+		filepath = home_path + '/.antarin_config.ini'
+		config.read(filepath)
+		token = config.get('user_details', 'token')
+		id_val = config.get('user_details','id')
+		if token != "":
+			connection = Ls.send_request(self,token,id_val)
+			if connection.status_code == 200:
+				data =  connection.text
 				for i in range(0,len(json.loads(data))):
 					print json.loads(data)[i]
-				#file = json.load(connection)
-				#print file
 			else:
 				print 'Error while fetching files'
 

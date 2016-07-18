@@ -1,11 +1,14 @@
 from ConfigParser import SafeConfigParser
+from os.path import expanduser
 
 def write(item,value):
 	config = SafeConfigParser()
-	config.read('config.ini')
+	home_path = expanduser("~")
+	filepath = home_path + '/.antarin_config.ini'
+	config.read(filepath)
 	if not config.has_section('user_details'):
 		config.add_section('user_details')
 	config.set('user_details', item, value)
 
-	with open('config.ini', 'w') as f:
+	with open(filepath, 'w') as f:
 	    config.write(f)

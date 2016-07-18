@@ -1,16 +1,19 @@
 """
-antarin
+antarinX
 
 Usage:
-  antarin login
-  antarin logout
-  antarin summary
-  antarin ls
-  antarin upload <file>
-  antarin download <file>
-  antarin delete <file>
-  antarin -h | --help
-  antarin --version
+  ax login
+  ax logout
+  ax summary
+  ax ls
+  ax cd [<foldername>]
+  ax pwd
+  ax mkdir <foldername>
+  ax upload <file>
+  ax download <file>
+  ax delete <file>
+  ax -h | --help
+  ax --version
   
 """
 
@@ -22,7 +25,7 @@ def main():
 
   import commands
   options = docopt(__doc__,version=VERSION)
-
+  #print options
   for key, value in options.iteritems():
     if hasattr(commands, key) and value:
       module = getattr(commands, key)
@@ -31,6 +34,7 @@ def main():
       #print commands
       command = [command[1] for command in commands if command[0] != 'Base' and command[0]!= 'SafeConfigParser'][0] 
       command = command(options)
+      #print command
       command.run()
 
 ##Python 3.5

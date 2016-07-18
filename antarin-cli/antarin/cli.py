@@ -8,6 +8,7 @@ Usage:
   ax ls
   ax cd [<foldername>]
   ax pwd
+  ax rm [-r] <folder/file>
   ax mkdir <foldername>
   ax upload <file>
   ax download <file>

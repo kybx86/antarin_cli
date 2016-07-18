@@ -7,9 +7,8 @@ class ChangeDirectory(Base):
 	def send_request(self,token,id_val):
 		foldername = json.loads(json.dumps(self.options))['<foldername>']
 		try:
-			#print foldername
-			#url = "http://127.0.0.1:8000/rest-cd/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-cd/"
+			url = "http://127.0.0.1:8000/rest-cd/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-cd/"
 			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val})
 		except requests.ConnectionError, e:
 			connection = e
@@ -22,7 +21,6 @@ class ChangeDirectory(Base):
 		config.read(filepath)
 		token = config.get('user_details', 'token')
 		id_val = config.get('user_details','id')
-		#print self.options['foldername']
 		if token != "":
 			if self.options['<foldername>'] is None:
 				config.set('user_details','current_directory','/')

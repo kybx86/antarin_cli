@@ -17,10 +17,19 @@ class UserProfile(models.Model):
     total_data_storage = models.CharField(max_length=20,default="5 GB")
     data_storage_used = models.CharField(max_length=20,default="0 GB")
 
+def get_upload_filepath(instance,filename):
+    return 'userfiles/{0}/{1}'.format(instance.user.username, filename)
+
+class UserFolder(models.Model):
+    user = models.ForeignKey(User,related_name='userfolders',null=True)
+    name = models.CharField(max_length=60)
+    parentfolder = models.ForeignKey('UserFolder',related_name='parentfoldername',null=True,on_delete=models.PROTECT)
+
 class UserUploadedFiles(models.Model):
-	user = models.ForeignKey(User,related_name='useruploadedfiles')
-	file = models.FileField(upload_to ='user_files',blank=True,null=True)
-    
+    user = models.ForeignKey(User,related_name='useruploadedfiles')
+    file = models.FileField(upload_to =get_upload_filepath,blank=True,null=True)
+    folder = models.ForeignKey(UserFolder,related_name='foldername',null=True,on_delete=models.PROTECT)
+  
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:

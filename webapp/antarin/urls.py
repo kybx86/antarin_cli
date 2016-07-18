@@ -29,8 +29,12 @@ urlpatterns = [
 	url(r'^rest-auth/', include('rest_auth.urls')),
 	url(r'^rest-summary/',antarin_views.UserSummaryView.as_view()),
 	url(r'^rest-ls/',antarin_views.ListFilesView.as_view()),
-	url(r'^rest-fileupload/(?P<filename>.+)$',antarin_views.UploadFileView.as_view()),
-	url(r'^rest-filedelete/(?P<filename>.+)$',antarin_views.DeleteFileView.as_view()),
+	url(r'^rest-fileupload/$',antarin_views.UploadFileView.as_view()),
+	url(r'^rest-filedelete/$',antarin_views.DeleteFileView.as_view()),
 	url(r'^rest-filedownload/',antarin_views.DownloadFileView.as_view()),
+	url(r'^rest-logout/$',antarin_views.LogoutView.as_view()),
+	url(r'^rest-mkdir/$',antarin_views.CreateDirectoryView.as_view()),
+	url(r'^rest-cd/$',antarin_views.ChangeDirectoryView.as_view()),
+	url(r'^rest-pwd/$',antarin_views.CurrentWorkingDirectoryView.as_view()),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -11,7 +11,7 @@ LAUNCHING THE APPLICATION: (ON LOCALHOST)
 
 SUMMARY:
 
-The project folder 'webapp' consits of one application - antarin. 
+The project folder 'webapp' consists of one application - antarin. 
 
 Description of different folders and files contained in 'antarin' is as follows:
 	1. media - folder that contains user uploaded files

@@ -12,7 +12,7 @@ from django.template import RequestContext
 from django.views.decorators.csrf import csrf_protect
 from datetime import datetime
 import hashlib,random,json,boto,os
-from antarin.models import UserProfile,UserUploadedFiles
+from antarin.models import UserProfile,UserUploadedFiles,UserFolder
 from django.utils import timezone
 from django.conf import settings
 from antarin.serializers import FetchFilesSerializer
@@ -26,9 +26,9 @@ from rest_framework.views import APIView
 from rest_framework.decorators import parser_classes
 from rest_framework.parsers import FileUploadParser
 from hurry.filesize import size
-
-#from django.core.servers.basehttp import FileWrapper
+from boto.s3.connection import S3Connection, Bucket, Key
 from wsgiref.util import FileWrapper
+
 '''
 To manage the data entered in AuthenticationForm. If the form was submitted(http POST) and returned without validation errors, then the user is authenticated and redirected to his homepage.
 '''
@@ -161,6 +161,32 @@ def calculate_used_data_storage(all_files):
 This view defines the customised user homepage that is rendered on a successful user login. The @login_required decorator ensurest that this view is
 only excuted when a user is logged in.
 '''
+# @login_required
+# def userHomepage(request):
+# 	user = User.objects.get(username = request.user.username)
+# 	all_files = user.useruploadedfiles.all()
+# 	used_data_storage = calculate_used_data_storage(all_files)
+# 	user.data_storage_used = used_data_storage
+# 	user.save()
+# 	if request.method == 'POST':
+# 		form = FileUploadForm(request.POST,request.FILES)
+# 		if form.is_valid():
+# 			user_files = UserUploadedFiles()
+# 			user_files.user = user
+# 			user_files.file = request.FILES.get('file')
+# 			user_files.save()
+# 			all_files = user.useruploadedfiles.all()
+# 			used_data_storage = calculate_used_data_storage(all_files)
+# 			user.data_storage_used = used_data_storage
+# 			user.save()
+# 			message = "Files were uploaded successfully!"
+# 			variables = RequestContext(request,{'form':form,'message':message,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
+# 			return render_to_response('home.html',variables)
+# 	else:
+# 		form = FileUploadForm()
+# 	variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
+# 	return render_to_response('home.html',variables)
+
 @login_required
 def userHomepage(request):
 	user = User.objects.get(username = request.user.username)
@@ -174,6 +200,7 @@ def userHomepage(request):
 			user_files = UserUploadedFiles()
 			user_files.user = user
 			user_files.file = request.FILES.get('file')
+			user_files.folder = NONE
 			user_files.save()
 			all_files = user.useruploadedfiles.all()
 			used_data_storage = calculate_used_data_storage(all_files)
@@ -187,29 +214,56 @@ def userHomepage(request):
 	variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
 	return render_to_response('home.html',variables)
 
+# class ListFilesView(APIView):
+# 	def get(self,request):
+# 		try:
+# 			user_val = Token.objects.get(key = self.request.data)
+# 			all_files = user_val.user.useruploadedfiles.all()
+# 			return_val = [file.file.name for file in all_files]
+# 			print(return_val)
+# 			return Response(return_val)
+# 		except Token.DoesNotExist:
+# 			return None
+
 class ListFilesView(APIView):
-	def get(self,request):
+	def post(self,request):
+		token = self.request.data['token']
+		pk = self.request.data['id']
+		list_val = []
 		try:
-			user_val = Token.objects.get(key = self.request.data)
-			all_files = user_val.user.useruploadedfiles.all()
-			return_val = [file.file.name for file in all_files]
-			print(return_val)
-			return Response(return_val)
+			user_object = Token.objects.get(key = token)
+			#print(token,pk)
+			if pk != "":
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			else:
+				folder_object = None
+			
+			for file in user_object.user.useruploadedfiles.all():
+				#print (file.file.name,file.folder)
+				if file.folder == folder_object:
+					list_val.append(os.path.basename(file.file.name))
+			
+			for folder in user_object.user.userfolders.all():
+				if folder.parentfolder == folder_object:
+					list_val.append("/"+folder.name)
+			return Response(list_val)
 		except Token.DoesNotExist:
-			return None
+			return Response(status=404)
 		
 class UploadFileView(APIView):
 	#parser_classes = (FileUploadParser,)
-	def put(self, request, filename, format=None):
+	def put(self, request,format=None):
 		file_object = request.data['file']
 		print (request.data)
 		token = request.data['token'].strip('"')
-		print(token)
-
+		#print(token)
+		pk = request.data['id_val'].strip('"')
 		user_val = Token.objects.get(key = token)
+		folder_object = user_val.user.userfolders.get(pk=int(pk))
 		user_files = UserUploadedFiles()
 		user_files.user = user_val.user
 		user_files.file = file_object
+		user_files.folder = folder_object
 		print(user_val.user.userprofile.data_storage_used)
 
 		all_files = user_val.user.useruploadedfiles.all()
@@ -218,7 +272,7 @@ class UploadFileView(APIView):
 		user_val.user.save()
 		user_val.user.userprofile.save()
 		user_files.save()
-		print("Success!")
+		#print("Success!")
 		print(user_val.user.userprofile.data_storage_used)
 		#catch error when save didn't work fine and return status 400
 		return Response(status=204)
@@ -237,15 +291,23 @@ class DownloadFileView(APIView):
 				
 
 class DeleteFileView(APIView):
-	def post(self,request,filename,format=None):
+	def post(self,request,format=None):
 		token = request.data['token'].strip('"')
 		filename = request.data['file'].strip('"')
 		print(token,filename)
 		user_val = Token.objects.get(key=token)
-		if 'user_files/' not in filename:
-			filename = 'user_files/' + filename
+		if 'userfiles/' not in filename:
+			filename = 'userfiles/' + user_val.user.username + '/'+ filename
+		print(filename)
 		file = user_val.user.useruploadedfiles.filter(file=filename).first()
 		file.delete() 
+
+		conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
+		b = Bucket(conn, settings.AWS_STORAGE_BUCKET_NAME)
+		k = Key(b)
+		k.key = 'media/'+filename
+		print(k.key)
+		b.delete_key(k)
 		return Response(status=204)
 
 class UserSummaryView(APIView):
@@ -253,7 +315,98 @@ class UserSummaryView(APIView):
 		try:
 			user_val = Token.objects.get(key = self.request.data)
 			user_data = (user_val.user.first_name,user_val.user.last_name,user_val.user.username,user_val.user.userprofile.total_data_storage,user_val.user.userprofile.data_storage_used)
-			#print(return_val)
+			print(Response(user_data))
 			return Response(user_data)
 		except Token.DoesNotExist:
 			return None
+
+
+class LogoutView(APIView):
+	def post(self,request):
+		try:
+			instance = Token.objects.get(key=self.request.data['token'])
+			instance.delete()
+			return Response(status=204)
+		except Token.DoesNotExist:
+			return Response(status=404)
+
+class CreateDirectoryView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		foldername = self.request.data['foldername']
+		pk = self.request.data['id']
+		try:
+			user_object = Token.objects.get(key = token)
+			if pk != "":
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			else:
+				folder_object = None
+			new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
+			new_folder_object.save()
+			return Response(status=204)
+		except Token.DoesNotExist:
+			return Response(status=404)
+
+class ChangeDirectoryView(APIView):
+	def post(self,request):
+		flag = 0
+		token = self.request.data['token']
+		foldername = self.request.data['foldername']
+		pk = self.request.data['id']
+		try:
+			user_object = Token.objects.get(key=token)
+			if pk != "":
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			else:
+				folder_object = None
+			if foldername == '..':
+				if folder_object.parentfolder is not None:
+					current_directory = folder_object.parentfolder.name
+					id_val = folder_object.parentfolder.pk
+				else:
+					current_directory = "/"
+					id_val = ""
+				data = {'current_directory':current_directory,'id':id_val}
+				return Response(json.dumps(data))
+			else:
+				all_folders = user_object.user.userfolders.all()
+				for folder in all_folders:
+					if folder.parentfolder == folder_object and folder.name == foldername:
+						current_directory = folder.name
+						id_val = folder.pk
+						data = {'current_directory':current_directory,'id':id_val}
+						flag = 1
+						break
+				if flag==1:
+					return Response(json.dumps(data))
+				else:
+					return Response(status=404)
+		except Token.DoesNotExist:
+			return Response(status=404)
+
+
+class CurrentWorkingDirectoryView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		pk = self.request.data['id']
+		try:
+			user_object = Token.objects.get(key=token)
+			if pk != "":
+				path_val = []
+				string_val = ""
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+				while folder_object.parentfolder is not None:
+					path_val.append(folder_object.name)
+					folder_object = folder_object.parentfolder
+				path_val.append(folder_object.name)
+				for i in range(len(path_val)-1,-1,-1):
+					string_val = string_val + "/" + path_val[i]
+				print(string_val)
+				return Response(json.dumps(string_val))
+			else:
+				folder_object = None
+				return Response(json.dumps('/'))
+		except Token.DoesNotExist:
+			return Response(status=404)
+
+

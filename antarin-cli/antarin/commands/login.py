@@ -31,9 +31,9 @@ class Login(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		token = config.get('user_details', 'token')
-		username = config.get('user_details','username')
-		if token == "":
+		#if config.has_section('user_details'):
+			
+		if config.has_section('user_details') and config.get('user_details', 'token') == "":
 			print '\nEnter your Antarin credentials'
 			try:
 				while 1 :
@@ -63,7 +63,39 @@ class Login(Base):
 					sys.exit(0)
 				except SystemExit:
 					os._exit(0)
-		else:
-			print 'Logged in as: %s' %username
-			print 'Token: %s' %token
+
+		elif config.has_section('user_details') == False:
+			print '\nEnter your Antarin credentials'
+			try:
+				while 1 :
+					userdict['username'] = str(raw_input('Username:'))
+					userdict['password'] = getpass.getpass('Password:(will be hidden as you type)')
+					connection = Login.verify(self,userdict)
+					data = json.load(connection)
+					if connection.code == 200:
+						token = data['key']
+						print 'Logged in as: %s' %userdict['username']
+						print 'Token used for authentication : %s\n' %token
+						write("username",userdict['username'])
+						write("token",token)
+						write("current_directory",'/')
+						write("id","")
+						break
+					else:
+						token = ""
+						write("username",userdict['username'])
+						write("token",token)
+						write("current_directory",'')
+						write("id","")
+						print 'Invalid username and/or password\n'
+			except KeyboardInterrupt:
+				print("\n")
+				try:
+					sys.exit(0)
+				except SystemExit:
+					os._exit(0)
+
+		elif config.get('user_details', 'token') != "":
+			print 'Logged in as: %s' %config.get('user_details', 'username')
+			print 'Token: %s' %config.get('user_details', 'token')
  		

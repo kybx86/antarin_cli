@@ -10,7 +10,7 @@ from os.path import expanduser
 class Upload(Base):	        
 
 	def file_upload(self,token,filename,id_val=None):
-		print id_val
+		#print id_val
 		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"		
 		files = {
 			'token' : (None, json.dumps(token), 'application/json'),

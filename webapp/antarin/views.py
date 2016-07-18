@@ -259,7 +259,10 @@ class UploadFileView(APIView):
 		#print(token)
 		pk = request.data['id_val'].strip('"')
 		user_val = Token.objects.get(key = token)
-		folder_object = user_val.user.userfolders.get(pk=int(pk))
+		if pk!="":
+			folder_object = user_val.user.userfolders.get(pk=int(pk))
+		else:
+			folder_object = None
 		user_files = UserUploadedFiles()
 		user_files.user = user_val.user
 		user_files.file = file_object

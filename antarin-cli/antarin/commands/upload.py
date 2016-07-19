@@ -11,8 +11,9 @@ from .mkdir import MakeDirectory
 class Upload(Base):	        
 
 	def file_upload(self,token,filename,id_val=None):
-		url = "http://127.0.0.1:8000/rest-fileupload/"
-		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"		
+		#print(id_val)
+		#url = "http://127.0.0.1:8000/rest-fileupload/"
+		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"		
 		files = {
 			'token' : (None, json.dumps(token), 'application/json'),
 			'id_val' : (None, json.dumps(id_val), 'application/json'),
@@ -57,17 +58,21 @@ class Upload(Base):
   		key_val = id_val
   		makeDirectory = MakeDirectory(Base)
 		for root, dirs, files in result:
-			print "Creating directory %s" %os.path.basename(root)
+			print "Creating directory : %s " %os.path.basename(root) 
+			#print "pk = %s\n"%key_val
 			connection = MakeDirectory.send_request(makeDirectory,token,key_val,os.path.basename(root))
 			if connection.status_code != 200:
 				print str(connection) + ": while uploading folder %s " %root
 			else:
 				data = json.loads(json.loads(connection.text))
-				key_val = data['id']
+				file_id_val = data['id']
+				if dirs!=[]:
+					key_val = data['id']
 			for filename in files:
-				c = Upload.file_upload(self,token,os.path.join(root, filename),key_val)
+				c = Upload.file_upload(self,token,os.path.join(root, filename),file_id_val)
 				if c.status_code == 204:
 					print "Uploaded file : %s" %os.path.join(root,filename)
+					#print "pk = %s\n"%file_id_val
 				else:
 					print str(connection) + ":while uploading file %s" %os.path.join(root,filename)
 
@@ -76,21 +81,25 @@ class Upload(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		token = config.get('user_details', 'token')
-		id_val = config.get('user_details','id')
-		if token != "":
-			filename = json.loads(json.dumps(self.options))['<file>']
-			if os.path.isdir(filename):
-				if filename[-1] == '/':
-					filename = filename[:len(filename)-1]
-				Upload.folder_upload(self,token,filename,id_val)
-			else:
-				connection = Upload.file_upload(self,token,filename,id_val)
-				if connection.status_code == 204:
-					print "Uploaded file : %s" %filename
-				else:
-					print connection
-		else:
-			print "Looks like you have not verified your login credentials yet.Please try this command after authetication is compelete."
+		error_flag=0
 
+		if config.has_section('user_details'):
+			token = config.get('user_details', 'token')
+			id_val = config.get('user_details','id')
+			if token != "":
+				filename = json.loads(json.dumps(self.options))['<file>']
+				if os.path.isdir(filename):
+					if filename[-1] == '/':
+						filename = filename[:len(filename)-1]
+					Upload.folder_upload(self,token,filename,id_val)
+				else:
+					connection = Upload.file_upload(self,token,filename,id_val)
+					if connection.status_code == 204:
+						print "Uploaded file : %s" %filename
+					else:
+						print connection
+			else:
+				error_flag=1
+		if config.has_section('user_details') == False or error_flag==1:
+			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
 

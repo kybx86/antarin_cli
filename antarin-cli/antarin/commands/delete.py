@@ -32,4 +32,4 @@ class Delete(Base):
 			else:
 				print 'Error while fetching files'
 		else:
-			print "Looks like you have not verified your login credentials yet.Please try this command after authentication is compelete."
+			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"

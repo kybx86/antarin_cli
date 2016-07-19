@@ -7,8 +7,8 @@ class MakeDirectory(Base):
 	def send_request(self,token,id_val,foldername):
 		
 		try:
-			url = "http://127.0.0.1:8000/rest-mkdir/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-mkdir/"
+			#url = "http://127.0.0.1:8000/rest-mkdir/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-mkdir/"
 			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val})
 		except requests.ConnectionError, e:
 			connection = e
@@ -19,14 +19,19 @@ class MakeDirectory(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		token = config.get('user_details', 'token')
-		id_val = config.get('user_details','id')
-		if token != "":
-			foldername = json.loads(json.dumps(self.options))['<foldername>']
-			connection = MakeDirectory.send_request(self,token,id_val,foldername)
-			if connection.status_code != 200:
-				print connection
-		else:
-			print "Looks like you have not verified your login credentials yet.Please try this command after authetication is compelete."
+		error_flag=0
+		if config.has_section('user_details'):
+			token = config.get('user_details', 'token')
+			id_val = config.get('user_details','id')
+			if token != "":
+				foldername = json.loads(json.dumps(self.options))['<foldername>']
+				connection = MakeDirectory.send_request(self,token,id_val,foldername)
+				if connection.status_code != 200:
+					print connection
+			else:
+				error_flag=1
+		
+		if config.has_section('user_details') == False or error_flag==1:
+			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
 
 

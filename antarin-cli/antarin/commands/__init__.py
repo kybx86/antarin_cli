@@ -1,4 +1,3 @@
-from .hello import *
 from .login import *
 from .ls import *
 from .upload import *

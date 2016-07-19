@@ -12,8 +12,8 @@ class Login(Base):
 
 	def verify(self,userdict):
 		method = 'POST'
-		url = "http://127.0.0.1:8000/rest-auth/login/"
-		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-auth/login/"
+		#url = "http://127.0.0.1:8000/rest-auth/login/"
+		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-auth/login/"
 		handler = urllib2.HTTPHandler()
 		opener = urllib2.build_opener(handler)
 		data = urllib.urlencode(userdict)
@@ -34,6 +34,7 @@ class Login(Base):
 		config.read(filepath)
 		#if config.has_section('user_details'):
 			
+
 		if config.has_section('user_details') and config.get('user_details', 'token') == "":
 			print '\nEnter your Antarin credentials'
 			try:

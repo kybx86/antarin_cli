@@ -24,6 +24,8 @@ class RemoveObject(Base):
 
 		if token != "":
 			object_name = json.loads(json.dumps(self.options))['<folder/file>']
+			if object_name[0] == '/':
+				object_name = object_name[1:]
 			r_value = json.loads(json.dumps(self.options))['-r']
 			connection = RemoveObject.send_request(self,token,id_val,object_name,r_value)
 			if connection.status_code != 204:

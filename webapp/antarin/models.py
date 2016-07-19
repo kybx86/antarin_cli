@@ -18,7 +18,20 @@ class UserProfile(models.Model):
     data_storage_used = models.CharField(max_length=20,default="0 GB")
 
 def get_upload_filepath(instance,filename):
-    return 'userfiles/{0}/{1}'.format(instance.user.username, filename)
+    path_val=[]
+    string_val = ""
+    original_value = instance.folder
+    while instance.folder.parentfolder is not None:
+        path_val.append(instance.folder.name)
+        instance.folder = instance.folder.parentfolder
+    path_val.append(instance.folder.name)
+    for i in range(len(path_val)-1,-1,-1):
+        string_val = string_val + "/" + path_val[i]
+    instance.folder = original_value
+    #print(string_val)
+    #print('userfiles/{0}/{1}/{2}'.format(instance.user.username,string_val[1:],filename))
+    #print ("from model : " + instance.folder.name)
+    return 'userfiles/{0}/{1}/{2}'.format(instance.user.username,string_val[1:],filename)
 
 class UserFolder(models.Model):
     user = models.ForeignKey(User,related_name='userfolders',null=True)

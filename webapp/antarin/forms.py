@@ -190,14 +190,14 @@ class PasswordEntryForm(forms.Form):
 			raise forms.ValidationError("Your passwords do not match")
 
 class FileUploadForm(forms.ModelForm):
-	foldername = forms.CharField(widget = forms.TextInput(attrs=dict(max_length=30,placeholder = 'Folder name')))
+	#foldername = forms.CharField(widget = forms.TextInput(attrs=dict(max_length=30,placeholder = 'Folder name')))
 	class Meta:
 		fields = ('file',)
 		model = UserUploadedFiles
 
 	def __init__(self, *args, **kwargs):
 		super(FileUploadForm, self).__init__(*args, **kwargs)
-		for fieldname in ['file','foldername']:
+		for fieldname in ['file']:
 			self.fields[fieldname].label = ''
 			#self.fields[fieldname].widget = forms.HiddenInput()
 

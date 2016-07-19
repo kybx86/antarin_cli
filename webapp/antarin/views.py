@@ -200,7 +200,7 @@ def userHomepage(request):
 			user_files = UserUploadedFiles()
 			user_files.user = user
 			user_files.file = request.FILES.get('file')
-			user_files.folder = NONE
+			user_files.folder = None
 			user_files.save()
 			all_files = user.useruploadedfiles.all()
 			used_data_storage = calculate_used_data_storage(all_files)
@@ -239,13 +239,16 @@ class ListFilesView(APIView):
 				folder_object = None
 			
 			for file in user_object.user.useruploadedfiles.all():
-				#print (file.file.name,file.folder)
 				if file.folder == folder_object:
+					#print (file.file.name,file.folder)
 					list_val.append(os.path.basename(file.file.name))
 			
 			for folder in user_object.user.userfolders.all():
 				if folder.parentfolder == folder_object:
+					#print(folder.name, folder.parentfolder.pk)
+					#print("here")
 					list_val.append("/"+folder.name)
+			print(list_val)
 			return Response(list_val)
 		except Token.DoesNotExist:
 			return Response(status=404)
@@ -256,11 +259,13 @@ class UploadFileView(APIView):
 		file_object = request.data['file']
 		#print (request.data)
 		token = request.data['token'].strip('"')
-		#print(token)
+		#print(str(file_object),token)
 		pk = request.data['id_val'].strip('"')
+		#print("received key = "+ pk)
 		user_val = Token.objects.get(key = token)
 		if pk!="":
 			folder_object = user_val.user.userfolders.get(pk=int(pk))
+			#print(str(folder_object.pk),str(folder_object.name))
 		else:
 			folder_object = None
 		user_files = UserUploadedFiles()
@@ -275,9 +280,11 @@ class UploadFileView(APIView):
 		user_val.user.save()
 		user_val.user.userprofile.save()
 		user_files.save()
+		#print("Uploaded file " + str(file_object) + "inside folder with pk = "+ str(folder_object.pk) + " name = " +str(folder_object.name))
 		#print("Success!")
 		#print(user_val.user.userprofile.data_storage_used)
 		#catch error when save didn't work fine and return status 400
+		print("\n")
 		return Response(status=204)
 
 class DownloadFileView(APIView):
@@ -347,7 +354,7 @@ class CreateDirectoryView(APIView):
 			new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
 			new_folder_object.save()
 			data = {'id':new_folder_object.pk}
-			print ("created directory {0} with pk {1} and parentfodler {2}" .format(new_folder_object.name,new_folder_object.pk,new_folder_object.parentfolder.name))
+			#print ("created directory {0} with pk {1} and parentfodler {2}" .format(new_folder_object.name,new_folder_object.pk,new_folder_object.parentfolder.name))
 			return Response(json.dumps(data))
 		except Token.DoesNotExist:
 			return Response(status=404)
@@ -358,6 +365,7 @@ class ChangeDirectoryView(APIView):
 		token = self.request.data['token']
 		foldername = self.request.data['foldername']
 		pk = self.request.data['id']
+		#print(foldername,pk)
 		try:
 			user_object = Token.objects.get(key=token)
 			if pk != "":
@@ -406,12 +414,80 @@ class CurrentWorkingDirectoryView(APIView):
 				path_val.append(folder_object.name)
 				for i in range(len(path_val)-1,-1,-1):
 					string_val = string_val + "/" + path_val[i]
-				print(string_val)
+				#print(string_val)
 				return Response(json.dumps(string_val))
 			else:
 				folder_object = None
 				return Response(json.dumps('/'))
 		except Token.DoesNotExist:
 			return Response(status=404)
+
+class RemoveObjectView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		pk = self.request.data['id']
+		name = self.request.data['object_name']
+		r_val = self.request.data['r_value']
+		conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
+		b = Bucket(conn, settings.AWS_STORAGE_BUCKET_NAME)
+		k = Key(b)
+		file_flag = 0 # 1 - file;0-not a file
+		ref_fodler=None
+		print (name,r_val)
+		try:
+			user_object = Token.objects.get(key=token)
+			if pk!='':
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+				if r_val == 'False':
+					for file in user_object.user.useruploadedfiles.all():
+						if file.folder == folder_object and os.path.basename(file.file.name) == name:
+							file_flag = 1
+							file.delete()
+
+							path_val=[]
+							string_val=''
+							while file.folder.parentfolder is not None:
+								path_val.append(file.folder.name)
+								file.folder = file.folder.parentfolder
+							path_val.append(file.folder.name)
+							for i in range(len(path_val)-1,-1,-1):
+								string_val = string_val + "/" + path_val[i]
+
+							k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ string_val[1:] + '/'+ os.path.basename(file.file.name)
+							print (k.key)
+							b.delete_key(k)
+							return Response(status=204)
+					if file_flag == 0:
+						all_folders = user_object.user.userfolders.all()
+						for folder in all_folders:
+							if folder.parentfolder == folder_object and folder.name == name:
+								ref_fodler = folder
+								break
+						if ref_fodler is not None:
+							folder_empty_flag = 1 # 1 is empty and 0 is non-empty
+							for folder in all_folders:
+								if folder.parentfolder == ref_fodler:
+									folder_empty_flag = 0
+									break	
+							if folder_empty_flag:
+								ref_fodler.delete()
+								return Response(status=204)
+							else:
+								return Response(status=404)
+						else:
+							return Response(status=204)
+
+				elif r_val=='True':
+					for file in user_object.user.useruploadedfiles.all():
+						if file.folder == folder_object and os.path.basename(file.file.name) == name:
+							file_flag = 1
+							return Response(status=404)
+					if file_flag == 0:
+						print ("here")
+						pass
+						#recursive delete
+		except Token.DoesNotExist:
+			return Response(status=404)
+
 
 

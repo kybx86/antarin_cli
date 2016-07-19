@@ -36,5 +36,6 @@ urlpatterns = [
 	url(r'^rest-mkdir/$',antarin_views.CreateDirectoryView.as_view()),
 	url(r'^rest-cd/$',antarin_views.ChangeDirectoryView.as_view()),
 	url(r'^rest-pwd/$',antarin_views.CurrentWorkingDirectoryView.as_view()),
+	url(r'^rest-rm/$',antarin_views.RemoveObjectView.as_view()),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

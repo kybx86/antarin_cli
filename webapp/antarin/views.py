@@ -29,6 +29,13 @@ from hurry.filesize import size
 from boto.s3.connection import S3Connection, Bucket, Key
 from wsgiref.util import FileWrapper
 
+
+#S3 Bucket details
+conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
+b = Bucket(conn, settings.AWS_STORAGE_BUCKET_NAME)
+k = Key(b)
+
+
 '''
 To manage the data entered in AuthenticationForm. If the form was submitted(http POST) and returned without validation errors, then the user is authenticated and redirected to his homepage.
 '''
@@ -423,23 +430,56 @@ class CurrentWorkingDirectoryView(APIView):
 			return Response(status=404)
 
 class RemoveObjectView(APIView):
+
+	def remove_all_files_dirs(token,all_files,all_folders,pk,foldername):
+		print("Inside remove all function" + "\t" + foldername)
+		user_object = Token.objects.get(key=token)
+		folder_object = user_object.user.userfolders.get(pk=int(pk))
+		for file in all_files:
+			#print(file.folder.name +"\t"+file.file.name+"\t"+foldername)
+			if file.folder == folder_object:
+				file.delete()
+				print("deleted file "+str(file.file.name))
+				path_val=[]
+				string_val=''
+				while file.folder.parentfolder is not None:
+					path_val.append(file.folder.name)
+					file.folder = file.folder.parentfolder
+				path_val.append(file.folder.name)
+				for i in range(len(path_val)-1,-1,-1):
+					string_val = string_val + "/" + path_val[i]
+
+				k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ string_val[1:] + '/'+ os.path.basename(file.file.name)
+				#print (k.key)
+				b.delete_key(k)
+		
+		return_list=[]
+		for item in all_folders:
+			if item.parentfolder == folder_object:
+				return_list.append(item.pk)
+				return_list.append(item.name)
+
+		return return_list
+
 	def post(self,request):
 		token = self.request.data['token']
 		pk = self.request.data['id']
 		name = self.request.data['object_name']
 		r_val = self.request.data['r_value']
-		conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
-		b = Bucket(conn, settings.AWS_STORAGE_BUCKET_NAME)
-		k = Key(b)
+		
 		file_flag = 0 # 1 - file;0-not a file
 		ref_fodler=None
+		return_list=[]
+		final_list =[]
 		print (name,r_val)
 		try:
 			user_object = Token.objects.get(key=token)
+			all_files = user_object.user.useruploadedfiles.all()
+			all_folders = user_object.user.userfolders.all()
 			if pk!='':
 				folder_object = user_object.user.userfolders.get(pk=int(pk))
 				if r_val == 'False':
-					for file in user_object.user.useruploadedfiles.all():
+					for file in all_files:
 						if file.folder == folder_object and os.path.basename(file.file.name) == name:
 							file_flag = 1
 							file.delete()
@@ -457,35 +497,73 @@ class RemoveObjectView(APIView):
 							print (k.key)
 							b.delete_key(k)
 							return Response(status=204)
+
 					if file_flag == 0:
-						all_folders = user_object.user.userfolders.all()
 						for folder in all_folders:
 							if folder.parentfolder == folder_object and folder.name == name:
-								ref_fodler = folder
+								ref_folder = folder
 								break
-						if ref_fodler is not None:
+						if ref_folder is not None:
 							folder_empty_flag = 1 # 1 is empty and 0 is non-empty
 							for folder in all_folders:
-								if folder.parentfolder == ref_fodler:
+								if folder.parentfolder == ref_folder:
 									folder_empty_flag = 0
 									break	
 							if folder_empty_flag:
-								ref_fodler.delete()
+								ref_folder.delete()
 								return Response(status=204)
 							else:
 								return Response(status=404)
 						else:
-							return Response(status=204)
+							return Response(status=404)
 
 				elif r_val=='True':
-					for file in user_object.user.useruploadedfiles.all():
+					for file in all_files:
 						if file.folder == folder_object and os.path.basename(file.file.name) == name:
 							file_flag = 1
 							return Response(status=404)
 					if file_flag == 0:
-						print ("here")
-						pass
 						#recursive delete
+						for folder in all_folders:
+							if folder.parentfolder == folder_object and folder.name == name:
+								ref_folder = folder
+								break
+						if ref_folder is not None:
+							#call delete function
+							ref_folder_pk = ref_folder.pk
+							ref_folder_name = ref_folder.name
+							return_list = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,int(ref_folder_pk),ref_folder_name)
+							if return_list:
+								#print(return_list)
+								final_list.extend(return_list)
+								n = len(return_list)
+								i = 0
+								while i < n:
+								#for i in range(0,len(return_list),2):
+									val = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,int(return_list[i]),return_list[i+1])
+									if val:
+										return_list.extend(val)
+										final_list.extend(val)
+										print(return_list,len(return_list))
+									i = i + 2
+									n = len(return_list)
+							print("\n")
+							print ("final_list"+str(final_list))
+							# if final_list:
+							# 	for i in range(0,len(final_list),2):
+							# 		folder_object = user_object.user.userfolders.get(pk=int(final_list[i]))
+							# 		print("deleting folder  " + folder_object.name+ "   "+str(folder_object.pk))
+							# 		folder_object.delete()
+							folder_object = user_object.user.userfolders.get(pk=int(ref_folder_pk))
+							print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
+							folder_object.delete()
+							return Response(status=204)
+							
+						else:
+							return Response(status=404)
+			else:
+				#handle pk==None case
+				pass
 		except Token.DoesNotExist:
 			return Response(status=404)
 

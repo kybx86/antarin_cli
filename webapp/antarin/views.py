@@ -434,23 +434,35 @@ class RemoveObjectView(APIView):
 	def remove_all_files_dirs(token,all_files,all_folders,pk,foldername):
 		print("Inside remove all function" + "\t" + foldername)
 		user_object = Token.objects.get(key=token)
-		folder_object = user_object.user.userfolders.get(pk=int(pk))
+		if pk!='':
+			folder_object = user_object.user.userfolders.get(pk=int(pk))
+		else:
+			folder_object = None
+		#folder_object = user_object.user.userfolders.get(pk=int(pk))
+		print ("folder object = "+str(folder_object))
 		for file in all_files:
 			#print(file.folder.name +"\t"+file.file.name+"\t"+foldername)
+
 			if file.folder == folder_object:
+				path_val=[]
+				string_val = ''
+				original_value = file.folder
+				if file.folder is not None:
+					while file.folder.parentfolder is not None:
+						path_val.append(file.folder.name)
+						file.folder = file.folder.parentfolder
+					path_val.append(file.folder.name)
+					for i in range(len(path_val)-1,-1,-1):
+						string_val = string_val + "/" + path_val[i]
+					file.folder = original_value
+					argument_val = string_val[1:]+'/'
+				else:
+					argument_val = ''
+
 				file.delete()
 				print("deleted file "+str(file.file.name))
-				path_val=[]
-				string_val=''
-				while file.folder.parentfolder is not None:
-					path_val.append(file.folder.name)
-					file.folder = file.folder.parentfolder
-				path_val.append(file.folder.name)
-				for i in range(len(path_val)-1,-1,-1):
-					string_val = string_val + "/" + path_val[i]
-
-				k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ string_val[1:] + '/'+ os.path.basename(file.file.name)
-				#print (k.key)
+				k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
+				print (k.key)
 				b.delete_key(k)
 		
 		return_list=[]
@@ -478,92 +490,105 @@ class RemoveObjectView(APIView):
 			all_folders = user_object.user.userfolders.all()
 			if pk!='':
 				folder_object = user_object.user.userfolders.get(pk=int(pk))
-				if r_val == 'False':
-					for file in all_files:
-						if file.folder == folder_object and os.path.basename(file.file.name) == name:
-							file_flag = 1
-							file.delete()
+			else:
+				folder_object = None
+			if r_val == 'False':
+				for file in all_files:
+					if file.folder == folder_object and os.path.basename(file.file.name) == name:
+						file_flag = 1
 
-							path_val=[]
-							string_val=''
+						path_val=[]
+						string_val = ''
+						original_value = file.folder
+						if file.folder is not None:
 							while file.folder.parentfolder is not None:
 								path_val.append(file.folder.name)
 								file.folder = file.folder.parentfolder
 							path_val.append(file.folder.name)
 							for i in range(len(path_val)-1,-1,-1):
 								string_val = string_val + "/" + path_val[i]
+							file.folder = original_value
+							argument_val = string_val[1:]+'/'
+						else:
+							argument_val = ''
 
-							k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ string_val[1:] + '/'+ os.path.basename(file.file.name)
-							print (k.key)
-							b.delete_key(k)
-							return Response(status=204)
+						file.delete()
+						k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
+						print (k.key)
+						b.delete_key(k)
+						return Response(status=204)
 
-					if file_flag == 0:
+				if file_flag == 0:
+					for folder in all_folders:
+						if folder.parentfolder == folder_object and folder.name == name:
+							ref_folder = folder
+							break
+					if ref_folder is not None:
+						folder_empty_flag = 1 # 1 is empty and 0 is non-empty
 						for folder in all_folders:
-							if folder.parentfolder == folder_object and folder.name == name:
-								ref_folder = folder
-								break
-						if ref_folder is not None:
-							folder_empty_flag = 1 # 1 is empty and 0 is non-empty
-							for folder in all_folders:
-								if folder.parentfolder == ref_folder:
+							if folder.parentfolder == ref_folder:
+								folder_empty_flag = 0
+								break	
+						if folder_empty_flag:
+							for file in all_files:
+								if file.folder == ref_folder:
 									folder_empty_flag = 0
-									break	
-							if folder_empty_flag:
-								ref_folder.delete()
-								return Response(status=204)
-							else:
-								return Response(status=404)
-						else:
-							return Response(status=404)
-
-				elif r_val=='True':
-					for file in all_files:
-						if file.folder == folder_object and os.path.basename(file.file.name) == name:
-							file_flag = 1
-							return Response(status=404)
-					if file_flag == 0:
-						#recursive delete
-						for folder in all_folders:
-							if folder.parentfolder == folder_object and folder.name == name:
-								ref_folder = folder
-								break
-						if ref_folder is not None:
-							#call delete function
-							ref_folder_pk = ref_folder.pk
-							ref_folder_name = ref_folder.name
-							return_list = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,int(ref_folder_pk),ref_folder_name)
-							if return_list:
-								#print(return_list)
-								final_list.extend(return_list)
-								n = len(return_list)
-								i = 0
-								while i < n:
-								#for i in range(0,len(return_list),2):
-									val = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,int(return_list[i]),return_list[i+1])
-									if val:
-										return_list.extend(val)
-										final_list.extend(val)
-										print(return_list,len(return_list))
-									i = i + 2
-									n = len(return_list)
-							print("\n")
-							print ("final_list"+str(final_list))
-							# if final_list:
-							# 	for i in range(0,len(final_list),2):
-							# 		folder_object = user_object.user.userfolders.get(pk=int(final_list[i]))
-							# 		print("deleting folder  " + folder_object.name+ "   "+str(folder_object.pk))
-							# 		folder_object.delete()
-							folder_object = user_object.user.userfolders.get(pk=int(ref_folder_pk))
-							print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
-							folder_object.delete()
+									break
+						if folder_empty_flag:
+							ref_folder.delete()
 							return Response(status=204)
-							
 						else:
 							return Response(status=404)
-			else:
+					else:
+						return Response(status=404)
+
+			elif r_val=='True':
+				for file in all_files:
+					if file.folder == folder_object and os.path.basename(file.file.name) == name:
+						file_flag = 1
+						return Response(status=404)
+				if file_flag == 0:
+					#recursive delete
+					for folder in all_folders:
+						if folder.parentfolder == folder_object and folder.name == name:
+							ref_folder = folder
+							break
+					if ref_folder is not None:
+						#call delete function
+						ref_folder_pk = ref_folder.pk
+						ref_folder_name = ref_folder.name
+						return_list = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,ref_folder_pk,ref_folder_name)
+						if return_list:
+							#print(return_list)
+							final_list.extend(return_list)
+							n = len(return_list)
+							i = 0
+							while i < n:
+							#for i in range(0,len(return_list),2):
+								val = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,return_list[i],return_list[i+1])
+								if val:
+									return_list.extend(val)
+									final_list.extend(val)
+									print(return_list,len(return_list))
+								i = i + 2
+								n = len(return_list)
+						print("\n")
+						print ("final_list"+str(final_list))
+						# if final_list:
+						# 	for i in range(0,len(final_list),2):
+						# 		folder_object = user_object.user.userfolders.get(pk=int(final_list[i]))
+						# 		print("deleting folder  " + folder_object.name+ "   "+str(folder_object.pk))
+						# 		folder_object.delete()
+						folder_object = user_object.user.userfolders.get(pk=int(ref_folder_pk))
+						print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
+						folder_object.delete()
+						return Response(status=204)
+						
+					else:
+						return Response(status=404)
+			#else:
 				#handle pk==None case
-				pass
+			#	pass
 		except Token.DoesNotExist:
 			return Response(status=404)
 

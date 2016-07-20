@@ -21,27 +21,28 @@ def get_upload_filepath(instance,filename):
     path_val=[]
     string_val = ""
     original_value = instance.folder
-    while instance.folder.parentfolder is not None:
+    if instance.folder is not None:
+        while instance.folder.parentfolder is not None:
+            path_val.append(instance.folder.name)
+            instance.folder = instance.folder.parentfolder
         path_val.append(instance.folder.name)
-        instance.folder = instance.folder.parentfolder
-    path_val.append(instance.folder.name)
-    for i in range(len(path_val)-1,-1,-1):
-        string_val = string_val + "/" + path_val[i]
-    instance.folder = original_value
-    #print(string_val)
-    #print('userfiles/{0}/{1}/{2}'.format(instance.user.username,string_val[1:],filename))
-    #print ("from model : " + instance.folder.name)
-    return 'userfiles/{0}/{1}/{2}'.format(instance.user.username,string_val[1:],filename)
+        for i in range(len(path_val)-1,-1,-1):
+            string_val = string_val + "/" + path_val[i]
+        instance.folder = original_value
+        argument_val = string_val[1:]
+    else:
+        argument_val = ''
+    return 'userfiles/{0}/{1}/{2}'.format(instance.user.username,argument_val,filename)
 
 class UserFolder(models.Model):
     user = models.ForeignKey(User,related_name='userfolders',null=True)
     name = models.CharField(max_length=60)
-    parentfolder = models.ForeignKey('UserFolder',related_name='parentfoldername',null=True,on_delete=models.PROTECT)
+    parentfolder = models.ForeignKey('UserFolder',related_name='parentfoldername',null=True,on_delete=models.CASCADE)
 
 class UserUploadedFiles(models.Model):
     user = models.ForeignKey(User,related_name='useruploadedfiles')
     file = models.FileField(upload_to =get_upload_filepath,blank=True,null=True)
-    folder = models.ForeignKey(UserFolder,related_name='foldername',null=True,on_delete=models.PROTECT)
+    folder = models.ForeignKey(UserFolder,related_name='foldername',null=True,on_delete=models.CASCADE)
   
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):

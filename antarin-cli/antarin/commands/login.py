@@ -1,3 +1,5 @@
+## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
+
 
 from .base import Base
 import getpass
@@ -40,15 +42,15 @@ class Login(Base):
 			try:
 				while 1 :
 					
-					userdict['username'] = str(raw_input('Antarin ID:')) #changed
-					#userdict['username'] = str(raw_input('Username:'))
-					userdict['password'] = getpass.getpass('Password:(will be hidden as you type)')
+					userdict['username'] = str(raw_input('Antarin ID: ')) 
+					userdict['password'] = getpass.getpass('Password:(will be hidden as you type) ')
 					connection = Login.verify(self,userdict)
 					data = json.load(connection)
 					if connection.code == 200:
 						token = data['key']
+						print '\nantarinX login succesful!\n'
 						print 'Logged in as: %s' %userdict['username']
-						print 'Token used for authentication : %s\n' %token
+						print 'Session Token: %s\n' %token
 						write("username",userdict['username'])
 						write("token",token)
 						write("current_directory",'/')
@@ -72,15 +74,15 @@ class Login(Base):
 			print '\nEnter your Antarin credentials'
 			try:
 				while 1 :
-					userdict['username'] = str(raw_input('Antarin ID:')) #changed 
-					#userdict['username'] = str(raw_input('Username:'))
+					userdict['username'] = str(raw_input('Antarin ID:')) 
 					userdict['password'] = getpass.getpass('Password:(will be hidden as you type)')
 					connection = Login.verify(self,userdict)
 					data = json.load(connection)
 					if connection.code == 200:
 						token = data['key']
+						print '\nantarinX login succesful!\n'
 						print 'Logged in as: %s' %userdict['username']
-						print 'Token used for authentication: %s\n' %token
+						print 'Session Token: %s\n' %token
 						write("username",userdict['username'])
 						write("token",token)
 						write("current_directory",'/')
@@ -102,5 +104,5 @@ class Login(Base):
 
 		elif config.get('user_details', 'token') != "":
 			print 'Logged in as: %s' %config.get('user_details', 'username')
-			print 'Token: %s' %config.get('user_details', 'token')
+			print 'Session Token: %s' %config.get('user_details', 'token')
  		

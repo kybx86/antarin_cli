@@ -1,3 +1,5 @@
+## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
+
 #!/bin/sh
  
 #echo "Hello, world!"

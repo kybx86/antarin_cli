@@ -1,3 +1,7 @@
+## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
+
+
+
 """The base command."""
 
 

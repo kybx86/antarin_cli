@@ -1,9 +1,10 @@
+## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
+
 from .login import *
 from .ls import *
 from .upload import *
 from .download import *
 from .logout import *
-from .delete import *
 from .summary import *
 from .pwd import *
 from .mkdir import *

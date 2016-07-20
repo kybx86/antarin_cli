@@ -1,22 +1,37 @@
+## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
+
 """
 antarinX
 
 Usage:
   ax login
-  ax logout
   ax summary
+  ax -h | --help
   ax ls
-  ax cd [<foldername>]
   ax pwd
+  ax cd [<foldername>]
   ax rm [-r] <folder/file>
   ax mkdir <foldername>
   ax upload <file>
-  ax download <file>
-  ax delete <file>
-  ax -h | --help
   ax --version
+  ax logout
   
 """
+
+# Usage:
+#   ax login
+#   ax logout
+#   ax summary
+#   ax ls
+#   ax cd [<foldername>]
+#   ax pwd
+#   ax rm [-r] <folder/file>
+#   ax mkdir <foldername>
+#   ax upload <file>
+#   ax download <file>
+#   ax delete <file>
+#   ax -h | --help
+#   ax --version
 
 from docopt import docopt
 from . import __version__ as VERSION

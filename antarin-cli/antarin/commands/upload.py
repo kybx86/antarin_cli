@@ -1,3 +1,5 @@
+## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
+
 
 from .base import Base
 from ConfigParser import SafeConfigParser

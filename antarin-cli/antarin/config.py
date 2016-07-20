@@ -1,3 +1,6 @@
+## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
+
+
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 

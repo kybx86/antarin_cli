@@ -53,7 +53,7 @@ class Login(Base):
 						print 'Session Token: %s\n' %token
 						write("username",userdict['username'])
 						write("token",token)
-						write("current_directory",'/')
+						write("current_directory",'/antarin')
 						write("id","")
 						break
 					else:
@@ -85,7 +85,7 @@ class Login(Base):
 						print 'Session Token: %s\n' %token
 						write("username",userdict['username'])
 						write("token",token)
-						write("current_directory",'/')
+						write("current_directory",'/antarin')
 						write("id","")
 						break
 					else:

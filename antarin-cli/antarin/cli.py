@@ -15,7 +15,9 @@ Usage:
   ax upload <file>
   ax --version
   ax logout
-  
+  ax newproject <projectname>
+  ax addfile <filename> <projectname>
+
 """
 
 # Usage:
@@ -36,7 +38,6 @@ Usage:
 from docopt import docopt
 from . import __version__ as VERSION
 from inspect import getmembers, isclass
-import sys
 
 def main():
 
@@ -47,25 +48,9 @@ def main():
     if hasattr(commands, key) and value:
       module = getattr(commands, key)
       commands = getmembers(module, isclass)
-      #print commands
       command = [command[1] for command in commands if command[0] != 'Base' and command[0]!= 'SafeConfigParser'][0] 
       if module.__name__ == 'antarin.commands.upload':
         command = [command[1] for command in commands if command[0] != 'Base' and command[0] != 'MakeDirectory' and command[0]!= 'SafeConfigParser'][0]
       command = command(options)
-      #print command
       command.run()
-
-##Python 3.5
-  # import subprocess
-  # options = docopt(__doc__,version=VERSION)
-
-  # for key, value in options.items():
-  #   if hasattr(subprocess, key) and value:
-  #     module = getattr(subprocess, key)
-  #     #print module
-  #     commands = getmembers(module, isclass)
-  #     print commands
-  #     command = [command[1] for command in commands if command[0] != 'Base' and command[0]!= 'SafeConfigParser'][0] 
-  #     command = command(options)
-  #     command.run()
 

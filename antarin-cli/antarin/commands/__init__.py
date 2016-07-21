@@ -10,3 +10,5 @@ from .pwd import *
 from .mkdir import *
 from .cd import *
 from .rm import *
+from .newproject import *
+from .addfile import *

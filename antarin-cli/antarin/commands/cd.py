@@ -31,7 +31,7 @@ class ChangeDirectory(Base):
 			id_val = config.get('user_details','id')
 			if token != "":
 				if self.options['<foldername>'] is None:
-					config.set('user_details','current_directory','/')
+					config.set('user_details','current_directory','/antarin')
 					config.set('user_details','id','')
 					with open(filepath, 'w') as f:
 						config.write(f)

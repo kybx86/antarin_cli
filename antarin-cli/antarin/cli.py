@@ -15,8 +15,14 @@ Usage:
   ax upload <file>
   ax --version
   ax logout
+  ax env
   ax newproject <projectname>
-  ax addfile <filename> <projectname>
+  ax listallprojects
+  ax loadproject <projectname>
+  ax importdata --file <filename>
+  ax importdata --folder <foldername>
+  ax addcontributor <username>
+  ax exitproject
 
 """
 

@@ -8,10 +8,10 @@ from os.path import expanduser
 
 class Ls(Base):
 
-	def send_request(self,token,id_val):
+	def send_request(self,token,id_val,env_flag,env_name,pid_val):
 		#url = "http://127.0.0.1:8000/rest-ls/"
 		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-ls/"
-		payload = {'token':token,'id':id_val}
+		payload = {'token':token,'id':id_val,'env_flag':env_flag,'env_name':env_name,'pid':pid_val}
 		try:
 			connection = requests.post(url, data = payload)
 		except requests.ConnectionError, e:
@@ -26,9 +26,12 @@ class Ls(Base):
 		error_flag=0
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
-			id_val = config.get('user_details','id')
 			if token != "":
-				connection = Ls.send_request(self,token,id_val)
+				id_val = config.get('user_details','id')
+				env_flag = config.get('user_details','PROJECT_ENV')
+				env_name = config.get('user_details','PROJECT_ENV_NAME')
+				pid_val = config.get('user_details','PID')
+				connection = Ls.send_request(self,token,id_val,env_flag,env_name,pid_val)
 				if connection.status_code == 200:
 					data =  connection.text
 					for i in range(0,len(json.loads(data))):

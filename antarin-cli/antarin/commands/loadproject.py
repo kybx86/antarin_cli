@@ -38,7 +38,7 @@ class LoadProject(Base):
 						nameval = projectname.split(':')[1]
 						####TODO:customize shell prompt with nameval
 					else:
-						print connection
+						print json.loads(connection.text)
 				else: #inside project environment
 					print "Error: You need to exit from the current environment to load a new project--try 'ax exitproject'"
 			else:

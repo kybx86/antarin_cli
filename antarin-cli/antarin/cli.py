@@ -15,6 +15,7 @@ Usage:
   ax upload <file>
   ax --version
   ax logout
+  ax env
   ax newproject <projectname>
   ax listallprojects
   ax loadproject <projectname>

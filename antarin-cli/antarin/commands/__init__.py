@@ -17,3 +17,4 @@ from .loadproject import *
 from .importdata import *
 from .exitproject import *
 from .addcontributor import *
+from .env import *

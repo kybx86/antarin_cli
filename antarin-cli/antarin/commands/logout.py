@@ -37,6 +37,7 @@ class Logout(Base):
 					write("PROJECT_ENV",'')
 					write("PROJECT_ENV_NAME",'')
 					write("PID",'')
+					write("RET_ID",'')
 					print "Deleted token and user account details."
 				else:
 					print connection

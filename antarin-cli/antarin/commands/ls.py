@@ -26,11 +26,11 @@ class Ls(Base):
 		error_flag=0
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
-			id_val = config.get('user_details','id')
-			env_flag = config.get('user_details','PROJECT_ENV')
-			env_name = config.get('user_details','PROJECT_ENV_NAME')
-			pid_val = config.get('user_details','PID')
 			if token != "":
+				id_val = config.get('user_details','id')
+				env_flag = config.get('user_details','PROJECT_ENV')
+				env_name = config.get('user_details','PROJECT_ENV_NAME')
+				pid_val = config.get('user_details','PID')
 				connection = Ls.send_request(self,token,id_val,env_flag,env_name,pid_val)
 				if connection.status_code == 200:
 					data =  connection.text

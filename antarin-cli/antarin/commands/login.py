@@ -58,6 +58,7 @@ class Login(Base):
 						write("PROJECT_ENV",'0')
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
+						write("RET_ID",'')
 						break
 					else:
 						token = ""
@@ -68,6 +69,7 @@ class Login(Base):
 						write("PROJECT_ENV",'')
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
+						write("RET_ID",'')
 						print 'Invalid username and/or password\n'
 			except KeyboardInterrupt:
 				print("\n")
@@ -96,6 +98,7 @@ class Login(Base):
 						write("PROJECT_ENV",'0')
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
+						write("RET_ID",'')
 						break
 					else:
 						token = ""
@@ -106,6 +109,7 @@ class Login(Base):
 						write("PROJECT_ENV",'')
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
+						write("RET_ID",'')
 						print 'Invalid username and/or password\n'
 			except KeyboardInterrupt:
 				print("\n")

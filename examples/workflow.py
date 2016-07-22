@@ -39,7 +39,7 @@ def run():
 	data = produce_data(50,40)
 
 	# -- saving data to txt file
-	path = write_to_file('experiment1_results.txt', data)
+	path = write_to_file('experiment2_results.txt', data)
 
 	# -- antarin upload 
 	upload_to_antarin(path)

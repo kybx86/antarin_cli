@@ -10,8 +10,8 @@ class NewProject(Base):
 
 	def send_request(self,token,projectname,filename,id_val):
 		try:
-			#url = "http://127.0.0.1:8000/rest-addfiletoproject/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-newproject/"
+			url = "http://127.0.0.1:8000/rest-addfiletoproject/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-newproject/"
 			connection = requests.post(url, data = {'token':token,'projectname':projectname,'filename':filename,'id':id_val})
 		except requests.ConnectionError, e:
 			connection = e

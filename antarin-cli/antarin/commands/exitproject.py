@@ -4,19 +4,10 @@
 from . import Base
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
+import requests,json
 from antarin.config import write
-import requests
 
-class Logout(Base):
-
-	def send_request(self,token):
-		try:
-			#url = "http://127.0.0.1:8000/rest-logout/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-logout/"
-			connection = requests.post(url, data = {'token':token})
-		except requests.ConnectionError, e:
-			connection = e
-		return connection
+class ExitProject(Base):
 
 	def run(self):
 		config = SafeConfigParser()
@@ -27,19 +18,14 @@ class Logout(Base):
 
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
+			env_flag = config.get('user_details','PROJECT_ENV')
 			if token != "":
-				connection = Logout.send_request(self,token)
-				if connection.status_code == 204:
-					write("username",'')
-					write("token",'')
-					write("current_directory",'')
-					write("id","")
-					write("PROJECT_ENV",'')
+				if int(env_flag):
+					write("PROJECT_ENV",'0')
 					write("PROJECT_ENV_NAME",'')
-					write("PID",'')
-					print "Deleted token and user account details."
-				else:
-					print connection
+					####TODO:customize shell prompt 
+				else: #inside file system environment
+					print "Error: You are currently not inside a project environment--try 'ax loadproject <projectname>' to load a project environment"
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:

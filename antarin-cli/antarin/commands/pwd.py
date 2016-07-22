@@ -8,11 +8,11 @@ import requests,json
 
 class CurrentWorkingDirectory(Base):
 
-	def send_request(self,token,id_val):
+	def send_request(self,token,id_val,env_flag,env_name,pid_val):
 		try:
 			#url = "http://127.0.0.1:8000/rest-pwd/"
 			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-pwd/"
-			connection = requests.post(url, data = {'token':token,'id':id_val})
+			connection = requests.post(url, data = {'token':token,'id':id_val,'env_flag':env_flag,'env_name':env_name,'pid':pid_val})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -26,8 +26,11 @@ class CurrentWorkingDirectory(Base):
 		if config.has_section('user_details'):
 			token = config.get('user_details','token')
 			id_val = config.get('user_details', 'id')
+			env_flag = config.get('user_details','PROJECT_ENV')
+			env_name = config.get('user_details','PROJECT_ENV_NAME')
+			pid_val = config.get('user_details','PID')
 			if token != "":
-				connection = CurrentWorkingDirectory.send_request(self,token,id_val)
+				connection = CurrentWorkingDirectory.send_request(self,token,id_val,env_flag,env_name,pid_val)
 				if connection.status_code == 200:
 					print json.loads(json.loads(connection.text))
 				else:

@@ -5,13 +5,14 @@ from . import Base
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import requests,json
+from antarin.config import write
 
-class NewProject(Base):
+class LoadProject(Base):
 
 	def send_request(self,token,projectname):
 		try:
-			#url = "http://127.0.0.1:8000/rest-newproject/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-newproject/"
+			#url = "http://127.0.0.1:8000/rest-loadproject/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-loadproject/"
 			connection = requests.post(url, data = {'token':token,'projectname':projectname})
 		except requests.ConnectionError, e:
 			connection = e
@@ -30,13 +31,16 @@ class NewProject(Base):
 			if token != "":
 				if int(env_flag)==0:
 					projectname = json.loads(json.dumps(self.options))['<projectname>']
-					####TODO:Projectname validation (Make sure it does not contain a ':')
-					connection = NewProject.send_request(self,token,projectname)
-					if connection.status_code == 200:
-						data = connection.text
-						print "New project created as - "+ json.loads(data)
-				else:
-					print "Error: You need to exit from the current environment to create a new project--try 'ax exitproject'"
+					connection = LoadProject.send_request(self,token,projectname)
+					if connection.status_code == 204:
+						write("PROJECT_ENV",'1')
+						write("PROJECT_ENV_NAME",projectname)
+						nameval = projectname.split(':')[1]
+						####TODO:customize shell prompt with nameval
+					else:
+						print connection
+				else: #inside project environment
+					print "Error: You need to exit from the current environment to load a new project--try 'ax exitproject'"
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:

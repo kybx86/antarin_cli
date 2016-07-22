@@ -7,14 +7,14 @@ from os.path import expanduser
 import requests,json
 
 class ChangeDirectory(Base):
-	def send_request(self,token,id_val):
+	def send_request(self,token,id_val,env_flag):
 		foldername = json.loads(json.dumps(self.options))['<foldername>']
 		if foldername[0] == '/':
 			foldername = foldername[1:]
 		try:
 			#url = "http://127.0.0.1:8000/rest-cd/"
 			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-cd/"
-			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val})
+			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val,'env_flag':env_flag})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -29,6 +29,7 @@ class ChangeDirectory(Base):
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
 			id_val = config.get('user_details','id')
+			env_flag = config.get('user_details','PROJECT_ENV')
 			if token != "":
 				if self.options['<foldername>'] is None:
 					config.set('user_details','current_directory','/antarin')
@@ -36,7 +37,7 @@ class ChangeDirectory(Base):
 					with open(filepath, 'w') as f:
 						config.write(f)
 				else:
-					connection = ChangeDirectory.send_request(self,token,id_val)
+					connection = ChangeDirectory.send_request(self,token,id_val,env_flag)
 					if connection.status_code == 200:
 						data = json.loads(json.loads(connection.text))
 						current_directory = data['current_directory']

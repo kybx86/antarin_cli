@@ -55,6 +55,9 @@ class Login(Base):
 						write("token",token)
 						write("current_directory",'/antarin')
 						write("id","")
+						write("PROJECT_ENV",'0')
+						write("PROJECT_ENV_NAME",'')
+						write("PID",'')
 						break
 					else:
 						token = ""
@@ -62,6 +65,9 @@ class Login(Base):
 						write("token",token)
 						write("current_directory",'')
 						write("id","")
+						write("PROJECT_ENV",'')
+						write("PROJECT_ENV_NAME",'')
+						write("PID",'')
 						print 'Invalid username and/or password\n'
 			except KeyboardInterrupt:
 				print("\n")
@@ -87,6 +93,9 @@ class Login(Base):
 						write("token",token)
 						write("current_directory",'/antarin')
 						write("id","")
+						write("PROJECT_ENV",'0')
+						write("PROJECT_ENV_NAME",'')
+						write("PID",'')
 						break
 					else:
 						token = ""
@@ -94,6 +103,9 @@ class Login(Base):
 						write("token",token)
 						write("current_directory",'')
 						write("id","")
+						write("PROJECT_ENV",'')
+						write("PROJECT_ENV_NAME",'')
+						write("PID",'')
 						print 'Invalid username and/or password\n'
 			except KeyboardInterrupt:
 				print("\n")

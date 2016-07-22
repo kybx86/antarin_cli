@@ -250,16 +250,28 @@ class ListFilesView(APIView):
 				else:
 					project_folder_object = None
 
-				all_projectfiles = project_object.projectfiles.all()
-				all_projectfolders = project_object.projectfolders.all()
+				if project_folder_object is None:
+					all_projectfiles = project_object.projectfiles.all()
+					all_projectfolders = project_object.projectfolders.all()
 
-				for file in all_projectfiles:
-					list_val.append(os.path.basename(file.file_ref.file.name))
+					for file in all_projectfiles:
+						list_val.append(os.path.basename(file.file_ref.file.name))
 
-				for folder in all_projectfolders:
-					list_val.append("/"+folder.folder_ref.name)
-				return Response(list_val)
-
+					for folder in all_projectfolders:
+						list_val.append("/"+folder.folder_ref.name)
+					return Response(list_val)
+				else:
+					folder_object = project_folder_object.folder_ref
+					usr_obj = folder_object.user
+					for file in usr_obj.useruploadedfiles.all():
+						if file.folder == folder_object:
+							list_val.append(os.path.basename(file.file.name))
+				
+					for folder in usr_obj.userfolders.all():
+						if folder.parentfolder == folder_object:
+							list_val.append("/"+folder.name)
+				
+					return Response(list_val)
 			else:#inside file system environment
 				list_val = []
 				if pk != "":
@@ -319,14 +331,47 @@ class UploadFileView(APIView):
 
 
 class UserSummaryView(APIView):
-	def get(self,request):
+	def post(self,request):
+		token = self.request.data['token']
+		env_flag = int(self.request.data['env_flag'])
+		projectname = self.request.data['env_name']
 		try:
-			user_val = Token.objects.get(key = self.request.data)
-			user_data = (user_val.user.first_name,user_val.user.last_name,user_val.user.username,user_val.user.userprofile.total_data_storage,user_val.user.userprofile.data_storage_used)
-			print(Response(user_data))
-			return Response(user_data)
+			user_object = Token.objects.get(key=token)
+			if env_flag:#project env
+				try:
+					project_object = Projects.objects.get(name=projectname)
+					all_userproject_objects = project_object.projectdetails.all()
+					all_projectfiles = project_object.projectfiles.all()
+					all_projectfolders = project_object.projectfolders.all()
+					
+					contributor_list=[]
+					file_list=[]
+					folder_list=[]
+					admin = ''
+
+					for item in all_userproject_objects:
+						contributor_list.append((item.user.username,item.status))
+						if item.status == 'A':
+							admin = item.user.first_name + ' '+ item.user.last_name +'('+item.user.username+')'
+
+					for item in all_projectfiles:
+						file_list.append((os.path.basename(item.file_ref.file.name),item.file_ref.user.first_name+' '+item.file_ref.user.last_name+'('+item.file_ref.user.username+')'))
+
+					for item in all_projectfolders:
+						folder_list.append(('/'+item.folder_ref.name,item.folder_ref.user.first_name+ ' '+item.folder_ref.user.last_name+'('+item.folder_ref.user.username+')'))
+
+					data = {'projectname':projectname,'contributors':contributor_list,'admin':admin,'file_list':file_list,'folder_list':folder_list}
+					print (file_list)
+					print(folder_list)
+					return Response(data)
+				except Projects.DoesNotExist:
+					return Response("Project does not exist",status=404)
+			else:
+				user_data = (user_object.user.first_name,user_object.user.last_name,user_object.user.username,user_object.user.userprofile.total_data_storage,user_object.user.userprofile.data_storage_used)
+				print(user_data)
+				return Response(user_data)
 		except Token.DoesNotExist:
-			return None
+			return Response(status=404)
 
 
 class LogoutView(APIView):
@@ -344,6 +389,7 @@ class CreateDirectoryView(APIView):
 		foldername = self.request.data['foldername']
 		pk = self.request.data['id']
 		env_flag = int(self.request.data['env_flag'])
+
 		try:
 			user_object = Token.objects.get(key = token)
 			if env_flag:
@@ -368,12 +414,30 @@ class ChangeDirectoryView(APIView):
 		foldername = self.request.data['foldername']
 		pk = self.request.data['id']
 		env_flag =int(self.request.data['env_flag'])
+		projectname = self.request.data['env_name']
+		pid = self.request.data['pid']
 		#print(foldername,pk)
 		try:
 			user_object = Token.objects.get(key=token)
 			if env_flag:
-				pass
-			else:
+				try:
+					project_object = Projects.objects.get(name=projectname)
+					all_projectfolders = project_object.projectfolders.all()
+					folder_flag=0
+					for item in all_projectfolders:
+						if item.folder_ref.name == foldername:
+							folder_object = item
+							folder_flag=1
+							break
+					if folder_flag:
+						data = {'pid':folder_object.pk}
+						return Response(json.dumps(data))
+					else:
+						return Response("ERROR: Folder does not exist in this project",status=404)
+				except Projects.DoesNotExist:
+					return Response("ERROR: Project does not exist",status=404)
+
+			else: #inside filesystem env
 				if pk != "":
 					folder_object = user_object.user.userfolders.get(pk=int(pk))
 				else:
@@ -401,7 +465,7 @@ class ChangeDirectoryView(APIView):
 					else:
 						return Response(status=404)
 		except Token.DoesNotExist:
-			return Response(status=404)
+			return Response("Session token is not valid",status=404)
 
 
 class CurrentWorkingDirectoryView(APIView):
@@ -700,9 +764,9 @@ class LoadProjectView(APIView):
 					project_flag=1
 					return Response(status=204)
 			if project_flag==0:
-				return Response(status=404)
+				return Response("ERROR: Specified project does not exist in your antarin account",status=404)
 		except Token.DoesNotExist:
-			return Response(status=404)	
+			return Response("ERROR: Session token is not valid",status=404)	
 
 
 class ImportDataView(APIView):
@@ -807,26 +871,29 @@ class AddContributorView(APIView):
 			project_object = Projects.objects.get(name=projectname)
 			user_project_object = user_object.user.userprojects.get(project=project_object)
 			all_userprojects = UserProjects.objects.all()
-			error_flag=1
-			try:
-				contributor_obj = User.objects.get(username=username)
-				if user_project_object.status!='C':
-					
+			error_flag=0 #0-new contributor object
+
+			if user_project_object.status!='C':
+				try:
+					contributor_obj = User.objects.get(username=username)
 					for projects in all_userprojects:
+						print(project_object.pk ,projects.project.pk,projects.user.pk,projects.user.username,contributor_obj.pk,contributor_obj.username)
 						if projects.project == project_object and projects.user == contributor_obj:
 							error_flag=1
+							print("here" )
+							break
 					if error_flag==0 :
 						new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C')
-						#new_userprojects_object.save()
+						new_userprojects_object.save()
 						print("Added " + new_userprojects_object.user.username + " as contributor to "+ new_userprojects_object.project.name  )
 						return Response(new_userprojects_object.user.username)
 					else:
 						return Response("ERROR: Specified user is already a contributor to this project",status=404)					
-				else:
-					print("permission denied")
-					return Response("ERROR: Permission denied",status=404)
-			except User.DoesNotExist:
-				return Response("ERROR: Could not find an Antarin user with the specified username",status=404)
+				except User.DoesNotExist:
+					return Response("ERROR: Could not find an Antarin user with the specified username",status=404)
+			else:
+				print("permission denied")
+				return Response("ERROR: Permission denied",status=404)
 		except Token.DoesNotExist:
 			return Response("ERROR: Session Token not found",status=404)	
 

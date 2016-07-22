@@ -1,4 +1,7 @@
+## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
+
 #!/usr/bin/python
+
 
 """
 	Run:

@@ -27,6 +27,7 @@ Usage:
 """
 
 # Usage:
+#summary
 #   ax login
 #   ax logout
 #   ax summary

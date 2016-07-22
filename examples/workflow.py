@@ -36,7 +36,7 @@ def upload_to_antarin(path):
 def run():
 
 	# --some 'experimental' data
-	data = produce_data(10,5)
+	data = produce_data(50,40)
 
 	# -- saving data to txt file
 	path = write_to_file('experiment1_results.txt', data)

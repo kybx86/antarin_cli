@@ -12,7 +12,7 @@ from django.template import RequestContext
 from django.views.decorators.csrf import csrf_protect
 from datetime import datetime
 import hashlib,random,json,boto,os
-from antarin.models import UserProfile,UserUploadedFiles,UserFolder
+from antarin.models import *
 from django.utils import timezone
 from django.conf import settings
 from antarin.serializers import FetchFilesSerializer
@@ -236,96 +236,87 @@ class ListFilesView(APIView):
 	def post(self,request):
 		token = self.request.data['token']
 		pk = self.request.data['id']
-		list_val = []
+		env_flag = int(self.request.data['env_flag'])
+		projectname = self.request.data['env_name']
+		pid = self.request.data['pid']
 		try:
 			user_object = Token.objects.get(key = token)
-			#print(token,pk)
-			if pk != "":
-				folder_object = user_object.user.userfolders.get(pk=int(pk))
-			else:
-				folder_object = None
-			
-			for file in user_object.user.useruploadedfiles.all():
-				if file.folder == folder_object:
-					#print (file.file.name,file.folder)
-					list_val.append(os.path.basename(file.file.name))
-			
-			for folder in user_object.user.userfolders.all():
-				if folder.parentfolder == folder_object:
-					#print(folder.name, folder.parentfolder.pk)
-					#print("here")
-					list_val.append("/"+folder.name)
-			print(list_val)
-			return Response(list_val)
+			if env_flag: #inside project environment
+				list_val=[]
+				print (projectname)
+				project_object = Projects.objects.get(name=projectname)
+				if pid != "":
+					project_folder_object = project_object.projectfolders.get(pk=int(pid))
+				else:
+					project_folder_object = None
+
+				all_projectfiles = project_object.projectfiles.all()
+				all_projectfolders = project_object.projectfolders.all()
+
+				for file in all_projectfiles:
+					list_val.append(os.path.basename(file.file_ref.file.name))
+
+				for folder in all_projectfolders:
+					list_val.append("/"+folder.folder_ref.name)
+				return Response(list_val)
+
+			else:#inside file system environment
+				list_val = []
+				if pk != "":
+					folder_object = user_object.user.userfolders.get(pk=int(pk))
+				else:
+					folder_object = None
+				
+				for file in user_object.user.useruploadedfiles.all():
+					if file.folder == folder_object:
+						list_val.append(os.path.basename(file.file.name))
+				
+				for folder in user_object.user.userfolders.all():
+					if folder.parentfolder == folder_object:
+						list_val.append("/"+folder.name)
+				
+				return Response(list_val)
 		except Token.DoesNotExist:
 			return Response(status=404)
 		
 class UploadFileView(APIView):
-	#parser_classes = (FileUploadParser,)
 	def put(self, request,format=None):
 		file_object = request.data['file']
-		#print (request.data)
 		token = request.data['token'].strip('"')
-		#print(str(file_object),token)
 		pk = request.data['id_val'].strip('"')
-		#print("received key = "+ pk)
-		user_val = Token.objects.get(key = token)
-		if pk!="":
-			folder_object = user_val.user.userfolders.get(pk=int(pk))
-			#print(str(folder_object.pk),str(folder_object.name))
-		else:
-			folder_object = None
-		user_files = UserUploadedFiles()
-		user_files.user = user_val.user
-		user_files.file = file_object
-		user_files.folder = folder_object
-		#print(user_val.user.userprofile.data_storage_used)
+		env_flag = int(request.data['env_flag'].strip('"'))
 
-		all_files = user_val.user.useruploadedfiles.all()
-		used_data_storage = calculate_used_data_storage(all_files)
-		user_val.user.userprofile.data_storage_used = str(used_data_storage)
-		user_val.user.save()
-		user_val.user.userprofile.save()
-		user_files.save()
-		#print("Uploaded file " + str(file_object) + "inside folder with pk = "+ str(folder_object.pk) + " name = " +str(folder_object.name))
-		#print("Success!")
-		#print(user_val.user.userprofile.data_storage_used)
-		#catch error when save didn't work fine and return status 400
-		print("\n")
-		return Response(status=204)
+		try:
+			user_val = Token.objects.get(key = token)
+			if env_flag:
+				pass
+			else:
+				if pk!="":
+					folder_object = user_val.user.userfolders.get(pk=int(pk))
+					#print(str(folder_object.pk),str(folder_object.name))
+				else:
+					folder_object = None
+				user_files = UserUploadedFiles()
+				user_files.user = user_val.user
+				user_files.file = file_object
+				user_files.folder = folder_object
+				#print(user_val.user.userprofile.data_storage_used)
 
-class DownloadFileView(APIView):
-	def get(self,request):
-		conn = boto.connect_s3(settings.AWS_ACCESS_KEY_ID,settings.AWS_SECRET_ACCESS_KEY)
-		bucket = conn.get_bucket(settings.AWS_STORAGE_BUCKET_NAME)
-		bucket_list = bucket.list()
-		key = bucket.get_key('media/user_files/'+request.data['file'].strip('"'))
-		filepath = os.path.join("/Users/ruchikashivaswamy/", request.data['file'].strip('"'))
-		key.get_contents_to_filename(filepath)
-		file = open(filepath)
-		response = HttpResponse(FileWrapper(file), content_type='application/text')
-		return response
-				
+				all_files = user_val.user.useruploadedfiles.all()
+				used_data_storage = calculate_used_data_storage(all_files)
+				user_val.user.userprofile.data_storage_used = str(used_data_storage)
+				user_val.user.save()
+				user_val.user.userprofile.save()
+				user_files.save()
+				#print("Uploaded file " + str(file_object) + "inside folder with pk = "+ str(folder_object.pk) + " name = " +str(folder_object.name))
+				#print("Success!")
+				#print(user_val.user.userprofile.data_storage_used)
+				#catch error when save didn't work fine and return status 400
+				print("\n")
+				return Response(status=204)
+		except Token.DoesNotExist:
+			return Response(status=404)
 
-class DeleteFileView(APIView):
-	def post(self,request,format=None):
-		token = request.data['token'].strip('"')
-		filename = request.data['file'].strip('"')
-		print(token,filename)
-		user_val = Token.objects.get(key=token)
-		if 'userfiles/' not in filename:
-			filename = 'userfiles/' + user_val.user.username + '/'+ filename
-		print(filename)
-		file = user_val.user.useruploadedfiles.filter(file=filename).first()
-		file.delete() 
-
-		conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
-		b = Bucket(conn, settings.AWS_STORAGE_BUCKET_NAME)
-		k = Key(b)
-		k.key = 'media/'+filename
-		print(k.key)
-		b.delete_key(k)
-		return Response(status=204)
 
 class UserSummaryView(APIView):
 	def get(self,request):
@@ -352,17 +343,21 @@ class CreateDirectoryView(APIView):
 		token = self.request.data['token']
 		foldername = self.request.data['foldername']
 		pk = self.request.data['id']
+		env_flag = int(self.request.data['env_flag'])
 		try:
 			user_object = Token.objects.get(key = token)
-			if pk != "":
-				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			if env_flag:
+				pass
 			else:
-				folder_object = None
-			new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
-			new_folder_object.save()
-			data = {'id':new_folder_object.pk}
-			#print ("created directory {0} with pk {1} and parentfodler {2}" .format(new_folder_object.name,new_folder_object.pk,new_folder_object.parentfolder.name))
-			return Response(json.dumps(data))
+				if pk != "":
+					folder_object = user_object.user.userfolders.get(pk=int(pk))
+				else:
+					folder_object = None
+				new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
+				new_folder_object.save()
+				data = {'id':new_folder_object.pk}
+				#print ("created directory {0} with pk {1} and parentfodler {2}" .format(new_folder_object.name,new_folder_object.pk,new_folder_object.parentfolder.name))
+				return Response(json.dumps(data))
 		except Token.DoesNotExist:
 			return Response(status=404)
 
@@ -372,35 +367,39 @@ class ChangeDirectoryView(APIView):
 		token = self.request.data['token']
 		foldername = self.request.data['foldername']
 		pk = self.request.data['id']
+		env_flag =int(self.request.data['env_flag'])
 		#print(foldername,pk)
 		try:
 			user_object = Token.objects.get(key=token)
-			if pk != "":
-				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			if env_flag:
+				pass
 			else:
-				folder_object = None
-			if foldername == '..':
-				if folder_object.parentfolder is not None:
-					current_directory = folder_object.parentfolder.name
-					id_val = folder_object.parentfolder.pk
+				if pk != "":
+					folder_object = user_object.user.userfolders.get(pk=int(pk))
 				else:
-					current_directory = "/"
-					id_val = ""
-				data = {'current_directory':current_directory,'id':id_val}
-				return Response(json.dumps(data))
-			else:
-				all_folders = user_object.user.userfolders.all()
-				for folder in all_folders:
-					if folder.parentfolder == folder_object and folder.name == foldername:
-						current_directory = folder.name
-						id_val = folder.pk
-						data = {'current_directory':current_directory,'id':id_val}
-						flag = 1
-						break
-				if flag==1:
+					folder_object = None
+				if foldername == '..':
+					if folder_object.parentfolder is not None:
+						current_directory = folder_object.parentfolder.name
+						id_val = folder_object.parentfolder.pk
+					else:
+						current_directory = "/antarin"
+						id_val = ""
+					data = {'current_directory':current_directory,'id':id_val}
 					return Response(json.dumps(data))
 				else:
-					return Response(status=404)
+					all_folders = user_object.user.userfolders.all()
+					for folder in all_folders:
+						if folder.parentfolder == folder_object and folder.name == foldername:
+							current_directory = folder.name
+							id_val = folder.pk
+							data = {'current_directory':current_directory,'id':id_val}
+							flag = 1
+							break
+					if flag==1:
+						return Response(json.dumps(data))
+					else:
+						return Response(status=404)
 		except Token.DoesNotExist:
 			return Response(status=404)
 
@@ -409,23 +408,46 @@ class CurrentWorkingDirectoryView(APIView):
 	def post(self,request):
 		token = self.request.data['token']
 		pk = self.request.data['id']
+		env_flag = int(self.request.data['env_flag'])
+		projectname = self.request.data['env_name']
+		pid = self.request.data['pid']
+		if projectname:
+			nameval = projectname.split(':')[1]
 		try:
 			user_object = Token.objects.get(key=token)
-			if pk != "":
-				path_val = []
-				string_val = ""
-				folder_object = user_object.user.userfolders.get(pk=int(pk))
-				while folder_object.parentfolder is not None:
+			if env_flag:
+				project_object = Projects.objects.get(name=projectname)
+				if pid != "":
+					path_val = []
+					string_val = ""
+					folder_object = user_object.user.userfolders.get(pk=int(pid))
+					while folder_object.parentfolder is not None:
+						path_val.append(folder_object.name)
+						folder_object = folder_object.parentfolder
 					path_val.append(folder_object.name)
-					folder_object = folder_object.parentfolder
-				path_val.append(folder_object.name)
-				for i in range(len(path_val)-1,-1,-1):
-					string_val = string_val + "/" + path_val[i]
-				#print(string_val)
-				return Response(json.dumps(string_val))
+					for i in range(len(path_val)-1,-1,-1):
+						string_val = string_val + "/" + path_val[i]
+					#print(string_val)
+					return Response(json.dumps(nameval + ' : /'+string_val))
+					
+				else:
+					return Response(json.dumps(nameval + ' : /'))
 			else:
-				folder_object = None
-				return Response(json.dumps('/'))
+				if pk != "":
+					path_val = []
+					string_val = ""
+					folder_object = user_object.user.userfolders.get(pk=int(pk))
+					while folder_object.parentfolder is not None:
+						path_val.append(folder_object.name)
+						folder_object = folder_object.parentfolder
+					path_val.append(folder_object.name)
+					for i in range(len(path_val)-1,-1,-1):
+						string_val = string_val + "/" + path_val[i]
+					#print(string_val)
+					return Response(json.dumps('/antarin'+string_val))
+				else:
+					folder_object = None
+					return Response(json.dumps('/antarin'))
 		except Token.DoesNotExist:
 			return Response(status=404)
 
@@ -478,7 +500,8 @@ class RemoveObjectView(APIView):
 		pk = self.request.data['id']
 		name = self.request.data['object_name']
 		r_val = self.request.data['r_value']
-		
+		env_flag = int(self.request.data['env_flag'])
+
 		file_flag = 0 # 1 - file;0-not a file
 		ref_fodler=None
 		return_list=[]
@@ -488,109 +511,361 @@ class RemoveObjectView(APIView):
 			user_object = Token.objects.get(key=token)
 			all_files = user_object.user.useruploadedfiles.all()
 			all_folders = user_object.user.userfolders.all()
-			if pk!='':
-				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			if env_flag:
+				pass
 			else:
-				folder_object = None
-			if r_val == 'False':
-				for file in all_files:
-					if file.folder == folder_object and os.path.basename(file.file.name) == name:
-						file_flag = 1
+				if pk!='':
+					folder_object = user_object.user.userfolders.get(pk=int(pk))
+				else:
+					folder_object = None
+				if r_val == 'False':
+					for file in all_files:
+						if file.folder == folder_object and os.path.basename(file.file.name) == name:
+							file_flag = 1
 
-						path_val=[]
-						string_val = ''
-						original_value = file.folder
-						if file.folder is not None:
-							while file.folder.parentfolder is not None:
+							path_val=[]
+							string_val = ''
+							original_value = file.folder
+							if file.folder is not None:
+								while file.folder.parentfolder is not None:
+									path_val.append(file.folder.name)
+									file.folder = file.folder.parentfolder
 								path_val.append(file.folder.name)
-								file.folder = file.folder.parentfolder
-							path_val.append(file.folder.name)
-							for i in range(len(path_val)-1,-1,-1):
-								string_val = string_val + "/" + path_val[i]
-							file.folder = original_value
-							argument_val = string_val[1:]+'/'
-						else:
-							argument_val = ''
+								for i in range(len(path_val)-1,-1,-1):
+									string_val = string_val + "/" + path_val[i]
+								file.folder = original_value
+								argument_val = string_val[1:]+'/'
+							else:
+								argument_val = ''
 
-						file.delete()
-						k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
-						print (k.key)
-						b.delete_key(k)
-						return Response(status=204)
-
-				if file_flag == 0:
-					for folder in all_folders:
-						if folder.parentfolder == folder_object and folder.name == name:
-							ref_folder = folder
-							break
-					if ref_folder is not None:
-						folder_empty_flag = 1 # 1 is empty and 0 is non-empty
-						for folder in all_folders:
-							if folder.parentfolder == ref_folder:
-								folder_empty_flag = 0
-								break	
-						if folder_empty_flag:
-							for file in all_files:
-								if file.folder == ref_folder:
-									folder_empty_flag = 0
-									break
-						if folder_empty_flag:
-							ref_folder.delete()
+							file.delete()
+							k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
+							print (k.key)
+							b.delete_key(k)
 							return Response(status=204)
+
+					if file_flag == 0:
+						for folder in all_folders:
+							if folder.parentfolder == folder_object and folder.name == name:
+								ref_folder = folder
+								break
+						if ref_folder is not None:
+							folder_empty_flag = 1 # 1 is empty and 0 is non-empty
+							for folder in all_folders:
+								if folder.parentfolder == ref_folder:
+									folder_empty_flag = 0
+									break	
+							if folder_empty_flag:
+								for file in all_files:
+									if file.folder == ref_folder:
+										folder_empty_flag = 0
+										break
+							if folder_empty_flag:
+								ref_folder.delete()
+								return Response(status=204)
+							else:
+								return Response(status=404)
 						else:
 							return Response(status=404)
-					else:
-						return Response(status=404)
 
-			elif r_val=='True':
-				for file in all_files:
-					if file.folder == folder_object and os.path.basename(file.file.name) == name:
-						file_flag = 1
-						return Response(status=404)
-				if file_flag == 0:
-					#recursive delete
-					for folder in all_folders:
-						if folder.parentfolder == folder_object and folder.name == name:
-							ref_folder = folder
-							break
-					if ref_folder is not None:
-						#call delete function
-						ref_folder_pk = ref_folder.pk
-						ref_folder_name = ref_folder.name
-						return_list = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,ref_folder_pk,ref_folder_name)
-						if return_list:
-							#print(return_list)
-							final_list.extend(return_list)
-							n = len(return_list)
-							i = 0
-							while i < n:
-							#for i in range(0,len(return_list),2):
-								val = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,return_list[i],return_list[i+1])
-								if val:
-									return_list.extend(val)
-									final_list.extend(val)
-									print(return_list,len(return_list))
-								i = i + 2
+				elif r_val=='True':
+					for file in all_files:
+						if file.folder == folder_object and os.path.basename(file.file.name) == name:
+							file_flag = 1
+							return Response(status=404)
+					if file_flag == 0:
+						#recursive delete
+						for folder in all_folders:
+							if folder.parentfolder == folder_object and folder.name == name:
+								ref_folder = folder
+								break
+						if ref_folder is not None:
+							#call delete function
+							ref_folder_pk = ref_folder.pk
+							ref_folder_name = ref_folder.name
+							return_list = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,ref_folder_pk,ref_folder_name)
+							if return_list:
+								#print(return_list)
+								final_list.extend(return_list)
 								n = len(return_list)
-						print("\n")
-						print ("final_list"+str(final_list))
-						# if final_list:
-						# 	for i in range(0,len(final_list),2):
-						# 		folder_object = user_object.user.userfolders.get(pk=int(final_list[i]))
-						# 		print("deleting folder  " + folder_object.name+ "   "+str(folder_object.pk))
-						# 		folder_object.delete()
-						folder_object = user_object.user.userfolders.get(pk=int(ref_folder_pk))
-						print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
-						folder_object.delete()
-						return Response(status=204)
-						
-					else:
-						return Response(status=404)
-			#else:
-				#handle pk==None case
-			#	pass
+								i = 0
+								while i < n:
+								#for i in range(0,len(return_list),2):
+									val = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,return_list[i],return_list[i+1])
+									if val:
+										return_list.extend(val)
+										final_list.extend(val)
+										print(return_list,len(return_list))
+									i = i + 2
+									n = len(return_list)
+							print("\n")
+							print ("final_list"+str(final_list))
+							# if final_list:
+							# 	for i in range(0,len(final_list),2):
+							# 		folder_object = user_object.user.userfolders.get(pk=int(final_list[i]))
+							# 		print("deleting folder  " + folder_object.name+ "   "+str(folder_object.pk))
+							# 		folder_object.delete()
+							folder_object = user_object.user.userfolders.get(pk=int(ref_folder_pk))
+							print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
+							folder_object.delete()
+							return Response(status=204)
+							
+						else:
+							return Response(status=404)
 		except Token.DoesNotExist:
 			return Response(status=404)
 
 
+class NewProjectView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['projectname']
 
+		try:
+			user_object = Token.objects.get(key=token)
+			#create project object
+			projectname = user_object.user.username + ':' + projectname
+			new_project_object = Projects(name=projectname)
+			new_project_object.save()
+			#create userprojects object
+			new_userprojects_object = UserProjects(user=user_object.user,project=new_project_object,status='A')
+			new_userprojects_object.save()
+			print('created project and userproject object ' + str(new_userprojects_object.pk) + ' ' + new_project_object.name +' ' +str(new_project_object.pk) )
+			return Response(new_project_object.name)
+		except Token.DoesNotExist:
+			return Response(status=404)
+
+
+class AddFileToProjectView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['projectname']
+		filename = self.request.data['filename']
+		pk = self.request.data['id']
+		file_flag = 0
+		try:
+			user_object = Token.objects.get(key=token)
+			all_files = user_object.user.useruploadedfiles.all()
+			if pk!='':
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			else:
+				folder_object = None
+			for item in all_files:
+				if item.folder == folder_object and os.path.basename(item.file.name) == filename:
+					file_object = item
+					file_flag = 1
+					break
+			if file_flag:
+				try:
+					project_object = Projects.objects.get(name=projectname)
+					new_projectfiles_object = ProjectFiles(project=project_object,file_ref=file_object)
+					new_projectfiles_object.save()
+					print('created projectfiles object ' + str(new_projectfiles_object.pk))
+					return Response(status=204)
+				except Projects.DoesNotExist:
+					return Response(status=404)
+			else:
+				return Response(status=404)
+		except Token.DoesNotExist:
+			return Response(status=404)
+
+class ListAllProjectsView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		try:
+			return_val=[]
+			user_object = Token.objects.get(key=token)
+			all_projects = user_object.user.userprojects.all()
+			for project in all_projects:
+				if project.status == 'A':
+					status = 'Admin'
+				else:
+					status = 'Contributor'
+				return_val.append(project.project.name+"\t"+status)
+			return Response(return_val)
+		except Token.DoesNotExist:
+			return Response(status=404)	
+
+
+class LoadProjectView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['projectname']
+		project_flag=0
+		try:
+			user_object = Token.objects.get(key=token)
+			all_projects = user_object.user.userprojects.all()
+			for project in all_projects:
+				if project.project.name == projectname:
+					project_flag=1
+					return Response(status=204)
+			if project_flag==0:
+				return Response(status=404)
+		except Token.DoesNotExist:
+			return Response(status=404)	
+
+
+class ImportDataView(APIView):
+
+	def find_folder(foldername,parentfolder,all_folders):
+		folder_flag = 0
+		for item in all_folders:
+			if item.name == foldername and item.parentfolder == parentfolder:
+				folder_object = item
+				folder_flag = 1
+				break
+		if folder_flag == 0:
+			return -1
+		return folder_object
+
+	def find_file(filename,parentfolder,all_files):
+		file_flag = 0
+		for item in all_files:
+			if item.folder == parentfolder and os.path.basename(item.file.name) == filename:
+				file_object = item
+				file_flag = 1
+				break
+		if file_flag == 0:
+			return -1
+		return file_object
+
+	def post(self,request):
+		token = self.request.data['token']
+		folder_flag = int(self.request.data['folder_flag'])
+		projectname = self.request.data['env_name']
+		path = self.request.data['path']
+		try:
+			user_object = Token.objects.get(key=token)
+			project_object = Projects.objects.get(name=projectname)
+			if folder_flag:
+				#FOLDER
+				all_folders = user_object.user.userfolders.all()
+				plist = path
+				plist = plist.split('/')
+				if path[0]=='/' and path[-1]=='/':
+				    plist = plist[1:-1]
+				elif path[0]=='/'and path[-1]!='/':
+				    plist = plist[1:]
+				elif path[0]!='/' and path[-1]=='/':
+				    plist = plist[:-1]
+				print (plist)
+				parentfolder = None
+				for i in range(1,len(plist)):
+					val = ImportDataView.find_folder(plist[i],parentfolder,all_folders)
+					if val != -1:
+						parentfolder = val
+						print (parentfolder.name)
+					else:
+						return Response(status=404)
+				folder_object = val
+				new_projectfolder_object = ProjectFolders(project=project_object,folder_ref=folder_object)
+				print("Adding "  + new_projectfolder_object.folder_ref.name + " to " + new_projectfolder_object.project.name)
+				new_projectfolder_object.save()
+				return Response(status=204)
+			else:
+				#FILE
+				
+				all_folders = user_object.user.userfolders.all()
+				all_files = user_object.user.useruploadedfiles.all()
+
+				plist = path
+				plist = plist.split('/')
+				if path[0]=='/':
+				    plist = plist[1:]
+				
+				print (plist)
+				parentfolder = None
+				val = None
+				for i in range(1,len(plist)-1):
+					print(plist[i],parentfolder)
+					val = ImportDataView.find_folder(plist[i],parentfolder,all_folders)
+					if val != -1:
+						parentfolder = val
+						print(parentfolder.name)
+					else:
+						return Response(status=404)
+				folder_object = val
+				file_object = ImportDataView.find_file(plist[-1],folder_object,all_files)
+				if file_object != -1:
+					new_projectfile_object = ProjectFiles(project=project_object,file_ref=file_object)
+					print("Adding " + new_projectfile_object.file_ref.file.name + " to " + new_projectfile_object.project.name)
+					new_projectfile_object.save()
+					return Response(status=204)
+				else:
+					return Response(status=404)
+		except Token.DoesNotExist:
+			return Response(status=404)
+
+
+class AddContributorView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['env_name']
+		username = self.request.data['username']
+		try:
+			user_object = Token.objects.get(key=token)
+			project_object = Projects.objects.get(name=projectname)
+			user_project_object = user_object.user.userprojects.get(project=project_object)
+			all_userprojects = UserProjects.objects.all()
+			error_flag=1
+			try:
+				contributor_obj = User.objects.get(username=username)
+				if user_project_object.status!='C':
+					
+					for projects in all_userprojects:
+						if projects.project == project_object and projects.user == contributor_obj:
+							error_flag=1
+					if error_flag==0 :
+						new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C')
+						#new_userprojects_object.save()
+						print("Added " + new_userprojects_object.user.username + " as contributor to "+ new_userprojects_object.project.name  )
+						return Response(new_userprojects_object.user.username)
+					else:
+						return Response("ERROR: Specified user is already a contributor to this project",status=404)					
+				else:
+					print("permission denied")
+					return Response("ERROR: Permission denied",status=404)
+			except User.DoesNotExist:
+				return Response("ERROR: Could not find an Antarin user with the specified username",status=404)
+		except Token.DoesNotExist:
+			return Response("ERROR: Session Token not found",status=404)	
+
+
+
+
+
+
+
+
+# class DownloadFileView(APIView):
+# 	def get(self,request):
+# 		conn = boto.connect_s3(settings.AWS_ACCESS_KEY_ID,settings.AWS_SECRET_ACCESS_KEY)
+# 		bucket = conn.get_bucket(settings.AWS_STORAGE_BUCKET_NAME)
+# 		bucket_list = bucket.list()
+# 		key = bucket.get_key('media/user_files/'+request.data['file'].strip('"'))
+# 		filepath = os.path.join("/Users/ruchikashivaswamy/", request.data['file'].strip('"'))
+# 		key.get_contents_to_filename(filepath)
+# 		file = open(filepath)
+# 		response = HttpResponse(FileWrapper(file), content_type='application/text')
+# 		return response
+				
+
+# class DeleteFileView(APIView):
+# 	def post(self,request,format=None):
+# 		token = request.data['token'].strip('"')
+# 		filename = request.data['file'].strip('"')
+# 		print(token,filename)
+# 		user_val = Token.objects.get(key=token)
+# 		if 'userfiles/' not in filename:
+# 			filename = 'userfiles/' + user_val.user.username + '/'+ filename
+# 		print(filename)
+# 		file = user_val.user.useruploadedfiles.filter(file=filename).first()
+# 		file.delete() 
+
+# 		conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
+# 		b = Bucket(conn, settings.AWS_STORAGE_BUCKET_NAME)
+# 		k = Key(b)
+# 		k.key = 'media/'+filename
+# 		print(k.key)
+# 		b.delete_key(k)
+# 		return Response(status=204)

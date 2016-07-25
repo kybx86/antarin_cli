@@ -292,12 +292,37 @@ class ListFilesView(APIView):
 			return Response(status=404)
 		
 class UploadFileView(APIView):
+	def post(self,request):
+		token = request.data['token']
+		foldername = self.request.data['foldername']
+		pk = self.request.data['id']
+		try:
+			user_object = Token.objects.get(key = token)
+			if pk != "":
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			else:
+				folder_object = None
+
+			dup_name_flag = 0
+			all_folders_inside_currdir = user_object.user.userfolders.filter(parentfolder=folder_object)
+			for  item in all_folders_inside_currdir:
+				if item.name == foldername:
+					dup_name_flag = 1
+					break
+					print("duplicate names")
+			if dup_name_flag:
+				return Response("ERROR: Folder exists.",status=400)
+			return Response(status=200)
+		except Token.DoesNotExist:
+			return Response(status=404)
+
 	def put(self, request,format=None):
 		file_object = request.data['file']
 		token = request.data['token'].strip('"')
 		pk = request.data['id_val'].strip('"')
 		env_flag = int(request.data['env_flag'].strip('"'))
-
+		filename = request.data['filename'].strip('"')
+		file_flag = request.data['file_flag'].strip('"')
 		try:
 			user_val = Token.objects.get(key = token)
 			if env_flag:
@@ -308,9 +333,21 @@ class UploadFileView(APIView):
 					#print(str(folder_object.pk),str(folder_object.name))
 				else:
 					folder_object = None
+
+				if file_flag:
+					all_files_in_currdir = user_val.user.useruploadedfiles.filter(folder=folder_object)
+					dup_name_flag = 0
+					for item in all_files_in_currdir:
+						if os.path.basename(item.file.file.name) == filename:
+							dup_name_flag = 1
+							break
+					if dup_name_flag:
+						return Response("ERROR: File exists.",status=400)
+
 				user_files = UserUploadedFiles()
 				user_files.user = user_val.user
 				user_files.file = file_object
+				user_files.file.name = filename
 				user_files.folder = folder_object
 				#print(user_val.user.userprofile.data_storage_used)
 
@@ -389,7 +426,14 @@ class CreateDirectoryView(APIView):
 		foldername = self.request.data['foldername']
 		pk = self.request.data['id']
 		env_flag = int(self.request.data['env_flag'])
-
+		count = None
+		alt_foldername = None
+		if 'count' in self.request.data:
+			count = int(self.request.data['count'])
+		if 'alt_foldername' in self.request.data:
+			alt_foldername = self.request.data['alt_foldername']
+			foldername = alt_foldername
+		print(count,alt_foldername)
 		try:
 			user_object = Token.objects.get(key = token)
 			if env_flag:
@@ -399,7 +443,21 @@ class CreateDirectoryView(APIView):
 					folder_object = user_object.user.userfolders.get(pk=int(pk))
 				else:
 					folder_object = None
-				new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
+
+				dup_name_flag = 0
+				all_folders_inside_currdir = user_object.user.userfolders.filter(parentfolder=folder_object)
+				for  item in all_folders_inside_currdir:
+					if item.name == foldername:
+						dup_name_flag = 1
+						break
+						print("duplicate names")
+				if dup_name_flag:
+					return Response("ERROR: Folder exists.",status=400)
+				if count==0:
+					print("here -- count=0")
+					new_folder_object = UserFolder(user=user_object.user,name=alt_foldername,parentfolder=folder_object)
+				else:
+					new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
 				new_folder_object.save()
 				data = {'id':new_folder_object.pk}
 				#print ("created directory {0} with pk {1} and parentfodler {2}" .format(new_folder_object.name,new_folder_object.pk,new_folder_object.parentfolder.name))
@@ -463,7 +521,7 @@ class ChangeDirectoryView(APIView):
 					if flag==1:
 						return Response(json.dumps(data))
 					else:
-						return Response(status=404)
+						return Response("ERROR: Folder does not exist.",status=404)
 		except Token.DoesNotExist:
 			return Response("Session token is not valid",status=404)
 
@@ -607,7 +665,7 @@ class RemoveObjectView(APIView):
 							print (k.key)
 							b.delete_key(k)
 							return Response(status=204)
-
+					ref_folder = None
 					if file_flag == 0:
 						for folder in all_folders:
 							if folder.parentfolder == folder_object and folder.name == name:
@@ -628,15 +686,16 @@ class RemoveObjectView(APIView):
 								ref_folder.delete()
 								return Response(status=204)
 							else:
-								return Response(status=404)
+								return Response("ERROR: Directory is not empty.",status=400)
 						else:
-							return Response(status=404)
+							return Response("ERROR: File does not exist.",status=404)
 
 				elif r_val=='True':
 					for file in all_files:
 						if file.folder == folder_object and os.path.basename(file.file.name) == name:
 							file_flag = 1
-							return Response(status=404)
+							return Response("ERROR: -r option is valid only with directories.",status=400)
+					ref_folder = None
 					if file_flag == 0:
 						#recursive delete
 						for folder in all_folders:
@@ -675,9 +734,9 @@ class RemoveObjectView(APIView):
 							return Response(status=204)
 							
 						else:
-							return Response(status=404)
+							return Response("ERROR: Directory does not exist.",status=404)
 		except Token.DoesNotExist:
-			return Response(status=404)
+			return Response("ERROR: Session token is not valid.",status=404)
 
 
 class NewProjectView(APIView):

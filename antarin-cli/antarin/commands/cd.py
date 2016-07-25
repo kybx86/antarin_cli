@@ -49,7 +49,7 @@ class ChangeDirectory(Base):
 							current_directory = data['current_directory']
 							id_val = data['id']
 							write("current_directory",current_directory)
-							write("id",id_val)
+							write("id",str(id_val))
 						else:
 							pid_val = data['pid']
 							write("pid",str(pid_val))

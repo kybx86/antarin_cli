@@ -7,12 +7,12 @@ from os.path import expanduser
 import json,requests
 
 class MakeDirectory(Base):
-	def send_request(self,token,id_val,foldername,env_flag):
+	def send_request(self,token,id_val,foldername,env_flag,count_val=None,alt_foldername=None):
 		
 		try:
 			#url = "http://127.0.0.1:8000/rest-mkdir/"
 			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-mkdir/"
-			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val,'env_flag':env_flag})
+			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val,'env_flag':env_flag,'count':count_val,'alt_foldername':alt_foldername})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -29,8 +29,14 @@ class MakeDirectory(Base):
 			env_flag = config.get('user_details','PROJECT_ENV')
 			if token != "":
 				foldername = json.loads(json.dumps(self.options))['<foldername>']
+				if foldername[0] == '/':
+					foldername = foldername[1:]
 				connection = MakeDirectory.send_request(self,token,id_val,foldername,env_flag)
-				if connection.status_code != 200:
+				if connection.status_code == 400:#BAD REQUEST -- duplicate names
+					print json.loads(connection.text)
+				elif connection.status_code == 404:
+					print connection
+				else:
 					print connection
 			else:
 				error_flag=1

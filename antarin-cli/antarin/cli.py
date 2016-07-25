@@ -17,7 +17,7 @@ Usage:
   ax logout
   ax env
   ax newproject <projectname>
-  ax listallprojects
+  ax lp
   ax loadproject <projectname>
   ax importdata --file <filename>
   ax importdata --folder <foldername>

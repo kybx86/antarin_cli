@@ -12,7 +12,7 @@ from .cd import *
 from .rm import *
 from .newproject import *
 from .addfile import *
-from .listallprojects import *
+from .lp import *
 from .loadproject import *
 from .importdata import *
 from .exitproject import *

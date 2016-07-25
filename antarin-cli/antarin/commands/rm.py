@@ -31,7 +31,11 @@ class RemoveObject(Base):
 				object_name = object_name[1:]
 			r_value = json.loads(json.dumps(self.options))['-r']
 			connection = RemoveObject.send_request(self,token,id_val,object_name,r_value,env_flag)
-			if connection.status_code != 204:
+			if connection.status_code == 404 or connection.status_code == 400:#  File/Folder does not exist
+				print json.loads(connection.text)
+			# elif connection.status_code == 400:# BAD REQUEST --Folder not empty
+			# 	print json.loads(connection.text)
+			elif connection.status_code!=204:
 				print connection
 		else: 
 			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"

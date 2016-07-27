@@ -34,7 +34,7 @@ setup(
     ],
     keywords = 'ax',
     packages = find_packages(exclude=['docs', 'tests*']),
-    install_requires = ['docopt','boto','requests'],
+    install_requires = ['docopt','boto','requests', 'termcolor'],
     extras_require = {
         'test': ['coverage', 'pytest', 'pytest-cov'],
     },

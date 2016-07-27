@@ -6,6 +6,8 @@ from ConfigParser import SafeConfigParser
 from os.path import expanduser
 from antarin.config import write
 import requests
+from _color import ax_blue
+
 
 class Logout(Base):
 
@@ -38,13 +40,14 @@ class Logout(Base):
 					write("PROJECT_ENV_NAME",'')
 					write("PID",'')
 					write("RET_ID",'')
-					print "Deleted token and user account details."
+					print ax_blue('\nantarinX logout succesful!')
+					print ax_blue("Deleted token and user account details.")
 				else:
 					print connection
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

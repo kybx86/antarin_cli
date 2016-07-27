@@ -12,9 +12,10 @@ from .cd import *
 from .rm import *
 from .newproject import *
 from .addfile import *
-from .lp import *
-from .loadproject import *
+from .listprojects import *
+from .enterproject import *
 from .importdata import *
 from .exitproject import *
 from .addcontributor import *
 from .env import *
+from .help import*

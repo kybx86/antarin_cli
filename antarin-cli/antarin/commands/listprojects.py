@@ -7,13 +7,13 @@ from os.path import expanduser
 import requests,json
 from _color import ax_blue 
 
-class NewProject(Base):
+class ListAllProjects(Base):
 
-	def send_request(self,token,projectname):
+	def send_request(self,token):
 		try:
-			#url = "http://127.0.0.1:8000/rest-newproject/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-newproject/"
-			connection = requests.post(url, data = {'token':token,'projectname':projectname})
+			#url = "http://127.0.0.1:8000/rest-listallprojects/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-listallprojects/"
+			connection = requests.post(url, data = {'token':token})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -30,15 +30,19 @@ class NewProject(Base):
 			env_flag = config.get('user_details','PROJECT_ENV')
 			if token != "":
 				if int(env_flag)==0:
-					projectname = json.loads(json.dumps(self.options))['<projectname>']
-					####TODO:Projectname validation (Make sure it does not contain a ':')
-					connection = NewProject.send_request(self,token,projectname)
+					connection = ListAllProjects.send_request(self,token)
 					if connection.status_code == 200:
-						data = connection.text
-						#print "New project created as - "+ json.loads(data)
-						print ax_blue('\nCreated new project: %s' %(json.loads(data)))
-				else:
-					print ax_blue("Error: You need to exit from the current project to create a new project--see 'ax exitproject'")
+						data =  connection.text
+
+						#print('\n\t| Project Name| \t\t| Permissions|')
+						print ax_blue('\nMy Projects:\n')
+						for i in range(0,len(json.loads(data))):
+							print ax_blue('\n\t' + json.loads(data)[i])
+						print('\n')
+					else:
+						print ax_blue(connection)
+				else: #inside project environment
+					print ax_blue("Error: You need to exit from the current environment to see a list of all projects--see 'ax exitproject'")
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:

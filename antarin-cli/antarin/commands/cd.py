@@ -6,6 +6,8 @@ from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import requests,json
 from antarin.config import write
+from _color import ax_blue
+
 class ChangeDirectory(Base):
 	def send_request(self,token,id_val,env_flag,pid,env_name,retid_val):
 		foldername = json.loads(json.dumps(self.options))['<foldername>']
@@ -55,9 +57,9 @@ class ChangeDirectory(Base):
 							write("pid",str(pid_val))
 							write("ret_id",str(ret_id))
 					else:
-						print json.loads(connection.text)
+						print ax_blue(json.loads(connection.text))
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
 

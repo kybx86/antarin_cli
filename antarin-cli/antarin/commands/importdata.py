@@ -6,6 +6,7 @@ from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import requests,json
 from antarin.config import write
+from _color import ax_blue
 
 class ImportData(Base):
 
@@ -36,20 +37,28 @@ class ImportData(Base):
 						folder_flag = 0 
 						path = json.loads(json.dumps(self.options))['<filename>']
 						connection = ImportData.send_request(self,token,path,env_name,folder_flag)
+
+						if connection.status_code == 204: # successs
+							print ax_blue('\nImported file %s to %s' %(path, env_name))
+
 						if connection.status_code!=204:
 							print connection
 					elif self.options['--folder']:
 						folder_flag = 1
 						path = json.loads(json.dumps(self.options))['<foldername>']
 						connection = ImportData.send_request(self,token,path,env_name,folder_flag)
-						if connection.status_code!=204:
+
+						if connection.status_code == 204: # successs
+							print ax_blue('\nImported folder %s to project %s' %(path, env_name))
+
+						if connection.status_code != 204:
 							print connection
 				else: #inside file system env
-					print "Error: You are currently not inside a project environment--try 'ax loadproject <projectname>' to load a project environment"
+					print ax_blue("Error: You are currently not inside a project environment--see 'ax enterproject <projectname>' to load a project environment")
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

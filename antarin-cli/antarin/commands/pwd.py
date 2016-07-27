@@ -5,6 +5,7 @@ from .base import Base
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import requests,json
+from _color import ax_blue
 
 class CurrentWorkingDirectory(Base):
 
@@ -32,12 +33,14 @@ class CurrentWorkingDirectory(Base):
 			if token != "":
 				connection = CurrentWorkingDirectory.send_request(self,token,id_val,env_flag,env_name,pid_val)
 				if connection.status_code == 200:
-					print json.loads(json.loads(connection.text))
+					print ax_blue('\nCurrent directory:\n')
+					print ax_blue('\t' + json.loads(json.loads(connection.text)))
+
 				else:
-					print "Error connecting to server"
+					print ax_blue("Error connecting to server") #we need to make sure our '200 Error' outputs are consistent
 			else:
 				error_flag=1
 		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 

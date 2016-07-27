@@ -9,6 +9,7 @@ import gzip
 import shutil
 from os.path import expanduser
 from .mkdir import MakeDirectory
+from _color import ax_blue
 
 class Upload(Base):	        
 
@@ -28,7 +29,7 @@ class Upload(Base):
 			connection = requests.put(url, files=files)
 		except requests.ConnectionError, e:
 			connection = e
-			print "Error while uploading file %s" %filename
+			print ax_blue("Error while uploading file %s" %filename)
 			print connection 
 			sys.exit(1)
 		return connection
@@ -58,7 +59,7 @@ class Upload(Base):
 		if not topdown:
 			yield top, dirs, nondirs
 
-	def folder_upload(self,token,foldername,foldername_without_path,id_val,env_flag):
+	def folder_upload(self, token, foldername, foldername_without_path, id_val, env_flag):
 		result = Upload.tree_traversal(self,foldername)
   		key_val = id_val
   		file_flag = 0
@@ -69,13 +70,13 @@ class Upload(Base):
 			#print "pk = %s\n"%key_val
 			if count!=0:
 				alt_foldername = None
-				print "Creating directory : %s " %os.path.basename(root) 
+				print ax_blue("Creating directory : %s " %os.path.basename(root))
 			else:
 				alt_foldername = foldername_without_path
-				print "Creating directory : %s " %foldername_without_path
+				print ax_blue("Creating directory : %s " %foldername_without_path)
 			connection = MakeDirectory.send_request(makeDirectory,token,key_val,os.path.basename(root),env_flag,count,alt_foldername)
 			if connection.status_code != 200:
-				print str(connection) + ": while uploading folder %s " %root
+				print ax_blue(str(connection) + ": while uploading folder %s " %root)
 				try:
 					sys.exit(0)
 				except SystemExit:
@@ -89,11 +90,13 @@ class Upload(Base):
 			for filename in files:
 				c = Upload.file_upload(self,token,os.path.join(root, filename),filename,env_flag,file_flag,file_id_val)
 				if c.status_code == 204:
-					print "Uploaded file : %s" %os.path.join(root,filename)
+					print ax_blue("Uploaded file : %s" %os.path.join(root,filename))
 					#print "pk = %s\n"%file_id_val
 				else:
-					print str(connection) + ":while uploading file %s" %os.path.join(root,filename)
+					print ax_blue(str(connection) + ":while uploading file %s" %os.path.join(root,filename))
 
+
+	# i did not add the ax_blue() to the code below because theres a few changes i believe will happen 
 	def run(self):
 		config = SafeConfigParser()
 		home_path = expanduser("~")

@@ -5,6 +5,7 @@ from .base import Base
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import json,requests
+from _color import ax_blue
 
 class MakeDirectory(Base):
 	def send_request(self,token,id_val,foldername,env_flag,count_val=None,alt_foldername=None):
@@ -31,17 +32,23 @@ class MakeDirectory(Base):
 				foldername = json.loads(json.dumps(self.options))['<foldername>']
 				if foldername[0] == '/':
 					foldername = foldername[1:]
-				connection = MakeDirectory.send_request(self,token,id_val,foldername,env_flag)
+				connection = MakeDirectory.send_request(self, token, id_val, foldername, env_flag)
+
+				if connection.status_code == 200: # Created dir succesfully 
+					print ax_blue('\nCreated new directory %s' %(foldername))
+
 				if connection.status_code == 400:#BAD REQUEST -- duplicate names
-					print json.loads(connection.text)
+					#print json.loads(connection.text) 
+					print ax_blue('Error: Folder %s already exists --Create with a different name' %(foldername))
 				elif connection.status_code == 404:
-					print connection
-				else:
-					print connection
+					print ax_blue(connection)
+				#else:
+				#	print connection #this is printing: <Response [200]>, which is a success, so im going to comment it out
+					
 			else:
-				error_flag=1
+				error_flag = 1
 		
-		if config.has_section('user_details') == False or error_flag==1:
+		if config.has_section('user_details') == False or error_flag == 1:
 			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
 
 

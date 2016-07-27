@@ -5,6 +5,7 @@ from .base import Base
 from ConfigParser import SafeConfigParser
 import json,requests
 from os.path import expanduser
+from _color import ax_blue
 
 class Summary(Base):
 	def send_request(self,token,env_flag,env_name):
@@ -34,13 +35,13 @@ class Summary(Base):
 					if connection.status_code == 200:
 						data = connection.text    
 						summary_file = json.loads(data)
-						print('\nProject Details:')
-						print('\n\t Project Name -  %s'%(summary_file['projectname']))
-						print('\n\t Admin - %s' %(summary_file['admin']))
-						print('\n\t Contributors -  %s' %(summary_file['contributors']))
-						print('\n\t Project Files -  %s' %(summary_file['file_list']))
-						print('\n\t Project Folders - %s' %(summary_file['folder_list']))
-						print('\n')
+						print ax_blue(('\nProject Details:'))
+						print ax_blue(('\n\t Project Name -  %s'%(summary_file['projectname'])))
+						print ax_blue(('\n\t Admin - %s' %(summary_file['admin'])))
+						print ax_blue(('\n\t Contributors -  %s' %(summary_file['contributors']))) 
+						print ax_blue(('\n\t Project Files -  %s' %(summary_file['file_list'])))
+						print ax_blue(('\n\t Project Folders - %s' %(summary_file['folder_list'])))
+						print ('\n')
 					else:
 						print connection
 				else:
@@ -48,17 +49,17 @@ class Summary(Base):
 					if connection.status_code == 200:
 						data = connection.text     #["Kevin","yedid","kevin.yedid@gmail.com","5 GB","3M"]
 						summary_file = json.loads(data) #[u'Kevin', u'yedid', u'kevin.yedid@gmail.com', u'5 GB', u'3M']
-						print('\nAccount:')
-						print('\n\t User: %s %s' %(summary_file[0], summary_file[1]))
-						print('\n\t Antarin ID: %s' %(summary_file[2]))
-						print('\n\t Storage Use: %s / %s' %(summary_file[4], summary_file[3]))
+						print ax_blue(('\nAccount:'))
+						print ax_blue(('\n\t User: %s %s' %(summary_file[0], summary_file[1])))
+						print ax_blue(('\n\t Antarin ID: %s' %(summary_file[2])))
+						print ax_blue(('\n\t Storage Use: %s / %s' %(summary_file[4], summary_file[3])))
 						print('\n')
 					else:
 						print connection
 			else:
 				error_flag=1
 		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 
 	

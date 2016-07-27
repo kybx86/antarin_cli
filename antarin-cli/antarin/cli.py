@@ -17,12 +17,13 @@ Usage:
   ax logout
   ax env
   ax newproject <projectname>
-  ax lp
-  ax loadproject <projectname>
+  ax listprojects
+  ax enterproject <projectname>
   ax importdata --file <filename>
   ax importdata --folder <foldername>
   ax addcontributor <username>
   ax exitproject
+  ax help
 
 """
 

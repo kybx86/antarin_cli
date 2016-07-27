@@ -5,6 +5,7 @@ from .base import Base
 from ConfigParser import SafeConfigParser
 import json, requests
 from os.path import expanduser
+from _color import ax_blue
 
 class Ls(Base):
 
@@ -34,12 +35,14 @@ class Ls(Base):
 				connection = Ls.send_request(self,token,id_val,env_flag,env_name,pid_val)
 				if connection.status_code == 200:
 					data =  connection.text
+
+					print ax_blue(('\nMy files:\n'))
 					for i in range(0,len(json.loads(data))):
-						print json.loads(data)[i]
+						print ax_blue('\t' + json.loads(data)[i])
 				else:
-					print 'Error while fetching files'
+					print ax_blue('Error while fetching files')
 			else:
 				error_flag=1
 
 		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")

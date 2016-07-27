@@ -6,6 +6,8 @@ from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import requests,json
 from antarin.config import write
+from _color import ax_blue
+
 
 class LoadProject(Base):
 
@@ -36,15 +38,17 @@ class LoadProject(Base):
 						write("PROJECT_ENV",'1')
 						write("PROJECT_ENV_NAME",projectname)
 						nameval = projectname.split(':')[1]
+
+						print ax_blue('\nEntered Project %s' %(projectname))
 						####TODO:customize shell prompt with nameval
 					else:
-						print json.loads(connection.text)
+						print ax_blue(json.loads(connection.text))
 				else: #inside project environment
-					print "Error: You need to exit from the current environment to load a new project--try 'ax exitproject'"
+					print ax_blue("Error: You need to exit from the current environment to load a new project--see 'ax exitproject'")
 			else:
 				error_flag = 1
-		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+		if config.has_section('user_details') == False or error_flag == 1:
+			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

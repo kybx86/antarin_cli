@@ -9,7 +9,14 @@ import sys,os
 from ConfigParser import SafeConfigParser
 from antarin.config import write
 from os.path import expanduser
+from _color import ax_blue
 
+
+#we need to come up with a better way to use this command--and wonder if we even need it, given that we can get the 
+# "(env) kevinyedid $" bash prompt going 
+
+
+# i am not modifying this because future changes possible 
 class Env(Base):
 	def run(self):
 		config = SafeConfigParser()

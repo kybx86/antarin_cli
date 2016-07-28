@@ -37,6 +37,8 @@ class NewProject(Base):
 						data = connection.text
 						#print "New project created as - "+ json.loads(data)
 						print ax_blue('\nCreated new project: %s' %(json.loads(data)))
+					elif connection.status_code == 400: #Project exists
+						print json.loads(connection.text)
 				else:
 					print ax_blue("Error: You need to exit from the current project to create a new project--see 'ax exitproject'")
 			else:

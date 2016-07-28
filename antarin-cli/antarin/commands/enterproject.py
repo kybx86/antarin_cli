@@ -38,7 +38,7 @@ class LoadProject(Base):
 						write("PROJECT_ENV",'1')
 						write("PROJECT_ENV_NAME",projectname)
 						nameval = projectname.split(':')[1]
-
+						#function()
 						print ax_blue('\nEntered Project %s' %(projectname))
 						####TODO:customize shell prompt with nameval
 					else:

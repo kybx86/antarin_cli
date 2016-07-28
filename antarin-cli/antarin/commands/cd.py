@@ -36,9 +36,9 @@ class ChangeDirectory(Base):
 				env_name = config.get('user_details','PROJECT_ENV_NAME')
 				pid_val = config.get('user_details','PID')
 				retid_val = config.get('user_details','RET_ID')
-				if self.options['<foldername>'] is None:
+				if self.options['<foldername>'] is None or self.options['<foldername>'] == home_path:
 					if env_flag==0:
-						write("current_directory",'/antarin')
+						write("current_directory",'~antarin')
 						write("id",'')
 					else:
 						write("pid",'')
@@ -46,7 +46,8 @@ class ChangeDirectory(Base):
 				else:
 					connection = ChangeDirectory.send_request(self,token,id_val,env_flag,pid_val,env_name,retid_val)
 					if connection.status_code == 200:
-						data = json.loads(json.loads(connection.text))
+						data = json.loads(json.loads(connection.text)['message'])
+						#print data
 						if env_flag==0:
 							current_directory = data['current_directory']
 							id_val = data['id']

@@ -101,11 +101,13 @@ class RegistrationForm(forms.Form):
 		user_profile.save()
 
 	'''
-	This method takes care of sending an email to the user entered email address on registration.
+	This method takes care of sending an email to the user entered email address, on registration.
 	'''
 	def sendEmail(self,userdata):
 		url = "/" + userdata['activation_key']
-		context = Context({'activation_url':url,'firstname':userdata['firstname']})
+		firstname = userdata['firstname']
+		firstname = firstname[0].upper()+firstname[1:]
+		context = Context({'activation_url':url,'firstname':firstname})
 		template = get_template('activationEmail.html')
 		email_message = template.render(context)
 		send_mail(userdata['email_subject'],email_message,'Antarin Technologies<noreply@antarintechnolgies.com>',[userdata['username']],fail_silently = False)

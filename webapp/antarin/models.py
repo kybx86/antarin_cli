@@ -65,6 +65,12 @@ class ProjectFolders(models.Model):
     project = models.ForeignKey(Projects,related_name = 'projectfolders')
     folder_ref = models.ForeignKey(UserFolder,related_name='projectfolderreference',null=True)
 
+class ProjectDetailsLogger(models.Model):
+    project = models.ForeignKey(Projects,related_name = 'projectlogs')
+    user = models.ForeignKey(User,related_name = 'userchanges')
+    timestamp = models.DateTimeField(auto_now_add=True)
+    action = models.CharField(max_length=600)
+
 # def get_upload_projectfilepath(instance,filename):
 #     path_val=[]
 #     string_val = ""

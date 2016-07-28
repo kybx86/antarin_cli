@@ -44,5 +44,7 @@ urlpatterns = [
 	url(r'^rest-importdata/$',antarin_views.ImportDataView.as_view()),
 	url(r'^rest-addcontributor/$',antarin_views.AddContributorView.as_view()),
 	url(r'^rest-deleteproject/$',antarin_views.DeleteProjectView.as_view()),
+	url(r'^rest-leaveproject/$',antarin_views.LeaveProjectView.as_view()),
+	url(r'^rest-checklogs/$',antarin_views.CheckLogsView.as_view()),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

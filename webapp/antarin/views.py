@@ -664,7 +664,7 @@ class RemoveObjectView(APIView):
 		name = self.request.data['object_name']
 		r_val = self.request.data['r_value']
 		env_flag = int(self.request.data['env_flag'])
-
+		projectname = self.request.data['env_name']
 		file_flag = 0 # 1 - file;0-not a file
 		ref_fodler=None
 		return_list=[]
@@ -675,7 +675,69 @@ class RemoveObjectView(APIView):
 			all_files = user_object.user.useruploadedfiles.all()
 			all_folders = user_object.user.userfolders.all()
 			if env_flag:
-				pass
+				if r_val == 'False':
+					project_object = Projects.objects.get(name=projectname)
+					project_files = ProjectFiles.objects.filter(project=project_object)
+					file_object = None
+					found = 0
+					is_owner = 0
+					for item in project_files: #check if file exists in projectFiles
+						if os.path.basename(item.file_ref.file.name) == name:
+							file_object = item.file_ref
+							found = 1
+							break
+
+					if found:
+						for item in all_files:
+							if item == file_object:
+								is_owner = 1
+								break
+					if found == 0:
+						message = {'message':"File does not exist.",'status_code':404}
+						return Response(message,status=404)
+					if is_owner == 0:
+						message = {'message':"Permission denied.",'status_code':404}
+						return Response(message,status=404)
+					if found and is_owner:
+						project_files_object = ProjectFiles.objects.get(project=project_object,file_ref=file_object)
+						project_files_object.delete()
+
+						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
+						new_projectlogs_object.save()
+
+						message = {'message':"File removed.",'status_code':204}
+						return Response(message,status=204)
+				else:
+					project_object = Projects.objects.get(name=projectname)
+					project_folders = ProjectFolders.objects.filter(project=project_object)
+					folder_object = None
+					found = 0
+					is_owner = 0
+					for item in project_folders: #check if file exists in projectFolders
+						if os.path.basename(item.folder_ref.name) == name:
+							folder_object = item.folder_ref
+							found = 1
+							break
+					if found:
+						for item in all_folders:
+							if item == folder_object:
+								is_owner = 1
+								break
+					if found == 0:
+						message = {'message':"Directory does not exist.",'status_code':404}
+						return Response(message,status=404)
+					if is_owner == 0:
+						message = {'message':"Permission denied.",'status_code':404}
+						return Response(message,status=404)
+					if found and is_owner:
+						project_folder_object = ProjectFolders.objects.get(project=project_object,folder_ref=folder_object)
+						project_folder_object.delete()
+						
+						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
+						new_projectlogs_object.save()
+
+						message = {'message':"Directory removed.",'status_code':204}
+						return Response(message,status=204)
 			else:
 				if pk!='':
 					folder_object = user_object.user.userfolders.get(pk=int(pk))
@@ -795,16 +857,25 @@ class NewProjectView(APIView):
 
 		try:
 			user_object = Token.objects.get(key=token)
-			#create project object
+			
 			try:
 				projectname = user_object.user.username + ':' + projectname
+				
+				#create project object
 				new_project_object = Projects(name=projectname)
 				new_project_object.save()
+				
 				#create userprojects object
 				new_userprojects_object = UserProjects(user=user_object.user,project=new_project_object,status='A')
 				new_userprojects_object.save()
+				
+				#add to logs
+				new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=new_project_object,action=user_object.user.username + ' created '+ projectname)
+				new_projectlogs_object.save()
+				## Format time stamp - time.strftime("[%d/%B/%Y %H:%M:%S]")
 				print('created project and userproject object ' + str(new_userprojects_object.pk) + ' ' + new_project_object.name +' ' +str(new_project_object.pk) )
-				return Response(new_project_object.name)
+				message = {'message':new_project_object.name,'status_code':200}
+				return Response(message,status=200)
 			except IntegrityError:
 				message = {'message':"Project exists.",'status_code':400}
 				return Response(message,status=400)
@@ -956,10 +1027,22 @@ class ImportDataView(APIView):
 						print("Duplicate folder ref")
 						error_flag = 1
 						break
+
+				for item in all_projectfolders:
+					if item.folder_ref.name == folder_object.name:
+						print("Duplicate folder ref")
+						error_flag = 1
+						break
+
 				if error_flag ==0:
+					
 					new_projectfolder_object = ProjectFolders(project=project_object,folder_ref=folder_object)
 					print("Adding "  + new_projectfolder_object.folder_ref.name + " to " + new_projectfolder_object.project.name)
 					new_projectfolder_object.save()
+
+					new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added directory '+ new_projectfolder_object.folder_ref.name)
+					new_projectlogs_object.save()
+
 					message = {'message':'Imported directory.','status_code':204}
 					return Response(message,status=204)
 				else:
@@ -997,10 +1080,22 @@ class ImportDataView(APIView):
 							print("duplicate ref")
 							error_flag = 1
 							break
+
+					for item in all_projectfiles:
+						if os.path.basename(item.file_ref.file.name) == os.path.basename(file_object.file.name):
+							print("duplicate ref")
+							error_flag = 1
+							break
+					
 					if error_flag == 0:
+						
 						new_projectfile_object = ProjectFiles(project=project_object,file_ref=file_object)
 						print("Adding " + new_projectfile_object.file_ref.file.name + " to " + new_projectfile_object.project.name)
 						new_projectfile_object.save()
+
+						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added file '+ os.path.basename(new_projectfile_object.file_ref.file.name))
+						new_projectlogs_object.save()
+
 						message = {'message':'Imported file.','status_code':204}
 						return Response(message,status=204)
 					else:
@@ -1040,6 +1135,10 @@ class AddContributorView(APIView):
 						new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C')
 						new_userprojects_object.save()
 						print("Added " + new_userprojects_object.user.username + " as contributor to "+ new_userprojects_object.project.name  )
+						
+						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added '+ new_userprojects_object.user.username + ' as contributor.' )
+						new_projectlogs_object.save()
+
 						message = {'message':new_userprojects_object.user.username,'status_code':200}
 						return Response(message,status=200)
 					else:
@@ -1058,23 +1157,114 @@ class AddContributorView(APIView):
 
 
 class DeleteProjectView(APIView):
+	def get(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['projectname']
+		try:
+			user_object = Token.objects.get(key=token)
+			project_object = Projects.objects.get(name=projectname)
+			user_project_object = user_object.user.userprojects.get(project=project_object)
+			if user_project_object.status != 'A':
+				print("Permission denied.")
+				message = {'message':'Permission denied.','status_code':400}
+				return Response(message,status=400)
+			else:
+				print("'Is an Admin. Has permissions to delete project.'")
+				message = {'message':'Is an Admin. Has permissions to delete project.','status_code':200}
+				return Response(message,status=200)
+		except UserProjects.DoesNotExist:
+			message = {'message':'You are not a part of this project. Permission denied','status_code':400}
+			return Response(message,status=400)
+		except Projects.DoesNotExist:
+			message = {'message':'Project does not exist.','status_code':404}
+			return Response(message,status=404)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['projectname']
+		password = self.request.data['pwd']
+		try:
+			user_object = Token.objects.get(key=token)
+			username = user_object.user.username
+			user_val = User.objects.get(username__exact=username)
+			print (password)
+			if user_val.check_password(password):
+				print("correct password")
+				project_object = Projects.objects.get(name=projectname)
+				project_object.delete()
+				print("deleted project")
+				
+				new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted project. ' )
+				new_projectlogs_object.save()
+				
+				message = {'message':'Project deleted.','status_code':200}
+				return Response(message,status=404)
+			else:
+				print('incorrect password')
+				message = {'message':'Invalid password.','status_code':404}
+				return Response(message,status=404)
+		except Projects.DoesNotExist:
+			message = {'message':'Project does not exist.','status_code':404}
+			return Response(message,status=404)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+class LeaveProjectView(APIView):
 	def post(self,request):
 		token = self.request.data['token']
 		projectname = self.request.data['projectname']
 		try:
 			user_object = Token.objects.get(key=token)
-
 			project_object = Projects.objects.get(name=projectname)
 			user_project_object = user_object.user.userprojects.get(project=project_object)
-			all_userprojects = UserProjects.objects.all()
-			error_flag=0 #0-new contributor object
+			if user_project_object.status == 'A':
+				message = {'message':'Permission denied.','status_code':400}
+				return Response(message,status=400)
+			else:
+				user_project_object.delete()
 
+				new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' left project. ' )
+				new_projectlogs_object.save()
 
+				message = {'message':'Project record deleted from user account.','status_code':200}
+				return Response(message,status=200)
+		except UserProjects.DoesNotExist:
+			message = {'message':'You are not a part of this project. Permission denied','status_code':400}
+			return Response(message,status=400)
+		except Projects.DoesNotExist:
+			message = {'message':'Project does not exist.','status_code':404}
+			return Response(message,status=404)
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
 
+class CheckLogsView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['env_name']
+		try:
+			user_object = Token.objects.get(key=token)
+			project_object = Projects.objects.get(name=projectname)
+			all_logs = ProjectDetailsLogger.objects.filter(project=project_object)
+			return_val = []
+			for item in all_logs:
+				logs = []
+				logs.append(item.timestamp.strftime("[%d/%B/%Y %H:%M:%S]"))
+				logs.append(item.action)
+				return_val.append(logs)
+			message = {'message': return_val,'status_code':200}
+			return Response(message,status=200)
+		except Projects.DoesNotExist:
+			message = {'message':'Project does not exist.','status_code':404}
+			return Response(message,status=404)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
 
 
 

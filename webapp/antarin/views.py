@@ -72,7 +72,7 @@ def signup(request):
 			if isinstance(usernamekey,str):
 				usernamekey = usernamekey.encode('utf8')
 			userdata['activation_key'] = hashlib.sha1(keyval+usernamekey).hexdigest()
-			userdata['email_subject'] = "[Antarin] Please verify your email address"
+			userdata['email_subject'] = "Welcome to antarinX!"
 			form.sendEmail(userdata)
 			form.save(userdata)
 			return HttpResponseRedirect('./success')
@@ -122,7 +122,7 @@ def password_reset(request):
 			if isinstance(usernamekey,str):
 				usernamekey = usernamekey.encode('utf8')
 			userdata['password_reset_key'] = hashlib.sha1(keyval+usernamekey).hexdigest()
-			userdata['email_subject'] = "[Antarin] Reset your Password "
+			userdata['email_subject'] = "antarinX reset your Password "
 			form.sendEmail(userdata)
 			form.save(userdata)
 			return HttpResponseRedirect('./redirect/')

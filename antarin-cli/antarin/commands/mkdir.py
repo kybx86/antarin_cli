@@ -41,7 +41,7 @@ class MakeDirectory(Base):
 					#print json.loads(connection.text) 
 					print ax_blue('Error: Folder %s already exists --Create with a different name' %(foldername))
 				elif connection.status_code == 404:
-					print ax_blue(connection)
+					print ax_blue(connection.text)
 				#else:
 				#	print connection #this is printing: <Response [200]>, which is a success, so im going to comment it out
 					

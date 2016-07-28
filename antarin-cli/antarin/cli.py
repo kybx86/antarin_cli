@@ -22,6 +22,7 @@ Usage:
   ax importdata --file <filename>
   ax importdata --folder <foldername>
   ax addcontributor <username>
+  ax deleteproject <projectname>
   ax exitproject
   ax help
 
@@ -52,8 +53,10 @@ def main():
   import commands
   options = docopt(__doc__,version=VERSION)
   #print options
+  all_false = 1
   for key, value in options.iteritems():
     if hasattr(commands, key) and value:
+      all_false = 0
       module = getattr(commands, key)
       commands = getmembers(module, isclass)
       command = [command[1] for command in commands if command[0] != 'Base' and command[0]!= 'SafeConfigParser'][0] 
@@ -62,3 +65,5 @@ def main():
       command = command(options)
       command.run()
 
+  # if all_false:
+  #   print 'Not a valid command.'

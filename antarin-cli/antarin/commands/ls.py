@@ -34,13 +34,16 @@ class Ls(Base):
 				pid_val = config.get('user_details','PID')
 				connection = Ls.send_request(self,token,id_val,env_flag,env_name,pid_val)
 				if connection.status_code == 200:
-					data =  connection.text
-
+					data =  json.loads(connection.text)
 					print ax_blue(('\nMy files:\n'))
-					for i in range(0,len(json.loads(data))):
-						print ax_blue('\t' + json.loads(data)[i])
+					# 'connection.text' gives a dictionary with two keys-value pairs.  
+					# eg. {"status_code":200,"message":["print.pdf","print_copy.txt","/newfolder"]}
+					message = data['message']
+					status_code = data['status_code']
+					for i in range(0,len(message)):
+						print ax_blue('\t' + message[i])
 				else:
-					print ax_blue('Error while fetching files')
+					print ax_blue(json.loads(connection.text))
 			else:
 				error_flag=1
 

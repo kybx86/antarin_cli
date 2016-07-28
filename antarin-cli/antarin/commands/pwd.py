@@ -33,8 +33,9 @@ class CurrentWorkingDirectory(Base):
 			if token != "":
 				connection = CurrentWorkingDirectory.send_request(self,token,id_val,env_flag,env_name,pid_val)
 				if connection.status_code == 200:
+					data = json.loads(connection.text)['message']
 					print ax_blue('\nCurrent directory:\n')
-					print ax_blue('\t' + json.loads(json.loads(connection.text)))
+					print ax_blue('\t' + data)
 
 				else:
 					print ax_blue("Error connecting to server") #we need to make sure our '200 Error' outputs are consistent

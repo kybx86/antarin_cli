@@ -36,16 +36,19 @@ class RemoveObject(Base):
 			if connection.status_code == 204:
 				print ax_blue('\nDeleted ' + object_name) # succesfully deleting file 
 
-			if connection.status_code == 404 or connection.status_code == 400:#  File/Folder does not exist
+			elif connection.status_code == 404:
+				print ax_blue(connection.text)
+			elif connection.status_code == 400:#  File/Folder does not exist
+				print ax_blue(connection.text)
 				#print ax_blue(json.loads(connection.text)) 
 				# ^^^ "ERROR: File does not exist." <--- where is this .text coming from ?!
 				# how about we define our own error message under the 404 and 400 conditions ? i.e.: 
-				print ax_blue('Error: File %s does not exist' %(object_name))
+				#print ax_blue('Error: File %s does not exist' %(object_name))
 
 			# elif connection.status_code == 400:# BAD REQUEST --Folder not empty
 			# 	print json.loads(connection.text)
 			elif connection.status_code!=204:
-				print ax_blue(connection)
+				print ax_blue(connection.text)
 		else: 
 			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
 			

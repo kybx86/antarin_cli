@@ -76,7 +76,7 @@ class Upload(Base):
 				print ax_blue("Creating directory : %s " %foldername_without_path)
 			connection = MakeDirectory.send_request(makeDirectory,token,key_val,os.path.basename(root),env_flag,count,alt_foldername)
 			if connection.status_code != 200:
-				print ax_blue(str(connection) + ": while uploading folder %s " %root)
+				print ax_blue(str(connection.text) + ": while uploading folder %s " %root)
 				try:
 					sys.exit(0)
 				except SystemExit:
@@ -158,7 +158,7 @@ class Upload(Base):
 						file_flag = 0
 						Upload.folder_upload(self,token,filename,foldername,id_val,env_flag)
 					else:
-						print connection
+						print connection.text
 				else:
 					file_flag = 1
 					name = os.path.basename(filename)
@@ -177,7 +177,7 @@ class Upload(Base):
 										if connection.status_code == 204:
 											print "Uploaded file as : %s" %new_filename
 										else:
-											print connection
+											print connection.text
 										break
 								elif user_input == "no":
 									break
@@ -191,7 +191,7 @@ class Upload(Base):
 								os._exit(0)
 
 					else:
-						print connection
+						print connection.text
 			else:
 				error_flag=1
 		if config.has_section('user_details') == False or error_flag==1:

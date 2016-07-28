@@ -33,8 +33,10 @@ class Summary(Base):
 				if int(env_flag): #inside project env
 					connection = Summary.send_request(self,token,env_flag,env_name)
 					if connection.status_code == 200:
-						data = connection.text    
-						summary_file = json.loads(data)
+						data = json.loads(connection.text)    
+						summary_file = data['message']
+						status_code = data['status_code']
+						#print summary_file
 						print ax_blue(('\nProject Details:'))
 						print ax_blue(('\n\t Project Name -  %s'%(summary_file['projectname'])))
 						print ax_blue(('\n\t Admin - %s' %(summary_file['admin'])))
@@ -43,19 +45,21 @@ class Summary(Base):
 						print ax_blue(('\n\t Project Folders - %s' %(summary_file['folder_list'])))
 						print ('\n')
 					else:
-						print connection
+						print connection.text
 				else:
 					connection = Summary.send_request(self,token,env_flag,env_name)
 					if connection.status_code == 200:
-						data = connection.text     #["Kevin","yedid","kevin.yedid@gmail.com","5 GB","3M"]
-						summary_file = json.loads(data) #[u'Kevin', u'yedid', u'kevin.yedid@gmail.com', u'5 GB', u'3M']
+						data = json.loads(connection.text)     #["Kevin","yedid","kevin.yedid@gmail.com","5 GB","3M"]
+						summary_file = data['message'] #[u'Kevin', u'yedid', u'kevin.yedid@gmail.com', u'5 GB', u'3M']
+						status_code = data['status_code']
+						#print summary_file
 						print ax_blue(('\nAccount:'))
-						print ax_blue(('\n\t User: %s %s' %(summary_file[0], summary_file[1])))
-						print ax_blue(('\n\t Antarin ID: %s' %(summary_file[2])))
-						print ax_blue(('\n\t Storage Use: %s / %s' %(summary_file[4], summary_file[3])))
+						print ax_blue(('\n\t User: %s %s' %(summary_file['firstname'], summary_file['lastname'])))
+						print ax_blue(('\n\t Antarin ID: %s' %(summary_file['username'])))
+						print ax_blue(('\n\t Storage Use: %s / %s' %(summary_file['data_storage_used'], summary_file['data_storage_available'])))
 						print('\n')
 					else:
-						print connection
+						print connection.text
 			else:
 				error_flag=1
 		if config.has_section('user_details') == False or error_flag==1:

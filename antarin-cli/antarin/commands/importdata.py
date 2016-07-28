@@ -41,8 +41,8 @@ class ImportData(Base):
 						if connection.status_code == 204: # successs
 							print ax_blue('\nImported file %s to %s' %(path, env_name))
 
-						if connection.status_code!=204:
-							print connection
+						if connection.status_code == 404: #DUPLICATE NAME of file/folder
+							print ax_blue('\n%s'%(json.loads(connection.text)))
 					elif self.options['--folder']:
 						folder_flag = 1
 						path = json.loads(json.dumps(self.options))['<foldername>']
@@ -51,8 +51,8 @@ class ImportData(Base):
 						if connection.status_code == 204: # successs
 							print ax_blue('\nImported folder %s to project %s' %(path, env_name))
 
-						if connection.status_code != 204:
-							print connection
+						if connection.status_code == 404: #DUPLICATE NAME of file/folder
+							print ax_blue('\n%s'%(json.loads(connection.text)))
 				else: #inside file system env
 					print ax_blue("Error: You are currently not inside a project environment--see 'ax enterproject <projectname>' to load a project environment")
 			else:

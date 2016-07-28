@@ -32,15 +32,17 @@ class ListAllProjects(Base):
 				if int(env_flag)==0:
 					connection = ListAllProjects.send_request(self,token)
 					if connection.status_code == 200:
-						data =  connection.text
-
+						message =  json.loads(connection.text)
+						data = message['message']
+						status_code = message['status_code']
+						#print data
 						#print('\n\t| Project Name| \t\t| Permissions|')
 						print ax_blue('\nMy Projects:\n')
-						for i in range(0,len(json.loads(data))):
-							print ax_blue('\n\t' + json.loads(data)[i])
+						for i in range(0,len(data)):
+							print ax_blue('\n\t' + data[i])
 						print('\n')
 					else:
-						print ax_blue(connection)
+						print ax_blue(connection.text)
 				else: #inside project environment
 					print ax_blue("Error: You need to exit from the current environment to see a list of all projects--see 'ax exitproject'")
 			else:

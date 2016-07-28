@@ -1,18 +1,20 @@
 ## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
 
-
 from . import Base
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import requests,json
+from antarin.config import write
+from _color import ax_blue
+import sys,os
 
-class ListAllProjects(Base):
-
-	def send_request(self,token):
+class LeaveProject(Base):
+	def send_request(self,token,projectname):
 		try:
-			#url = "http://127.0.0.1:8000/rest-listallprojects/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-listallprojects/"
-			connection = requests.post(url, data = {'token':token})
+			#url = "http://127.0.0.1:8000/rest-leaveproject/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-leaveproject/"
+			
+			connection = requests.post(url, data = {'token':token,'projectname':projectname})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -27,17 +29,17 @@ class ListAllProjects(Base):
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
 			env_flag = config.get('user_details','PROJECT_ENV')
+			env_name = config.get('user_details','PROJECT_ENV_NAME')
 			if token != "":
 				if int(env_flag)==0:
-					connection = ListAllProjects.send_request(self,token)
-					if connection.status_code == 200:
-						data =  connection.text
-						for i in range(0,len(json.loads(data))):
-							print json.loads(data)[i]
+					projectname = json.loads(json.dumps(self.options))['<projectname>']
+					connection = LeaveProject.send_request(self,token,projectname)
+					if connection.status_code==200:
+						print connection.text
 					else:
-						print connection
-				else: #inside project environment
-					print "Error: You need to exit from the current environment to see a list of all projects--try 'ax exitproject'"
+						print connection.text
+				else:
+					print "Error: You are inside a project environment. Please try this command after exiting the project--see 'ax exitproject'"
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:

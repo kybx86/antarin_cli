@@ -23,6 +23,8 @@ Usage:
   ax importdata --folder <foldername>
   ax addcontributor <username>
   ax deleteproject <projectname>
+  ax leaveproject <projectname>
+  ax checklogs
   ax exitproject
   ax help
 

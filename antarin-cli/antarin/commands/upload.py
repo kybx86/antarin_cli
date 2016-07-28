@@ -83,7 +83,8 @@ class Upload(Base):
 					os._exit(0)
 			else:
 				count = 1
-				data = json.loads(json.loads(connection.text))
+				data = json.loads(json.loads(connection.text)['message'])
+				#print data
 				file_id_val = data['id']
 				if dirs!=[]:
 					key_val = data['id']

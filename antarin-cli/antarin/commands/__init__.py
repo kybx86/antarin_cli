@@ -18,4 +18,7 @@ from .importdata import *
 from .exitproject import *
 from .addcontributor import *
 from .env import *
-from .help import*
+from .help import *
+from .deleteproject import *
+from .leaveproject import *
+from .checklogs import *

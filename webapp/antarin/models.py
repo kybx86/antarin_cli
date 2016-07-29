@@ -60,6 +60,7 @@ class UserProjects(models.Model):
         ('C', 'Contributor'),
     )
     status = models.CharField(max_length=1, choices=STATUS_CHOICES)
+    access_key = models.IntegerField(default=0)
 
 class ProjectFolders(models.Model):
     project = models.ForeignKey(Projects,related_name = 'projectfolders')

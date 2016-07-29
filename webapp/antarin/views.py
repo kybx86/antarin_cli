@@ -851,34 +851,52 @@ class RemoveObjectView(APIView):
 
 
 class NewProjectView(APIView):
+	def generate_rand(n):
+		llimit = 10**(n-1)
+		ulimit = (10**n)-1
+		return random.randint(llimit,ulimit)
+
 	def post(self,request):
 		token = self.request.data['token']
 		projectname = self.request.data['projectname']
 
 		try:
 			user_object = Token.objects.get(key=token)
+			projectname = user_object.user.username + ':' + projectname
 			
-			try:
-				projectname = user_object.user.username + ':' + projectname
-				
-				#create project object
-				new_project_object = Projects(name=projectname)
-				new_project_object.save()
-				
-				#create userprojects object
-				new_userprojects_object = UserProjects(user=user_object.user,project=new_project_object,status='A')
-				new_userprojects_object.save()
-				
-				#add to logs
-				new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=new_project_object,action=user_object.user.username + ' created '+ projectname)
-				new_projectlogs_object.save()
-				## Format time stamp - time.strftime("[%d/%B/%Y %H:%M:%S]")
-				print('created project and userproject object ' + str(new_userprojects_object.pk) + ' ' + new_project_object.name +' ' +str(new_project_object.pk) )
-				message = {'message':new_project_object.name,'status_code':200}
-				return Response(message,status=200)
-			except IntegrityError:
-				message = {'message':"Project exists.",'status_code':400}
-				return Response(message,status=400)
+			#create project object
+			new_project_object = Projects(name=projectname)
+			new_project_object.save()
+			
+			#generate accesskey
+			all_user_projects = user_object.user.userprojects.all()
+			accesskey_list = []
+			for item in all_user_projects:
+				accesskey_list.append(item.access_key)
+
+			num = NewProjectView.generate_rand(4)
+			while num in accesskey_list:
+				print("NEW")
+				num = generate_rand(4)
+
+			access_key = num
+			print(access_key)
+			#create userprojects object
+			new_userprojects_object = UserProjects(user=user_object.user,project=new_project_object,status='A',access_key=access_key)
+			new_userprojects_object.save()
+			
+			#add to logs
+			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=new_project_object,action=user_object.user.username + ' created '+ projectname)
+			new_projectlogs_object.save()
+			## Format time stamp - time.strftime("[%d/%B/%Y %H:%M:%S]")
+			print('created project and userproject object ' + str(new_userprojects_object.pk) + ' ' + new_project_object.name +' ' +str(new_project_object.pk) )
+			data = {'projectname':new_project_object.name,'access_key':access_key}
+			message = {'message':data,'status_code':200}
+			return Response(message,status=200)
+		except IntegrityError:
+			#print("here")
+			message = {'message':"Project exists.",'status_code':400}
+			return Response(message,status=400)
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
@@ -929,7 +947,7 @@ class ListAllProjectsView(APIView):
 					status = 'Admin'
 				else:
 					status = 'Contributor'
-				return_val.append(project.project.name+"\t"+status)
+				return_val.append(project.project.name+"\t"+status+"\t"+str(project.access_key))
 			message = {'message':return_val,'status_code':200}
 			return Response(message,status=200)
 		except Token.DoesNotExist:
@@ -940,15 +958,18 @@ class ListAllProjectsView(APIView):
 class LoadProjectView(APIView):
 	def post(self,request):
 		token = self.request.data['token']
-		projectname = self.request.data['projectname']
+		projectid = int(self.request.data['projectid'])
 		project_flag=0
 		try:
 			user_object = Token.objects.get(key=token)
 			all_projects = user_object.user.userprojects.all()
 			for project in all_projects:
-				if project.project.name == projectname:
+				if project.access_key == projectid:
 					project_flag=1
-					return Response(status=204)
+					data = {'projectname':project.project.name,'projectid':project.access_key}
+					message = {'message':data,'status_code':200}
+					print(message)
+					return Response(message,status=200)
 			if project_flag==0:
 				message = {'message':"ERROR: Specified project does not exist in your antarin account",'status_code':404}
 				return Response(message,status=404)
@@ -1111,6 +1132,13 @@ class ImportDataView(APIView):
 
 
 class AddContributorView(APIView):
+
+	def generate_rand(n):
+		llimit = 10**(n-1)
+		ulimit = (10**n)-1
+		return random.randint(llimit,ulimit)
+
+
 	def post(self,request):
 		token = self.request.data['token']
 		projectname = self.request.data['env_name']
@@ -1132,14 +1160,28 @@ class AddContributorView(APIView):
 							print("here" )
 							break
 					if error_flag==0 :
-						new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C')
+
+						all_user_projects = contributor_obj.userprojects.all()
+						accesskey_list = []
+						for item in all_user_projects:
+							accesskey_list.append(item.access_key)
+
+						num = NewProjectView.generate_rand(4)
+						while num in accesskey_list:
+							num = generate_rand(4)
+
+						access_key = num
+						print(access_key)
+
+						new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C',access_key=access_key)
 						new_userprojects_object.save()
 						print("Added " + new_userprojects_object.user.username + " as contributor to "+ new_userprojects_object.project.name  )
 						
 						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added '+ new_userprojects_object.user.username + ' as contributor.' )
 						new_projectlogs_object.save()
 
-						message = {'message':new_userprojects_object.user.username,'status_code':200}
+						data = {'user':new_userprojects_object.user.username,'acess_key':access_key}
+						message = {'message':data,'status_code':200}
 						return Response(message,status=200)
 					else:
 						message = {'message':"ERROR: Specified user is already a contributor to this project",'status_code':404}
@@ -1159,11 +1201,11 @@ class AddContributorView(APIView):
 class DeleteProjectView(APIView):
 	def get(self,request):
 		token = self.request.data['token']
-		projectname = self.request.data['projectname']
+		projectid = self.request.data['projectid']
 		try:
 			user_object = Token.objects.get(key=token)
-			project_object = Projects.objects.get(name=projectname)
-			user_project_object = user_object.user.userprojects.get(project=project_object)
+			#project_object = Projects.objects.get(name=projectname)
+			user_project_object = user_object.user.userprojects.get(access_key=projectid)
 			if user_project_object.status != 'A':
 				print("Permission denied.")
 				message = {'message':'Permission denied.','status_code':400}
@@ -1175,30 +1217,31 @@ class DeleteProjectView(APIView):
 		except UserProjects.DoesNotExist:
 			message = {'message':'You are not a part of this project. Permission denied','status_code':400}
 			return Response(message,status=400)
-		except Projects.DoesNotExist:
-			message = {'message':'Project does not exist.','status_code':404}
-			return Response(message,status=404)
+		# except Projects.DoesNotExist:
+		# 	message = {'message':'Project does not exist.','status_code':404}
+		# 	return Response(message,status=404)
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
 	def post(self,request):
 		token = self.request.data['token']
-		projectname = self.request.data['projectname']
+		projectid = self.request.data['projectid']
 		password = self.request.data['pwd']
 		try:
 			user_object = Token.objects.get(key=token)
 			username = user_object.user.username
 			user_val = User.objects.get(username__exact=username)
-			print (password)
+			#print (password)
 			if user_val.check_password(password):
 				print("correct password")
-				project_object = Projects.objects.get(name=projectname)
+				user_project_object = user_object.user.userprojects.get(access_key=projectid)
+				project_object = user_project_object.project
 				project_object.delete()
 				print("deleted project")
 				
-				new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted project. ' )
-				new_projectlogs_object.save()
+				# new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted project. ' )
+				# new_projectlogs_object.save()
 				
 				message = {'message':'Project deleted.','status_code':200}
 				return Response(message,status=404)
@@ -1206,9 +1249,9 @@ class DeleteProjectView(APIView):
 				print('incorrect password')
 				message = {'message':'Invalid password.','status_code':404}
 				return Response(message,status=404)
-		except Projects.DoesNotExist:
-			message = {'message':'Project does not exist.','status_code':404}
-			return Response(message,status=404)
+		# except Projects.DoesNotExist:
+		# 	message = {'message':'Project does not exist.','status_code':404}
+		# 	return Response(message,status=404)
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
@@ -1216,11 +1259,12 @@ class DeleteProjectView(APIView):
 class LeaveProjectView(APIView):
 	def post(self,request):
 		token = self.request.data['token']
-		projectname = self.request.data['projectname']
+		projectid = self.request.data['projectid']
 		try:
 			user_object = Token.objects.get(key=token)
-			project_object = Projects.objects.get(name=projectname)
-			user_project_object = user_object.user.userprojects.get(project=project_object)
+			#project_object = Projects.objects.get(name=projectname)
+			user_project_object = user_object.user.userprojects.get(access_key=projectid)
+			project_object = user_project_object.project
 			if user_project_object.status == 'A':
 				message = {'message':'Permission denied.','status_code':400}
 				return Response(message,status=400)
@@ -1235,9 +1279,9 @@ class LeaveProjectView(APIView):
 		except UserProjects.DoesNotExist:
 			message = {'message':'You are not a part of this project. Permission denied','status_code':400}
 			return Response(message,status=400)
-		except Projects.DoesNotExist:
-			message = {'message':'Project does not exist.','status_code':404}
-			return Response(message,status=404)
+		# except Projects.DoesNotExist:
+		# 	message = {'message':'Project does not exist.','status_code':404}
+		# 	return Response(message,status=404)
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)

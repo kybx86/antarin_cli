@@ -119,7 +119,7 @@ Usage:
 			$ ax leaveproject <projectname>
 
 
-		_ To view project timeline changes: 
+		- To view project timeline changes: 
 
 			$ ax checklogs
 			

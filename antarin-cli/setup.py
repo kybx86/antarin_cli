@@ -32,6 +32,10 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
     ],
+    # package_data={
+    #     'sample': ['usage.txt'],
+    # },
+    include_package_data=True,
     keywords = 'ax',
     packages = find_packages(exclude=['docs', 'tests*']),
     install_requires = ['docopt','boto','requests', 'termcolor'],

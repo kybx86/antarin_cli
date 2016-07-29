@@ -18,12 +18,12 @@ Usage:
   ax env
   ax newproject <projectname>
   ax listprojects
-  ax enterproject <projectname>
+  ax enterproject <projectid>
   ax importdata --file <filename>
   ax importdata --folder <foldername>
   ax addcontributor <username>
-  ax deleteproject <projectname>
-  ax leaveproject <projectname>
+  ax deleteproject <projectid>
+  ax leaveproject <projectid>
   ax checklogs
   ax exitproject
   ax help

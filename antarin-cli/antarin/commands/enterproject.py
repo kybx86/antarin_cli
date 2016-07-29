@@ -11,11 +11,11 @@ from _color import ax_blue
 
 class LoadProject(Base):
 
-	def send_request(self,token,projectname):
+	def send_request(self,token,projectid):
 		try:
 			#url = "http://127.0.0.1:8000/rest-loadproject/"
 			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-loadproject/"
-			connection = requests.post(url, data = {'token':token,'projectname':projectname})
+			connection = requests.post(url, data = {'token':token,'projectid':projectid})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -32,14 +32,16 @@ class LoadProject(Base):
 			env_flag = config.get('user_details','PROJECT_ENV')
 			if token != "":
 				if int(env_flag)==0:
-					projectname = json.loads(json.dumps(self.options))['<projectname>']
-					connection = LoadProject.send_request(self,token,projectname)
-					if connection.status_code == 204:
+					projectid = json.loads(json.dumps(self.options))['<projectid>']
+					connection = LoadProject.send_request(self,token,projectid)
+					if connection.status_code == 200:
 						write("PROJECT_ENV",'1')
-						write("PROJECT_ENV_NAME",projectname)
-						nameval = projectname.split(':')[1]
-						#function()
-						print ax_blue('\nEntered Project %s' %(projectname))
+						data = json.loads(connection.text)['message']
+						write("PROJECT_ENV_NAME",data['projectname'])
+						#nameval = projectname.split(':')[1]
+						
+						print data
+						print ax_blue('\nEntered Project %s' %(data['projectname']))
 						####TODO:customize shell prompt with nameval
 					else:
 						print ax_blue(json.loads(connection.text))

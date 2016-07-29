@@ -18,21 +18,21 @@ class DeleteProject(Base):
 		except SystemExit:
 			os._exit(0)
 
-	def check_permissions(self,token,projectname):
+	def check_permissions(self,token,projectid):
 		try:
 			#url = "http://127.0.0.1:8000/rest-deleteproject/"
 			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-deleteproject/"
-			connection = requests.get(url, data = {'token':token,'projectname':projectname})
+			connection = requests.get(url, data = {'token':token,'projectid':projectid})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
 
-	def send_request(self,entered_password,token,projectname):
+	def send_request(self,entered_password,token,projectid):
 		try:
 			#url = "http://127.0.0.1:8000/rest-deleteproject/"
 			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-deleteproject/"
 			
-			connection = requests.post(url, data = {'token':token,'projectname':projectname,'pwd':entered_password})
+			connection = requests.post(url, data = {'token':token,'projectid':projectid,'pwd':entered_password})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -47,18 +47,18 @@ class DeleteProject(Base):
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
 			env_flag = config.get('user_details','PROJECT_ENV')
-			env_name = config.get('user_details','PROJECT_ENV_NAME')
+			
 			if token != "":
 				if int(env_flag)==0:
-					projectname = json.loads(json.dumps(self.options))['<projectname>']
-					connection = DeleteProject.check_permissions(self,token,projectname)
+					projectid = json.loads(json.dumps(self.options))['<projectid>']
+					connection = DeleteProject.check_permissions(self,token,projectid)
 					if connection.status_code==200:
 						try:
 							while 1:
 								user_input = str(raw_input(ax_blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
 								if user_input == "yes":
 									entered_password = getpass.getpass(ax_blue('Enter your antarinX password:(will be hidden as you type) '))
-									connection = DeleteProject.send_request(self,entered_password,token,projectname)
+									connection = DeleteProject.send_request(self,entered_password,token,projectid)
 									if connection.status_code == 200: #verification successful and project deleted
 										print connection.text
 										break
@@ -72,9 +72,9 @@ class DeleteProject(Base):
 									print ax_blue("Your response was not one of the expected responses (yes/no).")
 						except KeyboardInterrupt:
 							print("\n")
-							DeleteProject.exit(Self)
+							DeleteProject.exit(self)
 					else:
-						print connection.text
+						print connection.status_code
 				else:
 					print "Error: You are inside a project environment. Please try this command after exiting the project--see 'ax exitproject'"
 			else:

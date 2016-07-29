@@ -378,7 +378,7 @@ class UploadFileView(APIView):
 				message = {'message':"File upload successful.",'status_code':204}
 				return Response(message,status=204)
 		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
+			message = {'message':'ERROR: Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
 
@@ -418,7 +418,7 @@ class UserSummaryView(APIView):
 					message = {'message':data,'status_code':200}
 					return Response(message,status=200)
 				except Projects.DoesNotExist:
-					message = {'message':"Project does not exist",'status_code':404}
+					message = {'message':"ERROR: Project does not exist",'status_code':404}
 					return Response(message,status=404)
 			else:
 				user_data = {'firstname':user_object.user.first_name,
@@ -432,7 +432,7 @@ class UserSummaryView(APIView):
 				message = {'message':user_data,'status_code':200}
 				return Response(message,status=200)
 		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
+			message = {'message':'ERROR:Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
 
@@ -444,7 +444,7 @@ class LogoutView(APIView):
 			message = {'message':'Token deleted. Logout Successful.','status_code':204}
 			return Response(message,status=204)
 		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
+			message = {'message':'ERROR:Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
 class CreateDirectoryView(APIView):

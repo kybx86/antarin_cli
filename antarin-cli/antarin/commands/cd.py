@@ -26,7 +26,7 @@ class ChangeDirectory(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		error_flag=0
+		error_flag = 0
 
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
@@ -37,30 +37,34 @@ class ChangeDirectory(Base):
 				pid_val = config.get('user_details','PID')
 				retid_val = config.get('user_details','RET_ID')
 				if self.options['<foldername>'] is None or self.options['<foldername>'] == home_path:
-					if env_flag==0:
+					if env_flag == 0:
 						write("current_directory",'~antarin')
 						write("id",'')
 					else:
 						write("pid",'')
-						write("rid",'')
+						write("rid",'') # <-- whats this ?
 				else:
-					connection = ChangeDirectory.send_request(self,token,id_val,env_flag,pid_val,env_name,retid_val)
-					if connection.status_code == 200:
-						data = json.loads(json.loads(connection.text)['message'])
-						#print data
-						if env_flag==0:
-							current_directory = data['current_directory']
-							id_val = data['id']
-							write("current_directory",current_directory)
-							write("id",str(id_val))
+					connection = ChangeDirectory.send_request(self, token, id_val, env_flag, pid_val, env_name, retid_val)
+					if connection.status_code == 200:	
+
+						data = json.loads(connection.text)
+						message = json.loads(data['message'])
+						status_code = data['status_code']
+
+						if env_flag == 0:
+							current_directory = message['current_directory']
+							id_val = message['id']
+							write("current_directory", current_directory)
+							write("id", str(id_val))
 						else:
-							pid_val = data['pid']
-							write("pid",str(pid_val))
-							write("ret_id",str(ret_id))
+							pid_val = message['pid']
+							write("pid", str(pid_val))
+							write("ret_id", str(ret_id))
 					else:
-						print ax_blue(json.loads(connection.text))
+						#print ax_blue(json.loads(connection.text)) #ERROR: Folder does not exist.
+						print ax_blue('\nError: Directory does not exist')
 			else:
 				error_flag = 1
-		if config.has_section('user_details') == False or error_flag==1:
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+		if config.has_section('user_details') == False or error_flag == 1:
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 

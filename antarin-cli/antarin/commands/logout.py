@@ -25,7 +25,7 @@ class Logout(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		error_flag=0
+		error_flag = 0
 
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
@@ -42,11 +42,13 @@ class Logout(Base):
 					write("RET_ID",'')
 					print ax_blue('\nantarinX logout succesful!')
 					print ax_blue("Deleted token and user account details.")
+				elif connection.status_code == 404:
+					print ax_blue('\nError: Session token is not valid--contact us')
 				else:
-					print connection
+					print ax_blue(connection.text) #--error cases not yet handled
 			else:
 				error_flag = 1
-		if config.has_section('user_details') == False or error_flag==1:
+		if config.has_section('user_details') == False or error_flag == 1:
 			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	

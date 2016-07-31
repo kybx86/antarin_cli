@@ -22,7 +22,7 @@ class Login(Base):
 		data = urllib.urlencode(userdict)
 		request = urllib2.Request(url,data=json.dumps(userdict))
 		request.add_header("Content-Type",'application/json')
-		request.get_method = lambda:method
+		#request.get_method = lambda:method
 		try:
 			connection = opener.open(request)
 		except urllib2.HTTPError,e:

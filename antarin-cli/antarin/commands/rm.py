@@ -23,33 +23,39 @@ class RemoveObject(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		token = config.get('user_details', 'token')
-		id_val = config.get('user_details','id')
-		env_flag = config.get('user_details','PROJECT_ENV')
-		env_name = config.get('user_details','PROJECT_ENV_NAME')
-		if token != "":
-			object_name = json.loads(json.dumps(self.options))['<folder/file>']
-			if object_name[0] == '/':
-				object_name = object_name[1:]
-			r_value = json.loads(json.dumps(self.options))['-r']
-			connection = RemoveObject.send_request(self,token,id_val,object_name,r_value,env_flag,env_name)
+		error_flag = 0
 
-			if connection.status_code == 204:
-				print ax_blue('\nDeleted ' + object_name) # succesfully deleting file 
+		if config.has_section('user_details'):
+			token = config.get('user_details', 'token')
+			if token != "": 
+				id_val = config.get('user_details','id')
+				env_flag = config.get('user_details','PROJECT_ENV')
+				env_name = config.get('user_details','PROJECT_ENV_NAME')
+				object_name = json.loads(json.dumps(self.options))['<folder/file>']
+				if object_name[0] == '/':
+					object_name = object_name[1:]
+				r_value = json.loads(json.dumps(self.options))['-r']
 
-			elif connection.status_code == 404:
-				print ax_blue(connection.text)
-			elif connection.status_code == 400:#  File/Folder does not exist
-				print ax_blue(connection.text)
-				#print ax_blue(json.loads(connection.text)) 
-				# ^^^ "ERROR: File does not exist." <--- where is this .text coming from ?!
-				# how about we define our own error message under the 404 and 400 conditions ? i.e.: 
-				#print ax_blue('Error: File %s does not exist' %(object_name))
+				connection = RemoveObject.send_request(self, token, id_val, object_name, r_value, env_flag, env_name)
 
-			# elif connection.status_code == 400:# BAD REQUEST --Folder not empty
-			# 	print json.loads(connection.text)
-			elif connection.status_code!=204:
-				print ax_blue(connection.text)
-		else: 
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+				if connection.status_code == 204:
+					print ax_blue('\nDeleted ' + object_name) #--succesfully deleting file
+					#print ax_blue(connection.text) 
+				elif connection.status_code == 400: #--file/Folder does not exist
+					print ax_blue("\nError: 'ax rm -r <foldername>' is only valid to delete entire folders, not files")
+					#print ax_blue(connection.text)
+				elif connection.status_code == 404: #--wrong usage of rm 
+					print ax_blue("\nError: This file/folder may not exist or folder may contain other files--see 'ax rm -r <foldername>'")
+					#print ax_blue(connection.text)
+				else:
+					print ax_blue(connection.text) #--error cases not yet handled
+			else:
+				error_flag = 1
+
+		if config.has_section('user_details') == False or error_flag == 1:
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
+
+
+
+
 			

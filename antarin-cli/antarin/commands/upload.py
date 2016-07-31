@@ -34,6 +34,45 @@ class Upload(Base):
 			sys.exit(1)
 		return connection
 
+
+	def folder_upload(self, token, foldername, foldername_without_path, id_val, env_flag):
+		result = Upload.tree_traversal(self,foldername)
+  		key_val = id_val
+  		file_flag = 0
+  		count = 0
+  		makeDirectory = MakeDirectory(Base)
+		for root, dirs, files in result:
+			
+			#print "pk = %s\n"%key_val
+			if count != 0:
+				alt_foldername = None
+				print ax_blue("Creating directory : %s " %os.path.basename(root))
+			else:
+				alt_foldername = foldername_without_path
+				print ax_blue("Creating directory : %s " %foldername_without_path)
+			connection = MakeDirectory.send_request(makeDirectory,token,key_val,os.path.basename(root),env_flag,count,alt_foldername)
+			if connection.status_code != 200:
+				print ax_blue(str(connection.text) + ": while uploading folder %s " %root)
+				try:
+					sys.exit(0)
+				except SystemExit:
+					os._exit(0)
+			else:
+				count = 1
+				data = json.loads(json.loads(connection.text)['message'])
+				#print data
+				file_id_val = data['id']
+				if dirs!=[]:
+					key_val = data['id']
+			for filename in files:
+				connection = Upload.file_upload(self,token,os.path.join(root, filename),filename,env_flag,file_flag,file_id_val)
+				if connection.status_code == 204:
+					print ax_blue("Uploaded file : %s" %os.path.join(root,filename))
+					#print "pk = %s\n"%file_id_val
+				else:
+					print ax_blue(str(connection) + ":while uploading file %s" %os.path.join(root,filename))
+
+
 	def tree_traversal(self,top, topdown=True, onerror=None, followlinks=False):
 		islink, join, isdir = os.path.islink, os.path.join, os.path.isdir
 		try:
@@ -59,43 +98,6 @@ class Upload(Base):
 		if not topdown:
 			yield top, dirs, nondirs
 
-	def folder_upload(self, token, foldername, foldername_without_path, id_val, env_flag):
-		result = Upload.tree_traversal(self,foldername)
-  		key_val = id_val
-  		file_flag = 0
-  		count = 0
-  		makeDirectory = MakeDirectory(Base)
-		for root, dirs, files in result:
-			
-			#print "pk = %s\n"%key_val
-			if count!=0:
-				alt_foldername = None
-				print ax_blue("Creating directory : %s " %os.path.basename(root))
-			else:
-				alt_foldername = foldername_without_path
-				print ax_blue("Creating directory : %s " %foldername_without_path)
-			connection = MakeDirectory.send_request(makeDirectory,token,key_val,os.path.basename(root),env_flag,count,alt_foldername)
-			if connection.status_code != 200:
-				print ax_blue(str(connection.text) + ": while uploading folder %s " %root)
-				try:
-					sys.exit(0)
-				except SystemExit:
-					os._exit(0)
-			else:
-				count = 1
-				data = json.loads(json.loads(connection.text)['message'])
-				#print data
-				file_id_val = data['id']
-				if dirs!=[]:
-					key_val = data['id']
-			for filename in files:
-				c = Upload.file_upload(self,token,os.path.join(root, filename),filename,env_flag,file_flag,file_id_val)
-				if c.status_code == 204:
-					print ax_blue("Uploaded file : %s" %os.path.join(root,filename))
-					#print "pk = %s\n"%file_id_val
-				else:
-					print ax_blue(str(connection) + ":while uploading file %s" %os.path.join(root,filename))
-
 
 	# i did not add the ax_blue() to the code below because theres a few changes i believe will happen 
 	def run(self):
@@ -103,7 +105,7 @@ class Upload(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		error_flag=0
+		error_flag = 0
 		
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
@@ -117,37 +119,45 @@ class Upload(Base):
 					#url = "http://127.0.0.1:8000/rest-fileupload/"
 					url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"
 					
-					name = filename
+					name = filename #whats up with these few lines ? 
 					if filename[-1] == '/':
 							filename = filename[:len(filename)-1]
-					if name[-1]=='/':
+					if name[-1] =='/':
 						name = name[:-1]
+
 					foldername = os.path.basename(name)
 					payload = {'token':token,'id':id_val,'foldername':foldername}
+
 					try:
 						connection = requests.post(url, data = payload)
 					except requests.ConnectionError, e:
 						connection = e
-					if connection.status_code == 400:
-						print json.loads(connection.text)
+
+					if connection.status_code == 400: #--folder exists
+						#print ax_blue(json.loads(connection.text))
+						print ax_blue('\nError: The name %s is already taken in this location' %(foldername))
+
 						try:
 							while 1:
-								user_input = str(raw_input("Do you want to rename the directory? (yes/no) "))
+								user_input = ax_blue(str(raw_input("Do you want to rename the folder? (yes/no) ")))
 								if user_input == "yes":
-									new_filename = str(raw_input("Directory name(cannot be empty) : ")) 
+									new_filename = ax_blue(str(raw_input("folder name (cannot be empty): ")))
+									#take existing file and append extension
 									if new_filename:
-										Upload.folder_upload(self,token,filename,new_filename,id_val,env_flag)
+										Upload.folder_upload(self, token, filename, new_filename, id_val, env_flag)
 										try:
 											sys.exit(0)
 										except SystemExit:
 											os._exit(0)
+									else: 
+										
 								elif user_input == "no":
 									try:
 										sys.exit(0)
 									except SystemExit:
 										os._exit(0)
 								else:
-									print "Your response was not one of the expected responses (yes/no)."
+									print ax_blue("Your response was not one of the expected responses (yes/no)")
 						except KeyboardInterrupt:
 							print("\n")
 							try:

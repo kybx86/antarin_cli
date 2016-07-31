@@ -24,7 +24,7 @@ class Ls(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		error_flag=0
+		error_flag = 0
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
 			if token != "":
@@ -33,19 +33,22 @@ class Ls(Base):
 				env_name = config.get('user_details','PROJECT_ENV_NAME')
 				pid_val = config.get('user_details','PID')
 				connection = Ls.send_request(self,token,id_val,env_flag,env_name,pid_val)
+				
 				if connection.status_code == 200:
 					data =  json.loads(connection.text)
-					print ax_blue(('\nMy files:\n'))
-					# 'connection.text' gives a dictionary with two keys-value pairs.  
-					# eg. {"status_code":200,"message":["print.pdf","print_copy.txt","/newfolder"]}
 					message = data['message']
 					status_code = data['status_code']
+
+					print ax_blue(('\nMy files:\n'))
 					for i in range(0,len(message)):
 						print ax_blue('\t' + message[i])
+				elif connection.status_code == 404:
+					print ('\nError: Session token is not valid')
 				else:
-					print ax_blue(json.loads(connection.text))
+					print ax_blue(connection)
+					print ax_blue(connection.text) #--error cases not yet handled
 			else:
-				error_flag=1
+				error_flag = 1
 
-		if config.has_section('user_details') == False or error_flag==1:
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+		if config.has_section('user_details') == False or error_flag == 1:
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")

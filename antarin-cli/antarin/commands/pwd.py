@@ -23,7 +23,7 @@ class CurrentWorkingDirectory(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		error_flag=0
+		error_flag = 0
 		if config.has_section('user_details'):
 			token = config.get('user_details','token')
 			id_val = config.get('user_details', 'id')
@@ -33,15 +33,20 @@ class CurrentWorkingDirectory(Base):
 			if token != "":
 				connection = CurrentWorkingDirectory.send_request(self,token,id_val,env_flag,env_name,pid_val)
 				if connection.status_code == 200:
-					data = json.loads(connection.text)['message']
+					#data = json.loads(connection.text)['message']
+					data = json.loads(connection.text)
+					message = data['message']
+					status_code = data['status_code']
+
 					print ax_blue('\nCurrent directory:\n')
-					print ax_blue('\t' + data)
+					print ax_blue('\t' + message)
 
 				else:
-					print ax_blue("Error connecting to server") #we need to make sure our '200 Error' outputs are consistent
+					#print ax_blue("Error connecting to server") 
+					print ax_blue(status_code + "" + message)
 			else:
-				error_flag=1
-		if config.has_section('user_details') == False or error_flag==1:
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+				error_flag = 1
+		if config.has_section('user_details') == False or error_flag == 1:
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 

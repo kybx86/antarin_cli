@@ -24,27 +24,11 @@ Usage:
   ax addcontributor <username>
   ax deleteproject <projectid>
   ax leaveproject <projectid>
-  ax checklogs
+  ax checklog
   ax exitproject
   ax help
 
 """
-
-# Usage:
-#summary
-#   ax login
-#   ax logout
-#   ax summary
-#   ax ls
-#   ax cd [<foldername>]
-#   ax pwd
-#   ax rm [-r] <folder/file>
-#   ax mkdir <foldername>
-#   ax upload <file>
-#   ax download <file>
-#   ax delete <file>
-#   ax -h | --help
-#   ax --version
 
 from docopt import docopt
 from . import __version__ as VERSION

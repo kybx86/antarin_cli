@@ -5,7 +5,8 @@ from . import Base
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import requests,json
-from _color import ax_blue 
+from _color import ax_blue, bold, out
+
 
 class ListAllProjects(Base):
 
@@ -28,27 +29,38 @@ class ListAllProjects(Base):
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
 			env_flag = config.get('user_details','PROJECT_ENV')
+			username = config.get('user_details', 'username')
 			if token != "":
 				if int(env_flag)==0:
 					connection = ListAllProjects.send_request(self,token)
 					if connection.status_code == 200:
 						message =  json.loads(connection.text)
 						data = message['message']
-						status_code = message['status_code']
-						#print data
-						#print('\n\t| Project Name| \t\t| Permissions|')
-						print ax_blue('\nMy Projects:\n')
-						for i in range(0,len(data)):
-							print ax_blue('\n\t' + data[i])
-						print('\n')
+					
+						print ax_blue(bold('\nMy Projects:\n'))
+						# this is split the return value given from views.py as: 
+						# return_val.append(project.project.name+"\t"+status+"\t"+str(project.access_key))
+						for i in xrange(0, len(data)):
+							project_entry = data[i]
+							project_entry = project_entry.split('\t') 
+							project_name = project_entry[0].split(':')[1]
+							out(ax_blue(bold('\tProject Name:\t') + ax_blue(project_name)))
+							out(ax_blue(bold('\tPermissions:\t') + ax_blue(project_entry[1])))
+							out(ax_blue(bold('\tProject ID:\t') + ax_blue(project_entry[2])))
+							out('\n')
+								
+					elif connection.status_code == 404:
+						print ax_blue('\nError: Session token is not valid')
 					else:
-						print ax_blue(connection.text)
+						print ax_blue(connection)
+						print ax_blue(connection.text) #--error cases not yet handled
+
 				else: #inside project environment
-					print ax_blue("Error: You need to exit from the current environment to see a list of all projects--see 'ax exitproject'")
+					print ax_blue("\nError: You need to exit from the current environment to see a list of all projects--see 'ax exitproject'")
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

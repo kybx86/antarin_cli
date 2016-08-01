@@ -25,26 +25,27 @@ class LoadProject(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		error_flag=0
+		error_flag = 0
 
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
 			env_flag = config.get('user_details','PROJECT_ENV')
 			if token != "":
-				if int(env_flag)==0:
+				if int(env_flag) == 0:
 					projectid = json.loads(json.dumps(self.options))['<projectid>']
-					connection = LoadProject.send_request(self,token,projectid)
+					connection = LoadProject.send_request(self, token, projectid)
 					if connection.status_code == 200:
 						write("PROJECT_ENV",'1')
 						data = json.loads(connection.text)['message']
-						write("PROJECT_ENV_NAME",data['projectname'])
-						#nameval = projectname.split(':')[1]
-						
-						print data
-						print ax_blue('\nEntered Project %s' %(data['projectname']))
+						write("PROJECT_ENV_NAME", data['projectname'])
+						project_name = data['projectname']
+						project_name = data['projectname'].split(':')[1]
+						print ax_blue("\nEntered project: '%s'" %(project_name))
 						####TODO:customize shell prompt with nameval
+					elif connection.status_code == 404:
+						print ax_blue("\nError: Project with access code '%s' does not exist in your account. Please verify access code." %(projectid))
 					else:
-						print ax_blue(json.loads(connection.text))
+						print ax_blue(json.loads(connection.text)) 
 				else: #inside project environment
 					print ax_blue("Error: You need to exit from the current environment to load a new project--see 'ax exitproject'")
 			else:

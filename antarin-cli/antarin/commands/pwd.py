@@ -5,7 +5,7 @@ from .base import Base
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
 import requests,json
-from _color import ax_blue
+from _color import ax_blue, bold, out
 
 class CurrentWorkingDirectory(Base):
 
@@ -38,7 +38,7 @@ class CurrentWorkingDirectory(Base):
 					message = data['message']
 					status_code = data['status_code']
 
-					print ax_blue('\nCurrent directory:\n')
+					print ax_blue(bold('\nCurrent directory:\n'))
 					print ax_blue('\t' + message)
 
 				else:

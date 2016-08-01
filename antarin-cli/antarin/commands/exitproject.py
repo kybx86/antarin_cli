@@ -25,7 +25,8 @@ class ExitProject(Base):
 				if int(env_flag):
 					write("PROJECT_ENV",'0')
 					write("PROJECT_ENV_NAME",'')
-					print ax_blue('\nExited project %s' %(env_name))
+					project_name = env_name.split(':')[1]
+					print ax_blue("\nExited project: '%s'" %(project_name))
 					####TODO:customize shell prompt 
 				else: #inside file system environment
 					print ax_blue("Error: You are currently not inside a project environment--try 'ax loadproject <projectname>' to load a project environment")

@@ -4,7 +4,9 @@ from .base import Base
 from ConfigParser import SafeConfigParser
 import json,requests
 from os.path import expanduser
-from _color import ax_blue
+from _color import ax_blue, bold, out
+
+
 
 class Summary(Base):
 	def send_request(self,token,env_flag,env_name):
@@ -35,14 +37,30 @@ class Summary(Base):
 						data = json.loads(connection.text)    
 						summary_file = data['message']
 						status_code = data['status_code']
-					
-						print ax_blue(('\nProject Details:'))
-						print ax_blue(('\n\t Project Name -  %s'%(summary_file['projectname'])))
-						print ax_blue(('\n\t Admin - %s' %(summary_file['admin'])))
-						print ax_blue(('\n\t Contributors -  %s' %(summary_file['contributors']))) 
-						print ax_blue(('\n\t Project Files -  %s' %(summary_file['file_list'])))
-						print ax_blue(('\n\t Project Folders - %s' %(summary_file['folder_list'])))
-						print ('\n')
+						project_name = summary_file['projectname'].split(':')[1]
+
+						out(ax_blue(bold('\nProject Details:\n')))
+						out(ax_blue(bold('\n\tProject Name: ')) + ax_blue(project_name))
+						out(ax_blue(bold('\n\tAdmin: ')) + ax_blue(summary_file['admin']))
+						#--iterating for fields that can contain variable length fields
+						out(ax_blue(bold('\n\tContributors: \n')))
+						for i in xrange(len(summary_file['contributors'])):
+							username = summary_file['contributors'][i][0]
+							user_status = summary_file['contributors'][i][1]
+							print ax_blue("\t\t%s \t%s" %(username, user_status))
+
+						out(ax_blue(bold('\tProject Files: \n')))
+						for i in xrange(len(summary_file['file_list'])):
+							filename = summary_file['file_list'][i][0]
+							owner = summary_file['file_list'][i][1]
+							print ax_blue("\t\t%s \t%s" %(owner, filename))
+						
+						out(ax_blue(bold('\tProject Folders: \n')))
+						for i in xrange(len(summary_file['folder_list'])):
+							foldername = summary_file['folder_list'][i][0]
+							owner = summary_file['folder_list'][i][1]
+							print ax_blue("\t\t%s \t%s" %(owner, foldername))
+						
 					elif connection.status_code == 404:
 						print ('\nError: Project does not exist')
 					else:
@@ -53,12 +71,11 @@ class Summary(Base):
 						data = json.loads(connection.text)  
 						summary_file = data['message']        
 						status_code = data['status_code']
-					
-						print ax_blue(('\nAccount:'))
-						print ax_blue(('\n\t User: %s %s' %(summary_file['firstname'], summary_file['lastname'])))
-						print ax_blue(('\n\t Antarin ID: %s' %(summary_file['username'])))
-						print ax_blue(('\n\t Storage Use: %s / %s' %(summary_file['data_storage_used'], summary_file['data_storage_available'])))
-						print('\n')
+						
+						out(ax_blue(bold('\nAccount:\n')))
+						out(ax_blue(bold('\n\tUser: ')) + ax_blue(summary_file['firstname']) + " " + ax_blue(summary_file['lastname']))
+						out(ax_blue(bold('\n\tAntarin ID: ')) + ax_blue(summary_file['username']))
+						out(ax_blue(bold('\n\tStorage Use: '))), out(ax_blue('%s / %s' %(summary_file['data_storage_used'], summary_file['data_storage_available'])))
 					elif connection.status_code == 404:
 						print ('\nError: Session token is not valid')
 					else:

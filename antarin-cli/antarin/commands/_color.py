@@ -2,7 +2,7 @@
 
 
 from termcolor import colored # need to add on depedencies/requirement file 
-
+import sys
 
 # This file uses the termcolor lib to output colored text in terminal. 
 # Usage: colors.py should be imported wherever text needs to be printed to terminal--doing
@@ -16,4 +16,11 @@ from termcolor import colored # need to add on depedencies/requirement file
 #		print ax_blue('Hello %s' %(name))
 
 
+
+
 ax_blue = lambda x: colored(x, 'cyan')
+
+bold    = lambda x: ('\033[1m' + x + '\033[0m')
+
+out     = lambda x: sys.stdout.write(x)
+

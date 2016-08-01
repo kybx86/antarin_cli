@@ -5,7 +5,7 @@ from .base import Base
 from ConfigParser import SafeConfigParser
 import json, requests
 from os.path import expanduser
-from _color import ax_blue
+from _color import ax_blue, bold, out
 
 class Ls(Base):
 
@@ -39,7 +39,7 @@ class Ls(Base):
 					message = data['message']
 					status_code = data['status_code']
 
-					print ax_blue(('\nMy files:\n'))
+					print ax_blue(bold('\nMy files:\n'))
 					for i in range(0,len(message)):
 						print ax_blue('\t' + message[i])
 				elif connection.status_code == 404:

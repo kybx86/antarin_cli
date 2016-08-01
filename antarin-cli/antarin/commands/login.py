@@ -9,7 +9,7 @@ import sys,os
 from ConfigParser import SafeConfigParser
 from antarin.config import write
 from os.path import expanduser
-from _color import ax_blue
+from _color import ax_blue, bold, out
 
 class Login(Base):
 
@@ -22,7 +22,6 @@ class Login(Base):
 		data = urllib.urlencode(userdict)
 		request = urllib2.Request(url,data=json.dumps(userdict))
 		request.add_header("Content-Type",'application/json')
-		#request.get_method = lambda:method
 		try:
 			connection = opener.open(request)
 		except urllib2.HTTPError,e:
@@ -35,23 +34,22 @@ class Login(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		#if config.has_section('user_details'):
 			
 
 		if config.has_section('user_details') and config.get('user_details', 'token') == "":
-			print ax_blue('\nEnter your Antarin credentials')
+			out(ax_blue(bold('\nEnter your Antarin credentials\n')))
 			try:
 				while 1 :
 					
-					userdict['username'] = str(raw_input(ax_blue('Antarin ID: ')))
-					userdict['password'] = getpass.getpass(ax_blue('Password:(will be hidden as you type) '))
+					userdict['username'] = str(raw_input(ax_blue(bold('Antarin ID: '))))
+					userdict['password'] = getpass.getpass(ax_blue(bold('Password:(will be hidden as you type) ')))
 					connection = Login.verify(self,userdict)
 					data = json.load(connection)
 					if connection.code == 200:
 						token = data['key']
 						print ax_blue('\nantarinX login succesful!\n')
 						print ax_blue('Logged in as: %s' %userdict['username'])
-						print ax_blue('Session Token: %s\n' %token)
+						print ax_blue('Session Token: %s' %token)
 						write("username",userdict['username'])
 						write("token",token)
 						write("current_directory",'~antarin')
@@ -80,18 +78,18 @@ class Login(Base):
 					os._exit(0)
 
 		elif config.has_section('user_details') == False:
-			print ax_blue('\nEnter your Antarin credentials')
+			out(ax_blue(bold('\nEnter your Antarin credentials\n')))
 			try:
 				while 1 :
-					userdict['username'] = str(raw_input(ax_blue('Antarin ID:'))) 
-					userdict['password'] = getpass.getpass('Password:(will be hidden as you type)')
+					userdict['username'] = str(raw_input(ax_blue(bold('Antarin ID:')))) 
+					userdict['password'] = getpass.getpass(ax_blue(bold('Password:(will be hidden as you type) ')))
 					connection = Login.verify(self,userdict)
 					data = json.load(connection)
 					if connection.code == 200:
 						token = data['key']
 						print ax_blue('\nantarinX login succesful!\n')
 						print ax_blue('Logged in as: %s' %userdict['username'])
-						print ax_blue('Session Token: %s\n' %token)
+						print ax_blue('Session Token: %s' %token)
 						write("username",userdict['username'])
 						write("token",token)
 						write("current_directory",'~antarin')
@@ -111,7 +109,7 @@ class Login(Base):
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
 						write("RET_ID",'')
-						print ax_blue('Invalid username and/or password\n')
+						print ax_blue('\nInvalid username and/or password\n')
 			except KeyboardInterrupt:
 				print("\n")
 				try:
@@ -120,6 +118,7 @@ class Login(Base):
 					os._exit(0)
 
 		elif config.get('user_details', 'token') != "":
-			print ax_blue('Logged in as: %s' %config.get('user_details', 'username'))
+
+			print ax_blue('\nLogged in as: %s' %config.get('user_details', 'username'))
 			print ax_blue('Session Token: %s' %config.get('user_details', 'token'))
  		

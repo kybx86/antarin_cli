@@ -49,7 +49,7 @@ class Logout(Base):
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag == 1:
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

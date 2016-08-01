@@ -23,28 +23,34 @@ class NewProject(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		error_flag=0
+		error_flag = 0
 
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
 			env_flag = config.get('user_details','PROJECT_ENV')
 			if token != "":
-				if int(env_flag)==0:
+				if int(env_flag) == 0:
 					projectname = json.loads(json.dumps(self.options))['<projectname>']
 					####TODO:Projectname validation (Make sure it does not contain a ':')
-					connection = NewProject.send_request(self,token,projectname)
+					connection = NewProject.send_request(self, token, projectname)
+					data = json.loads(connection.text)    
+
 					if connection.status_code == 200:
-						data = connection.text
-						#print "New project created as - "+ json.loads(data)
-						print ax_blue('\nCreated new project: %s' %(json.loads(data)))
-					elif connection.status_code == 400: #Project exists
-						print json.loads(connection.text)
+						message = data['message']
+						print ax_blue("\nCreated new project: '%s'" %(projectname))
+					elif connection.status_code == 400: #-- Project exists
+						print ax_blue("\nError: A project with name '%s' already exists in your account. Please choose another name." %(projectname))
+					elif connection.status_code == 404:
+						print ax_blue('\nError: Session token is not valid')
+					else:
+						print ax_blue(connection)
+						print ax_blue(connection.text) #--error cases not yet handled
 				else:
-					print ax_blue("Error: You need to exit from the current project to create a new project--see 'ax exitproject'")
+					print ax_blue("\nError: Exit current project to create new project--see 'ax exitproject'")
 			else:
 				error_flag = 1
-		if config.has_section('user_details') == False or error_flag==1:
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+		if config.has_section('user_details') == False or error_flag == 1:
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

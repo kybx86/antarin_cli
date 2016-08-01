@@ -36,25 +36,31 @@ class ImportData(Base):
 					if self.options['--file']:
 						folder_flag = 0 
 						path = json.loads(json.dumps(self.options))['<filename>']
-						connection = ImportData.send_request(self,token,path,env_name,folder_flag)
+						connection = ImportData.send_request(self, token, path, env_name, folder_flag)
 
+						project_name = env_name.split(':')[1]
 						if connection.status_code == 204: # successs
-							print ax_blue('\nImported file %s to %s' %(path, env_name))
-
-						if connection.status_code == 404: #DUPLICATE NAME of file/folder
+							print ax_blue("\nImported file '%s' to '%s'" %(path, project_name))
+						elif connection.status_code == 404: #--duplicate file folder 
+							print ax_blue('\nError: File being imported already exists in this project')
+							#print ax_blue('\n%s'%(json.loads(connection.text)))
+						else: 
 							print ax_blue('\n%s'%(json.loads(connection.text)))
+
 					elif self.options['--folder']:
 						folder_flag = 1
 						path = json.loads(json.dumps(self.options))['<foldername>']
-						connection = ImportData.send_request(self,token,path,env_name,folder_flag)
+						connection = ImportData.send_request(self, token, path, env_name, folder_flag)
 
 						if connection.status_code == 204: # successs
 							print ax_blue('\nImported folder %s to project %s' %(path, env_name))
-
-						if connection.status_code == 404: #DUPLICATE NAME of file/folder
+						elif connection.status_code == 404: #DUPLICATE NAME of file/folder
+							print ax_blue("\nError: Folder being imported already exists in this project, or path to folder is incorrect--path to home folder is '~antarin/'")
+						else:
 							print ax_blue('\n%s'%(json.loads(connection.text)))
+
 				else: #inside file system env
-					print ax_blue("Error: You are currently not inside a project environment--see 'ax enterproject <projectname>' to load a project environment")
+					print ax_blue("\nError: You are currently outside a project environment--see 'ax enterproject <projectid>' to access a project environment")
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:

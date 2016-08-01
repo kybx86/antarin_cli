@@ -6,7 +6,7 @@ from os.path import expanduser
 import requests,json
 from antarin.config import write
 from _color import ax_blue
-import sys,os
+import os
 
 class LeaveProject(Base):
 	def send_request(self,token,projectid):
@@ -24,26 +24,28 @@ class LeaveProject(Base):
 		home_path = expanduser("~")
 		filepath = home_path + '/.antarin_config.ini'
 		config.read(filepath)
-		error_flag=0
+		error_flag = 0
 
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
 			env_flag = config.get('user_details','PROJECT_ENV')
 			
 			if token != "":
-				if int(env_flag)==0:
+				if int(env_flag) == 0:
 					projectid = json.loads(json.dumps(self.options))['<projectid>']
 					connection = LeaveProject.send_request(self,token,projectid)
-					if connection.status_code==200:
-						print connection.text
+					if connection.status_code == 200:
+						print ax_blue("\nYou have been removed from project '%s' as contributor")
+					elif connection.status_code == 400:
+						print ax_blue("\nError: You cannot leave this project either because you are the Admin or because you do not belong to it")
 					else:
-						print connection.text
+						print ax_blue(connection.text)
 				else:
-					print "Error: You are inside a project environment. Please try this command after exiting the project--see 'ax exitproject'"
+					print ax_blue("\nError: You are inside a project environment. Please try this command after exiting the project--see 'ax exitproject'")
 			else:
 				error_flag = 1
-		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+		if config.has_section('user_details') == False or error_flag == 1:
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

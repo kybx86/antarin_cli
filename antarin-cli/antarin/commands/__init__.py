@@ -21,4 +21,4 @@ from .env import *
 from .help import *
 from .deleteproject import *
 from .leaveproject import *
-from .checklogs import *
+from .checklog import *

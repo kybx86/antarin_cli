@@ -1,7 +1,7 @@
 ## -- Copyright (c) 2016 Antarin Technologies Inc. -- ##
 
 
-from termcolor import colored # need to add on depedencies/requirement file 
+from termcolor import colored 
 import sys
 
 # This file uses the termcolor lib to output colored text in terminal. 

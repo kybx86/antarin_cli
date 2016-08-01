@@ -43,7 +43,7 @@ class Ls(Base):
 					for i in range(0,len(message)):
 						print ax_blue('\t' + message[i])
 				elif connection.status_code == 404:
-					print ('\nError: Session token is not valid')
+					print ax_blue('\nError: Session token is not valid')
 				else:
 					print ax_blue(connection)
 					print ax_blue(connection.text) #--error cases not yet handled

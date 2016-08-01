@@ -30,7 +30,7 @@ class Upload(Base):
 		except requests.ConnectionError, e:
 			connection = e
 			print ax_blue("Error while uploading file %s" %filename)
-			print connection 
+			print ax_blue(connection)
 			sys.exit(1)
 		return connection
 
@@ -50,25 +50,37 @@ class Upload(Base):
 			else:
 				alt_foldername = foldername_without_path
 				print ax_blue("Creating directory : %s " %foldername_without_path)
+
 			connection = MakeDirectory.send_request(makeDirectory,token,key_val,os.path.basename(root),env_flag,count,alt_foldername)
-			if connection.status_code != 200:
-				print ax_blue(str(connection.text) + ": while uploading folder %s " %root)
+
+			if connection.status_code == 200:
+				count = 1
+				data = json.loads(json.loads(connection.text)['message'])
+				file_id_val = data['id']
+				if dirs!=[]:
+					key_val = data['id']
+
+			elif connection.status_code == 400: #--duplicate names
+				print ax_blue('\nAn error occured during upload')
+				print ax_blue("Error: Folder '%s' already exists--create with a different name" %(foldername))
 				try:
 					sys.exit(0)
 				except SystemExit:
 					os._exit(0)
-			else:
-				count = 1
-				data = json.loads(json.loads(connection.text)['message'])
-				#print data
-				file_id_val = data['id']
-				if dirs!=[]:
-					key_val = data['id']
+
+			elif connection.status_code == 404:
+
+				print ax_blue('\nAn error occured during upload')
+				print ax_blue('Error: Session token is not valid')
+
+			else:  			#--error cases not yet handled
+				print ax_blue(connection)
+				print ax_blue(connection.text)
+
 			for filename in files:
 				connection = Upload.file_upload(self,token,os.path.join(root, filename),filename,env_flag,file_flag,file_id_val)
 				if connection.status_code == 204:
 					print ax_blue("Uploaded file : %s" %os.path.join(root,filename))
-					#print "pk = %s\n"%file_id_val
 				else:
 					print ax_blue(str(connection) + ":while uploading file %s" %os.path.join(root,filename))
 
@@ -98,8 +110,6 @@ class Upload(Base):
 		if not topdown:
 			yield top, dirs, nondirs
 
-
-	# i did not add the ax_blue() to the code below because theres a few changes i believe will happen 
 	def run(self):
 		config = SafeConfigParser()
 		home_path = expanduser("~")
@@ -134,30 +144,30 @@ class Upload(Base):
 						connection = e
 
 					if connection.status_code == 400: #--folder exists
-						#print ax_blue(json.loads(connection.text))
-						print ax_blue('\nError: The name %s is already taken in this location' %(foldername))
+						print ax_blue("\nError: The name '%s' is already taken in this location" %(foldername))
 
 						try:
 							while 1:
-								user_input = ax_blue(str(raw_input("Do you want to rename the folder? (yes/no) ")))
+								user_input = str(raw_input(ax_blue("Do you want to rename the folder? (yes/no): ")))
 								if user_input == "yes":
-									new_filename = ax_blue(str(raw_input("folder name (cannot be empty): ")))
-									#take existing file and append extension
-									if new_filename:
-										Upload.folder_upload(self, token, filename, new_filename, id_val, env_flag)
+									new_filename = str(raw_input(ax_blue("Enteqr new folder name (cannot be empty): ")))
+									print new_filename
+									if new_filename != "" and new_filename != " ": #--handling white space conlfict 
+										Upload.folder_upload(self, token, filename, new_filename, id_val, env_flag) 
+										# whats the connection output cases for this ?
 										try:
 											sys.exit(0)
 										except SystemExit:
-											os._exit(0)
-									else: 
-										
+											os._exit(0) 
 								elif user_input == "no":
+									print ax_blue('\nFolder not uploaded')
 									try:
 										sys.exit(0)
 									except SystemExit:
 										os._exit(0)
+									print ax_blue('Upload aborted')
 								else:
-									print ax_blue("Your response was not one of the expected responses (yes/no)")
+									print ax_blue("Invalid response. Please type 'yes' or 'no'")
 						except KeyboardInterrupt:
 							print("\n")
 							try:
@@ -165,35 +175,39 @@ class Upload(Base):
 							except SystemExit:
 								os._exit(0)
 
-					if connection.status_code ==200:
+					if connection.status_code == 200: 
 						file_flag = 0
-						Upload.folder_upload(self,token,filename,foldername,id_val,env_flag)
+						Upload.folder_upload(self, token, filename, foldername, id_val, env_flag)
 					else:
-						print connection.text
+						print ax_blue(connection.text)
 				else:
 					file_flag = 1
 					name = os.path.basename(filename)
 					connection = Upload.file_upload(self,token,filename,name,env_flag,file_flag,id_val)
 					if connection.status_code == 204:
 						print "Uploaded file : %s" %filename
-					elif connection.status_code == 400:#BAD REQUEST -- duplicate filename
-						print json.loads(connection.text)
+					elif connection.status_code == 400: #--duplicate files names
+						#print json.loads(connection.text)
+						print ax_blue("\nError: a file with the name '%s' already exists in this space" %(filename))
 						try:
 							while 1:
-								user_input = str(raw_input("Do you want to rename the file? (yes/no) "))
+								user_input = str(raw_input(ax_blue("Do you want to rename the file? (yes/no): ")))
 								if user_input == "yes":
-									new_filename = str(raw_input("File name(cannot be empty) : ")) 
-									if new_filename:
-										connection = Upload.file_upload(self,token,filename,new_filename,env_flag,file_flag,id_val)
+									new_filename = str(raw_input(ax_blue("Enter new file name with extension (cannot be empty): "))) 
+
+									if new_filename != "" and new_filename != " ": #--handling white space conflict 
+										connection = Upload.file_upload(self, token, filename, new_filename, env_flag, file_flag, id_val)
 										if connection.status_code == 204:
-											print "Uploaded file as : %s" %new_filename
+											print ax_blue("Uploaded file as: '%s'" %(new_filename))
 										else:
-											print connection.text
+											print ax_blue(connection.text)
 										break
 								elif user_input == "no":
+									print ax_blue('\nFile not uploaded')
+									print ax_blue('Upload aborted')
 									break
 								else:
-									print "Your response was not one of the expected responses (yes/no)."
+									print ax_blue("Invalid response. Please type 'yes' or 'no'")
 						except KeyboardInterrupt:
 							print("\n")
 							try:
@@ -202,9 +216,9 @@ class Upload(Base):
 								os._exit(0)
 
 					else:
-						print connection.text
+						print ax_blue(connection.text)  #--unhandled error 
 			else:
-				error_flag=1
-		if config.has_section('user_details') == False or error_flag==1:
-			print "Error: You are not logged in. Please try this command after authentication--see 'ax login'"
+				error_flag = 1
+		if config.has_section('user_details') == False or error_flag == 1:
+			print "\nError: You are not logged in. Please try this command after authentication--see 'ax login'"
 

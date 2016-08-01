@@ -42,8 +42,8 @@ class MakeDirectory(Base):
 					print ax_blue("\nError: Folder '%s' already exists--create with a different name" %(foldername))
 					#print json.loads(connection.text) 
 				elif connection.status_code == 404:
-					print ax_blue(connection.text)
-				else:  								#--error cases not yet handled
+					print ax_blue('\nError: Session token is not valid')
+				else:  							#--error cases not yet handled
 					print ax_blue(connection)
 					print ax_blue(connection.text)
 					

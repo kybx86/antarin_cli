@@ -63,8 +63,8 @@ class ImportData(Base):
 					print ax_blue("\nError: You are currently outside a project environment--see 'ax enterproject <projectid>' to access a project environment")
 			else:
 				error_flag = 1
-		if config.has_section('user_details') == False or error_flag==1:
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+		if config.has_section('user_details') == False or error_flag == 1:
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

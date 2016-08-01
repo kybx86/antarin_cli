@@ -76,8 +76,9 @@ class Summary(Base):
 						out(ax_blue(bold('\n\tUser: ')) + ax_blue(summary_file['firstname']) + " " + ax_blue(summary_file['lastname']))
 						out(ax_blue(bold('\n\tAntarin ID: ')) + ax_blue(summary_file['username']))
 						out(ax_blue(bold('\n\tStorage Use: '))), out(ax_blue('%s / %s' %(summary_file['data_storage_used'], summary_file['data_storage_available'])))
+						out('\n')
 					elif connection.status_code == 404:
-						print ('\nError: Session token is not valid')
+						print ax_blue("\nError: Session token is not valid--see '$ ax login'")
 					else:
 						print ax_blue(connection.text) #--error cases not yet handled
 			else:

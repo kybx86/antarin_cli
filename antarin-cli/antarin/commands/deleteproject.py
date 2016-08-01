@@ -52,7 +52,7 @@ class DeleteProject(Base):
 				if int(env_flag) == 0:
 					projectid = json.loads(json.dumps(self.options))['<projectid>']
 					connection = DeleteProject.check_permissions(self,token,projectid)
-					if connection.status_code==200:
+					if connection.status_code == 200:
 						try:
 							while 1:
 								user_input = str(raw_input(ax_blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
@@ -83,7 +83,7 @@ class DeleteProject(Base):
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag == 1:
-			print ax_blue("Error: You are not logged in. Please try this command after authentication--see 'ax login'")
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 
 	
 		

@@ -46,5 +46,11 @@ urlpatterns = [
 	url(r'^rest-deleteproject/$',antarin_views.DeleteProjectView.as_view()),
 	url(r'^rest-leaveproject/$',antarin_views.LeaveProjectView.as_view()),
 	url(r'^rest-checklogs/$',antarin_views.CheckLogsView.as_view()),
+	url(r'^rest-newinstance/$',antarin_views.NewInstanceView.as_view()),
+	url(r'^rest-listallinstances/$',antarin_views.ListInstancesView.as_view()),
+	url(r'^rest-enterinstance/$',antarin_views.EnterInstanceView.as_view()),
+	url(r'^rest-importfile/$',antarin_views.ImportFileView.as_view()),
+	url(r'^rest-listfiles/$',antarin_views.list_filesView.as_view()),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

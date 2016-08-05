@@ -29,7 +29,8 @@ from rest_framework.parsers import FileUploadParser
 from hurry.filesize import size
 from boto.s3.connection import S3Connection, Bucket, Key
 from wsgiref.util import FileWrapper
-
+from django.core.files import File
+from django.core.files.base import ContentFile
 
 #S3 Bucket details
 conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
@@ -235,6 +236,7 @@ def userHomepage(request):
 
 class ListFilesView(APIView):
 	def post(self,request):
+		print(self.request.data)
 		token = self.request.data['token']
 		pk = self.request.data['id']
 		env_flag = int(self.request.data['env_flag'])
@@ -402,7 +404,7 @@ class UserSummaryView(APIView):
 					admin = ''
 
 					for item in all_userproject_objects:
-						contributor_list.append((item.user.username,item.status))
+						contributor_list.append((item.user.first_name+' '+item.user.last_name,item.status))
 						if item.status == 'A':
 							admin = item.user.first_name + ' '+ item.user.last_name +'('+item.user.username+')'
 
@@ -1121,7 +1123,7 @@ class ImportDataView(APIView):
 						return Response(message,status=204)
 					else:
 						print("here")
-						message = {'message':"ERROR: File exists.",'status_code':404}
+						message = {'message':"ERROR: File exists.",'status_code':400}
 						return Response(message,status=404)
 				else:
 					message = {'message':"ERROR: File does not exist.",'status_code':404}
@@ -1244,7 +1246,7 @@ class DeleteProjectView(APIView):
 				# new_projectlogs_object.save()
 				
 				message = {'message':'Project deleted.','status_code':200}
-				return Response(message,status=404)
+				return Response(message,status=200)
 			else:
 				print('incorrect password')
 				message = {'message':'Invalid password.','status_code':404}
@@ -1310,6 +1312,165 @@ class CheckLogsView(APIView):
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
+class NewInstanceView(APIView):
+	def generate_rand(n):
+		llimit = 10**(n-1)
+		ulimit = (10**n)-1
+		return random.randint(llimit,ulimit)
+
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['projectname']
+		instance_name = self.request.data['instance_name']
+		ami_id = self.request.data['ami_id']
+		instance_type = self.request.data['instance_type']
+		region = self.request.data['region']
+
+		try:
+			user_object = Token.objects.get(key=token)
+			project_object = Projects.objects.get(name=projectname)
+			# key = RSAKeys.objects.filter(region=region)
+			# if not key:
+			# 	ec2_instance = boto.connect_ec2()
+			# 	keyname = region+'_new_ec2_key'
+			# 	newkey = ec2_instance.create_key_pair(keyname)
+			# 	with open(keyname+'.pem','w')as f:
+			# 		f.write(newkey.material)
+			# 	new_key_record = RSAKeys(region=region,key_name=keyname,key=f)
+			# 	new_key_record.save()
+			# print("new key record added.")
+
+			all_user_instances = user_object.user.userinstances.all()
+			accesskey_list = []
+			for item in all_user_instances:
+				accesskey_list.append(item.access_key)
+
+			num = NewInstanceView.generate_rand(4)
+			while num in accesskey_list:
+				print("NEW")
+				num = generate_rand(4)
+
+			access_key = num
+			print(access_key)
+
+			new_instances_object = UserInstances(user=user_object.user,project=project_object,instance_name=instance_name,ami_id=ami_id,region=region,instance_type=instance_type,access_key=access_key)
+			new_instances_object.save()
+			message={'message':'New instance record added','access_key':new_instances_object.access_key,'status_code':200}
+			return Response(message,status=200)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+
+class ListInstancesView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['projectname']
+
+		try:
+			user_object = Token.objects.get(key=token)
+			project_object = Projects.objects.get(name=projectname)
+			all_instances = UserInstances.objects.filter(user=user_object.user,project=project_object)
+			ret_val = []
+			for item in all_instances:
+				print(item.instance_name)
+				ret_val.append(item.instance_name)
+				ret_val.append(item.access_key)
+			message = {'message':ret_val,'status_code':200}
+			return Response(message,status=200)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+class EnterInstanceView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		instance_access_id = self.request.data['access_key']
+
+		try:
+			user_object = Token.objects.get(key=token)
+			user_instance_object = UserInstances.objects.get(user=user_object.user,access_key=instance_access_id)
+			data = {'id':user_instance_object.pk,'name':user_instance_object.instance_name}
+			message = {'message':data,'status_code':200}
+			return Response(message,status=200)
+		except UserInstances.DoesNotExist:
+			message = {'message':'No instance with given access key','status_code':400}
+			return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+
+class ImportFileView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['env_name']
+		filename = self.request.data['path']
+		instance_id = self.request.data['instance_id']
+		section = self.request.data['section']
+		try:
+			user_object = Token.objects.get(key=token)
+			instance_object = UserInstances.objects.get(user=user_object.user,pk=int(instance_id))
+			project_object = Projects.objects.get(name=projectname)
+			all_project_files = project_object.projectfiles.all()
+			project_file_object = None
+			for item in all_project_files:
+				if os.path.basename(item.file_ref.file.name)==filename:
+					project_file_object = item
+					break
+
+			if project_file_object:
+				if section == 'algo':
+					all_instance_files = instance_object.algofiles_instance_object.all()
+					for item in all_instance_files:
+						if os.path.basename(item.projectfile.file_ref.file.name)==filename:
+							error=1
+							message = {'message':'File exists.','status_code':400}
+							return Response(message,status=400)
+
+					new_algofiles_object = algoFiles(instance=instance_object,projectfile=project_file_object)
+					new_algofiles_object.save()
+					message = {'message':'File import successful.','status_code':200}
+					return Response(message,status=200)
+				elif section == 'data':
+					all_instance_files = instance_object.datafiles_instance_object.all()
+					for item in all_instance_files:
+						if os.path.basename(item.projectfile.file_ref.file.name)==filename:
+							error=1
+							message = {'message':'File exists.','status_code':400}
+							return Response(message,status=400)
+					new_datafiles_object = dataFiles(instance=instance_object,projectfile=project_file_object)
+					new_datafiles_object.save()
+					message = {'message':'File import successful.','status_code':200}
+					return Response(message,status=200)
+			else:
+				message={'message':'File does not exist.','status_code':400}
+				return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+class list_filesView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['env_name']
+		instance_id = self.request.data['instance_id']
+		section = self.request.data['section']
+		try:
+			user_object = Token.objects.get(key=token)
+			instance_object = UserInstances.objects.get(user=user_object.user,pk=int(instance_id))
+			if section == 'data':
+				all_files = instance_object.datafiles_instance_object.all()
+			elif section == 'algo':
+				all_files = instance_object.algofiles_instance_object.all()
+			ret_val=[]
+			for item in all_files:
+				ret_val.append(os.path.basename(item.projectfile.file_ref.file.name))
+			message = {'message':ret_val,'status_code':200}
+			return Response(message,status=200)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
 
 
 # class DownloadFileView(APIView):

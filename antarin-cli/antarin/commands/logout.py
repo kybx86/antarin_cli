@@ -13,8 +13,8 @@ class Logout(Base):
 
 	def send_request(self,token):
 		try:
-			#url = "http://127.0.0.1:8000/rest-logout/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-logout/"
+			url = "http://127.0.0.1:8000/rest-logout/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-logout/"
 			connection = requests.post(url, data = {'token':token})
 		except requests.ConnectionError, e:
 			connection = e
@@ -40,6 +40,8 @@ class Logout(Base):
 					write("PROJECT_ENV_NAME",'')
 					write("PID",'')
 					write("RET_ID",'')
+					write("INSTANCE_ENV",'')
+					write("INSTANCE_ENV_ID",'')
 					print ax_blue('\nantarinX logout succesful!')
 					print ax_blue("Deleted token and user account details.")
 				elif connection.status_code == 404:

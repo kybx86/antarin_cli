@@ -8,7 +8,7 @@ import requests,json
 from antarin.config import write
 from _color import ax_blue
 
-class ExitProject(Base):
+class ExitInstance(Base):
 
 	def run(self):
 		config = SafeConfigParser()
@@ -19,19 +19,15 @@ class ExitProject(Base):
 
 		if config.has_section('user_details'):
 			token = config.get('user_details', 'token')
-			env_flag = config.get('user_details','PROJECT_ENV')
-			env_name = config.get('user_details','PROJECT_ENV_NAME')
+			instance_flag = config.get('user_details','INSTANCE_ENV')
 			if token != "":
-				if int(env_flag):
-					write("PROJECT_ENV",'0')
-					write("PROJECT_ENV_NAME",'')
+				if int(instance_flag):
 					write("INSTANCE_ENV",'0')
 					write("INSTANCE_ENV_ID",'')
-					project_name = env_name.split(':')[1]
-					print ax_blue("\nExited project: '%s'" %(project_name))
+					print ax_blue("\nExited instance")
 					####TODO:customize shell prompt 
 				else: #inside file system environment
-					print ax_blue("Error: You are currently not inside a project environment--try 'ax loadproject <projectname>' to load a project environment")
+					print ax_blue("Error: You are currently not inside an instance environment--try 'ax enterinstance <accesskey>' to load a project environment")
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag==1:

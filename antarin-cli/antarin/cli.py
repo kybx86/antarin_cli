@@ -26,6 +26,16 @@ Usage:
   ax leaveproject <projectid>
   ax checklog
   ax exitproject
+  ax newinstance
+  ax listinstances
+  ax enterinstance <accesskey>
+  ax importfile --algo <filename>
+  ax importfile --data <filename>
+  ax listfiles --algo
+  ax listfiles --data
+  ax rmfile --data <filename>
+  ax rmfile --algo <filename>
+  ax exitinstance
   ax help
 
 """

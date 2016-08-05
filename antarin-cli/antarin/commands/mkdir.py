@@ -11,8 +11,8 @@ class MakeDirectory(Base):
 	def send_request(self,token,id_val,foldername,env_flag,count_val=None,alt_foldername=None):
 		
 		try:
-			#url = "http://127.0.0.1:8000/rest-mkdir/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-mkdir/"
+			url = "http://127.0.0.1:8000/rest-mkdir/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-mkdir/"
 			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val,'env_flag':env_flag,'count':count_val,'alt_foldername':alt_foldername})
 		except requests.ConnectionError, e:
 			connection = e

@@ -11,8 +11,8 @@ import os
 class LeaveProject(Base):
 	def send_request(self,token,projectid):
 		try:
-			#url = "http://127.0.0.1:8000/rest-leaveproject/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-leaveproject/"
+			url = "http://127.0.0.1:8000/rest-leaveproject/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-leaveproject/"
 			
 			connection = requests.post(url, data = {'token':token,'projectid':projectid})
 		except requests.ConnectionError, e:

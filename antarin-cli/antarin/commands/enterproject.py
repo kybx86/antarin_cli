@@ -13,8 +13,8 @@ class LoadProject(Base):
 
 	def send_request(self,token,projectid):
 		try:
-			#url = "http://127.0.0.1:8000/rest-loadproject/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-loadproject/"
+			url = "http://127.0.0.1:8000/rest-loadproject/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-loadproject/"
 			connection = requests.post(url, data = {'token':token,'projectid':projectid})
 		except requests.ConnectionError, e:
 			connection = e

@@ -22,3 +22,11 @@ from .help import *
 from .deleteproject import *
 from .leaveproject import *
 from .checklog import *
+from .newinstance import *
+from .enterinstance import *
+from .listinstances import *
+from .exitinstance import *
+from .importfile import *
+from .listfiles import *
+from .rmalgofile import *
+from .rmdatafile import * 

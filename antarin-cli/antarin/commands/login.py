@@ -15,8 +15,8 @@ class Login(Base):
 
 	def verify(self,userdict):
 		method = 'POST'
-		#url = "http://127.0.0.1:8000/rest-auth/login/"
-		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-auth/login/"
+		url = "http://127.0.0.1:8000/rest-auth/login/"
+		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-auth/login/"
 		handler = urllib2.HTTPHandler()
 		opener = urllib2.build_opener(handler)
 		data = urllib.urlencode(userdict)
@@ -58,6 +58,7 @@ class Login(Base):
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
 						write("RET_ID",'')
+						write("INSTANCE_ENV",'0')
 						break
 					else:
 						token = ""
@@ -69,6 +70,7 @@ class Login(Base):
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
 						write("RET_ID",'')
+						write("INSTANCE_ENV",'')
 						print ax_blue('Invalid username and/or password\n')
 			except KeyboardInterrupt:
 				print("\n")
@@ -98,6 +100,7 @@ class Login(Base):
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
 						write("RET_ID",'')
+						write("INSTANCE_ENV",'0')
 						break
 					else:
 						token = ""
@@ -109,6 +112,7 @@ class Login(Base):
 						write("PROJECT_ENV_NAME",'')
 						write("PID",'')
 						write("RET_ID",'')
+						write("INSTANCE_ENV",'')
 						print ax_blue('\nInvalid username and/or password\n')
 			except KeyboardInterrupt:
 				print("\n")

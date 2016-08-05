@@ -12,8 +12,8 @@ class ImportData(Base):
 
 	def send_request(self,token,path,env_name,folder_flag):
 		try:
-			#url = "http://127.0.0.1:8000/rest-importdata/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-importdata/"
+			url = "http://127.0.0.1:8000/rest-importdata/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-importdata/"
 			connection = requests.post(url, data = {'token':token,'path':path,'env_name':env_name,'folder_flag':folder_flag})
 		except requests.ConnectionError, e:
 			connection = e
@@ -41,8 +41,8 @@ class ImportData(Base):
 						project_name = env_name.split(':')[1]
 						if connection.status_code == 204: # successs
 							print ax_blue("\nImported file '%s' to '%s'" %(path, project_name))
-						elif connection.status_code == 404: #--duplicate file folder 
-							print ax_blue('\nError: File being imported already exists in this project')
+						#elif connection.status_code == 404: #--duplicate file folder 
+						#	print ax_blue('\nError: File being imported already exists in this project')
 							#print ax_blue('\n%s'%(json.loads(connection.text)))
 						else: 
 							print ax_blue('\n%s'%(json.loads(connection.text)))
@@ -54,8 +54,8 @@ class ImportData(Base):
 
 						if connection.status_code == 204: # successs
 							print ax_blue('\nImported folder %s to project %s' %(path, env_name))
-						elif connection.status_code == 404: #DUPLICATE NAME of file/folder
-							print ax_blue("\nError: Folder being imported already exists in this project, or path to folder is incorrect--path to home folder is '~antarin/'")
+						#elif connection.status_code == 400: #DUPLICATE NAME of file/folder
+						#	print ax_blue("\nError: Folder being imported already exists in this project, or path to folder is incorrect--path to home folder is '~antarin/'")
 						else:
 							print ax_blue('\n%s'%(json.loads(connection.text)))
 

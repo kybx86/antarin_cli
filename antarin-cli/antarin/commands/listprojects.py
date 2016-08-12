@@ -12,8 +12,8 @@ class ListAllProjects(Base):
 
 	def send_request(self,token):
 		try:
-			url = "http://127.0.0.1:8000/rest-listallprojects/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-listallprojects/"
+			#url = "http://127.0.0.1:8000/rest-listallprojects/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-listallprojects/"
 			connection = requests.post(url, data = {'token':token})
 		except requests.ConnectionError, e:
 			connection = e

@@ -12,8 +12,8 @@ class CheckLog(Base):
 
 	def send_request(self,token,env_name):
 		try:
-			url = "http://127.0.0.1:8000/rest-checklogs/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-checklogs/"
+			#url = "http://127.0.0.1:8000/rest-checklogs/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-checklogs/"
 			connection = requests.post(url, data = {'token':token,'env_name':env_name})
 		except requests.ConnectionError, e:
 			connection = e

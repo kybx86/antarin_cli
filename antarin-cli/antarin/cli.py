@@ -36,6 +36,7 @@ Usage:
   ax rmfile --data <filename>
   ax rmfile --algo <filename>
   ax exitinstance
+  ax launchinstance <accesskey>
   ax help
 
 """

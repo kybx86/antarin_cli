@@ -8,13 +8,13 @@ import requests,json
 from antarin.config import write
 from _color import ax_blue
 
-class RemoveAlgoFile(Base):
+class RemoveFile(Base):
 
-	def send_request(self,token,path,env_name,instance_id):
+	def send_request(self,token,path,env_name,instance_id,section):
 		try:
-			url = "http://127.0.0.1:8000/rest-rmalgofile/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-importalgofile/"
-			connection = requests.post(url, data = {'token':token,'path':path,'env_name':env_name,'instance_id':instance_id})
+			#url = "http://127.0.0.1:8000/rest-rmfile/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-rmfile/"
+			connection = requests.post(url, data = {'token':token,'path':path,'env_name':env_name,'instance_id':instance_id,'section':section})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -34,8 +34,12 @@ class RemoveAlgoFile(Base):
 			instance_id = config.get('user_details','INSTANCE_ENV_ID')
 			if token != "":
 				if int(env_flag) and int(instance_flag):				
+					if self.options['--algo']:
+						section='algo'		
+					elif self.options['--data']:
+						section='data'		
 					path = json.loads(json.dumps(self.options))['<filename>']
-					connection = RemoveAlgoFile.send_request(self, token, path, env_name,instance_id)
+					connection = RemoveFile.send_request(self, token, path, env_name,instance_id,section)
 					if connection.status_code == 200: # successs
 						print ax_blue("\nFile deleted.'%s'" %(path))
 					else: 

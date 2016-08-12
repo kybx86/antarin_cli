@@ -10,8 +10,8 @@ from _color import ax_blue, bold, out
 
 class Summary(Base):
 	def send_request(self,token,env_flag,env_name):
-		url = "http://127.0.0.1:8000/rest-summary/"
-		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-summary/"
+		#url = "http://127.0.0.1:8000/rest-summary/"
+		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-summary/"
 		payload = {'token':token,'env_flag':env_flag,'env_name':env_name}
 		try:
 			connection = requests.post(url, data = payload)

@@ -12,8 +12,8 @@ class AddContributor(Base):
 
 	def send_request(self,token,username,env_name):
 		try:
-			url = "http://127.0.0.1:8000/rest-addcontributor/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-addcontributor/"
+			#url = "http://127.0.0.1:8000/rest-addcontributor/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-addcontributor/"
 			connection = requests.post(url, data = {'token':token,'username':username,'env_name':env_name})
 		except requests.ConnectionError, e:
 			connection = e

@@ -28,5 +28,5 @@ from .listinstances import *
 from .exitinstance import *
 from .importfile import *
 from .listfiles import *
-from .rmalgofile import *
-from .rmdatafile import * 
+from .rmfile import *
+from .launchinstance import *

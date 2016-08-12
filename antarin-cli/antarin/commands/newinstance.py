@@ -4,15 +4,15 @@
 from . import Base
 from ConfigParser import SafeConfigParser
 from os.path import expanduser
-import requests,json
+import requests,json,sys,os
 from _color import ax_blue, bold
 
 class NewInstance(Base):
 
 	def send_request(self,token,instance_name,ami_id,instance_type,projectname,region):
 		try:
-			url = "http://127.0.0.1:8000/rest-newinstance/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-newinstance/"
+			#url = "http://127.0.0.1:8000/rest-newinstance/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-newinstance/"
 			payload = {'token':token,'projectname':projectname, 'instance_name':instance_name,'ami_id':ami_id,'instance_type':instance_type,'region':region}
 			connection = requests.post(url, data = payload)
 		except requests.ConnectionError, e:
@@ -32,25 +32,27 @@ class NewInstance(Base):
 			env_name = config.get('user_details','PROJECT_ENV_NAME')
 			if token != "":
 				if int(env_flag):
-					instance_name = str(raw_input(ax_blue(bold('Instance Name: '))))
-					ami_id = str(raw_input(ax_blue(bold('Machine Image ID (Ubuntu 14.04 - ami-d732f0b7): '))))
-					instance_type = str(raw_input(ax_blue(bold('Instance Type (t2.micro): '))))
-					region = str(raw_input(ax_blue(bold('Region (us-west-2):'))))
+					try:
+						instance_name = str(raw_input(ax_blue(bold('Instance Name: '))))
+						ami_id = str(raw_input(ax_blue(bold('Machine Image ID (AntarinX Linux AMI - ami-bf9b50df): '))))
+						instance_type = str(raw_input(ax_blue(bold('Instance Type (t2.micro): '))))
+						region = str(raw_input(ax_blue(bold('Region (us-west-2):'))))
 
-					connection = NewInstance.send_request(self, token, instance_name,ami_id,instance_type,env_name,region)
-					data = json.loads(connection.text)    
+						connection = NewInstance.send_request(self, token, instance_name,ami_id,instance_type,env_name,region)
+						data = json.loads(connection.text)    
 
-					if connection.status_code == 200:
-						#message = data['message']
-						print(connection.text)
-						#print ax_blue("\nCreated new project: '%s'" %(projectname))
-					#elif connection.status_code == 400: #-- Project exists
-					#	print ax_blue("\nError: A project with name '%s' already exists in your account. Please choose another name." %(projectname))
-					elif connection.status_code == 404:
-						print ax_blue('\nError: Session token is not valid')
-					else:
-					#	print ax_blue(connection)
-						print ax_blue(connection.text) #--error cases not yet handled
+						if connection.status_code == 200:
+							print(connection.text)					
+						elif connection.status_code == 404:
+							print ax_blue('\nError: Session token is not valid')
+						else:
+							print ax_blue(connection.text) #--error cases not yet handled
+					except KeyboardInterrupt:
+						print("\n")
+						try:
+							sys.exit(0)
+						except SystemExit:
+							os._exit(0)
 				else:
 					print ax_blue("\nError: Enter project to create an instance--see 'ax enterproject <projectid>'")
 			else:

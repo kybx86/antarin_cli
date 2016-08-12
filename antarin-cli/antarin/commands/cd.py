@@ -14,8 +14,8 @@ class ChangeDirectory(Base):
 		if foldername[0] == '/':
 			foldername = foldername[1:]
 		try:
-			url = "http://127.0.0.1:8000/rest-cd/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-cd/"
+			#url = "http://127.0.0.1:8000/rest-cd/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-cd/"
 			connection = requests.post(url, data = {'token':token,'foldername':foldername,'id':id_val,'env_flag':env_flag,'pid':pid,'env_name':env_name,'ret_id':retid_val})
 		except requests.ConnectionError, e:
 			connection = e

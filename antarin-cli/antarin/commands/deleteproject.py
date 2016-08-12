@@ -20,8 +20,8 @@ class DeleteProject(Base):
 
 	def check_permissions(self, token, projectid):
 		try:
-			url = "http://127.0.0.1:8000/rest-deleteproject/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-deleteproject/"
+			#url = "http://127.0.0.1:8000/rest-deleteproject/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-deleteproject/"
 			connection = requests.get(url, data = {'token':token,'projectid':projectid})
 		except requests.ConnectionError, e:
 			connection = e
@@ -29,8 +29,8 @@ class DeleteProject(Base):
 
 	def send_request(self, entered_password, token, projectid):
 		try:
-			url = "http://127.0.0.1:8000/rest-deleteproject/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-deleteproject/"
+			#url = "http://127.0.0.1:8000/rest-deleteproject/"
+			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-deleteproject/"
 			
 			connection = requests.post(url, data = {'token':token,'projectid':projectid,'pwd':entered_password})
 		except requests.ConnectionError, e:

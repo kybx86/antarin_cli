@@ -50,7 +50,9 @@ urlpatterns = [
 	url(r'^rest-listallinstances/$',antarin_views.ListInstancesView.as_view()),
 	url(r'^rest-enterinstance/$',antarin_views.EnterInstanceView.as_view()),
 	url(r'^rest-importfile/$',antarin_views.ImportFileView.as_view()),
+	url(r'^rest-rmfile/$',antarin_views.RemoveFileView.as_view()),
 	url(r'^rest-listfiles/$',antarin_views.list_filesView.as_view()),
+	url(r'^rest-launchinstance/$',antarin_views.LaunchInstanceView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -97,6 +97,7 @@ class UserInstances(models.Model):
     keyval = models.ForeignKey(RSAKeys,related_name='rsakeys',null=True,default='')
     instance_type = models.CharField(max_length=60)
     security_group = models.CharField(max_length=60,default='launch-wizard-2')
+    dns_name = models.CharField(max_length=60,default='')
 
 class algoFiles(models.Model):
     instance = models.ForeignKey(UserInstances,related_name='algofiles_instance_object')

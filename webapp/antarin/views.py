@@ -31,12 +31,22 @@ from boto.s3.connection import S3Connection, Bucket, Key
 from wsgiref.util import FileWrapper
 from django.core.files import File
 from django.core.files.base import ContentFile
+from fabric.context_managers import settings as fabric_settings
+#from antarin.fabfile import launch_instance,execute_instance,stop_instance
+from fabric.api import hosts,env,run
+from fabric.network import disconnect_all
+from fabric.tasks import execute
+import boto3,sys,time
+from fabric.exceptions import NetworkError
+from fabric.state import connections
 
 #S3 Bucket details
 conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
 b = Bucket(conn, settings.AWS_STORAGE_BUCKET_NAME)
 k = Key(b)
 
+
+key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),'ec2test.pem')
 
 '''
 To manage the data entered in AuthenticationForm. If the form was submitted(http POST) and returned without validation errors, then the user is authenticated and redirected to his homepage.
@@ -1471,6 +1481,153 @@ class list_filesView(APIView):
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
+
+class RemoveFileView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['env_name']
+		instance_id = self.request.data['instance_id']
+		section = self.request.data['section']
+		filename = self.request.data['path']
+		try:
+			user_object = Token.objects.get(key=token)
+			instance_object = UserInstances.objects.get(user=user_object.user,pk=int(instance_id))
+			if section == 'algo':
+				all_files = instance_object.algofiles_instance_object.all()
+			elif section == 'data':
+				all_files = instance_object.datafiles_instance_object.all()
+			file_object = None
+			for item in all_files:
+				if os.path.basename(item.projectfile.file_ref.file.name)==filename:
+					file_object = item
+					found = 1
+					break
+			if file_object:
+				file_object.delete()
+				message = {'message':'File deleted','status_code':200}
+				return Response(message,status=200)
+			else:
+				message = {'message':'File does not exist.','status_code':400}
+				return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+class LaunchInstanceView(APIView):
+	@hosts('localhost')
+	def launch_instance(ami,keyname,instance_type,security_group):
+		client = boto3.resource('ec2')
+		host_list = []
+		ids = []	
+		print ('Launching instance..')
+		instances = client.create_instances(
+			ImageId=ami,
+			MinCount=1,
+	    	MaxCount=1,
+	        KeyName=keyname,
+	        InstanceType=instance_type,
+	        SecurityGroups=security_group)	
+		instance = None
+		while 1:
+			sys.stdout.flush()
+			dns_name = instances[0].public_dns_name
+			if dns_name:
+				instance = instances[0]
+				host_list.append(instance.public_dns_name)
+				ids.append(instance.instance_id)
+				break
+			time.sleep(5.0)
+			instances[0].load()
+		print ('\nInstance launched.Public DNS:', instance.public_dns_name)
+		print ('Connecting to instance.')
+		while instance.state['Name'] != 'running':
+			print ('.',end='')
+			time.sleep(5)
+			instance.load()
+		print ('Instance in Running state')
+		print ('Initializing instance')
+		c = boto3.client('ec2')
+		while True:
+			response = c.describe_instance_status(InstanceIds=ids)
+			print ('.')
+			if response['InstanceStatuses'][0]['InstanceStatus']['Details'][0]['Status'] == 'passed' and response['InstanceStatuses'][0]['SystemStatus']['Details'][0]['Status']=='passed':
+				break
+			time.sleep(1)
+		time.sleep(5)
+		return host_list,ids
+
+	def setup_instance(key_path,commands): 
+		output = []
+		try:
+			env.user = 'ubuntu'
+			env.key_filename = key_path
+			for command in commands:
+				print(command)
+				output.append(run(command))
+		finally:
+			disconnect_all()
+		return output
+
+	def post(self,request):
+		token = self.request.data['token']
+		access_key = int(self.request.data['access_key'])
+		try:
+			user_object = Token.objects.get(key=token)
+			all_instances = user_object.user.userinstances.all()
+			instance_object = None
+			for item in all_instances:
+				if item.access_key == access_key:
+					instance_object = item
+					break
+			if instance_object:
+				print (instance_object.ami_id,instance_object.instance_type,instance_object.keyval,instance_object.security_group)
+				
+				all_algo_files = instance_object.algofiles_instance_object.all()
+				all_data_files = instance_object.datafiles_instance_object.all()
+				
+				sec_group = []
+				sec_group.append(instance_object.security_group)
+				key_name = 'ec2test'
+
+				res = execute(LaunchInstanceView.launch_instance,instance_object.ami_id,key_name,instance_object.instance_type,sec_group)
+				print (res['localhost'][0])
+				
+				#if True:
+				if res['localhost'][0]:
+					instance_object.dns_name=res['localhost'][0]
+					instance_object.save()
+					#commands = ['uname -a','pwd',]
+					commands = []
+					commands.append('mkdir '+ user_object.user.username)
+					val = 'cd '+ user_object.user.username
+					commands.append(val + ' && mkdir data-section')
+					v = 'cd '+ user_object.user.username+'/data-section'
+					for item in all_data_files:
+						commands.append(v + ' && aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name))
+					commands.append(val + '&& mkdir algo-section')
+					v = 'cd '+ user_object.user.username+'/algo-section'
+					for item in all_algo_files:
+						commands.append(v + ' && aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name))
+					commands.append('ls -l')
+					output = execute(LaunchInstanceView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
+					output_text = output[instance_object.dns_name[0]]
+					print(output)
+					message = {'message': 'Instance Launched','status_code':200}
+					return Response(message,status=200)
+
+			elif instance_object==None:
+				message = {'message': 'No instance found with given access key','status_code':400}
+				return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+
+
+
+
+
+
 
 
 # class DownloadFileView(APIView):

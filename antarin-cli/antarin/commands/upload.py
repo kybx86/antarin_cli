@@ -11,6 +11,8 @@ from os.path import expanduser
 from .mkdir import MakeDirectory
 from _color import ax_blue
 
+
+
 class Upload(Base):	        
 
 	def file_upload(self,token,filename,name,env_flag,file_flag,id_val=None):
@@ -26,6 +28,7 @@ class Upload(Base):
          	'file_flag':(None,json.dumps(file_flag),'application/json')
 		}
 		try:
+
 			connection = requests.put(url, files=files)
 		except requests.ConnectionError, e:
 			connection = e
@@ -150,7 +153,7 @@ class Upload(Base):
 							while 1:
 								user_input = str(raw_input(ax_blue("Do you want to rename the folder? (yes/no): ")))
 								if user_input == "yes":
-									new_filename = str(raw_input(ax_blue("Enteqr new folder name (cannot be empty): ")))
+									new_filename = str(raw_input(ax_blue("Enter new folder name (cannot be empty): ")))
 									print new_filename
 									if new_filename != "" and new_filename != " ": #--handling white space conlfict 
 										Upload.folder_upload(self, token, filename, new_filename, id_val, env_flag) 
@@ -184,8 +187,8 @@ class Upload(Base):
 					file_flag = 1
 					name = os.path.basename(filename)
 					connection = Upload.file_upload(self,token,filename,name,env_flag,file_flag,id_val)
-					if connection.status_code == 204:
-						print "Uploaded file : %s" %filename
+					if connection.status_code == 204:`
+						print ax_blue("Uploaded file : %s" %filename)
 					elif connection.status_code == 400: #--duplicate files names
 						#print json.loads(connection.text)
 						print ax_blue("\nError: a file with the name '%s' already exists in this space" %(filename))
@@ -220,5 +223,5 @@ class Upload(Base):
 			else:
 				error_flag = 1
 		if config.has_section('user_details') == False or error_flag == 1:
-			print "\nError: You are not logged in. Please try this command after authentication--see 'ax login'"
+			print ax_blue("\nError: You are not logged in. Please try this command after authentication--see 'ax login'")
 

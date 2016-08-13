@@ -44,7 +44,7 @@ class ListAllProjects(Base):
 							project_entry = data[i]
 							project_entry = project_entry.split('\t') 
 							project_name = project_entry[0].split(':')[1]
-							out(ax_blue(bold('\tProject Name:\t') + ax_blue(project_name)))
+							out(ax_blue(bold('\tProject Name:\t') + ax_blue('{:12s}'.format(project_name[:12]))))
 							out(ax_blue(bold('\tPermissions:\t') + ax_blue(project_entry[1])))
 							out(ax_blue(bold('\tProject ID:\t') + ax_blue(project_entry[2])))
 							out('\n')

@@ -15,8 +15,8 @@ class Upload(Base):
 
 	def file_upload(self,token,filename,name,env_flag,file_flag,id_val=None):
 		#print(id_val)
-		#url = "http://127.0.0.1:8000/rest-fileupload/"
-		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"		
+		url = "http://127.0.0.1:8000/rest-fileupload/"
+		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"		
 		files = {
 			'token' : (None, json.dumps(token), 'application/json'),
 			'id_val' : (None, json.dumps(id_val), 'application/json'),
@@ -78,6 +78,8 @@ class Upload(Base):
 				print ax_blue(connection.text)
 
 			for filename in files:
+				if filename[0] == '.':
+					continue
 				connection = Upload.file_upload(self,token,os.path.join(root, filename),filename,env_flag,file_flag,file_id_val)
 				if connection.status_code == 204:
 					print ax_blue("Uploaded file : %s" %os.path.join(root,filename))
@@ -126,8 +128,8 @@ class Upload(Base):
 				if os.path.isdir(filename): #--folder
 					####TODO: Validation check for filename - should not contain '/'					
 					
-					#url = "http://127.0.0.1:8000/rest-fileupload/"
-					url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"
+					url = "http://127.0.0.1:8000/rest-fileupload/"
+					#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-fileupload/"
 					
 					name = filename #whats up with these few lines ? 
 					if filename[-1] == '/':

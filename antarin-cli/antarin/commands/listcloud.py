@@ -13,8 +13,8 @@ class ListInstances(Base):
 
 	def send_request(self,token,projectname):
 		try:
-			#url = "http://127.0.0.1:8000/rest-listallinstances/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-listallinstances/"
+			url = "http://127.0.0.1:8000/rest-listallinstances/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-listallinstances/"
 			connection = requests.post(url, data = {'token':token,'projectname':projectname})
 		except requests.ConnectionError, e:
 			connection = e
@@ -35,8 +35,12 @@ class ListInstances(Base):
 			if token != "":
 				if int(env_flag) and int(instance_flag)==0:
 					connection = ListInstances.send_request(self, token, projectname)
+					data = json.loads(connection.text)    
+					message = data['message']
+					status_code = data['status_code']
 					if connection.status_code == 200:
-						print(connection.text)
+						for key,value in message.items():
+							print ax_blue(key + ' : '+str(value))
 					#elif connection.status_code == 404:
 					#	print ax_blue("\nError: Instance with access code '%s' does not exist in your account. Please verify access code." %(access_key))
 					else:

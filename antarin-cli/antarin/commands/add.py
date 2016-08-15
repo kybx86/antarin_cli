@@ -8,13 +8,13 @@ import requests,json
 from antarin.config import write
 from _color import ax_blue
 
-class RemoveFile(Base):
+class AddToCloud(Base):
 
-	def send_request(self,token,path,env_name,instance_id,section):
+	def send_request(self,token,env_name,instance_id,section,packagename,path,filename):
 		try:
-			url = "http://127.0.0.1:8000/rest-rmfile/"
-			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-rmfile/"
-			connection = requests.post(url, data = {'token':token,'path':path,'env_name':env_name,'instance_id':instance_id,'section':section})
+			url = "http://127.0.0.1:8000/rest-adddata/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-adddata/"
+			connection = requests.post(url, data = {'token':token,'path':path,'env_name':env_name,'instance_id':instance_id,'section':section,'packagename':packagename,'filename':filename})
 		except requests.ConnectionError, e:
 			connection = e
 		return connection
@@ -33,15 +33,24 @@ class RemoveFile(Base):
 			instance_flag = config.get('user_details','INSTANCE_ENV')
 			instance_id = config.get('user_details','INSTANCE_ENV_ID')
 			if token != "":
-				if int(env_flag) and int(instance_flag):				
-					if self.options['--algo']:
-						section='algo'		
-					elif self.options['--data']:
-						section='data'		
-					path = json.loads(json.dumps(self.options))['<filename>']
-					connection = RemoveFile.send_request(self, token, path, env_name,instance_id,section)
+				if int(env_flag) and int(instance_flag):
+					filename = ''
+					path = ''
+					packagename = ''
+					if self.options['--env']:
+						section = 'package'
+						packagename = json.loads(json.dumps(self.options))['<packagename>']
+					else:
+						path = 	json.loads(json.dumps(self.options))['<path_in_package>']
+						filename = json.loads(json.dumps(self.options))['<filename>']
+						if self.options['--algo']:
+							section='algo'	
+						elif self.options['--data']:
+							section='data'		
+					
+					connection = AddToCloud.send_request(self,token,env_name,instance_id,section,packagename,path,filename)
 					if connection.status_code == 200: # successs
-						print ax_blue("\nFile deleted.'%s'" %(path))
+						print ax_blue("\nAdded file/package ")
 					else: 
 						print ax_blue('\n%s'%(json.loads(connection.text)))
 				elif int(instance_flag)==0:

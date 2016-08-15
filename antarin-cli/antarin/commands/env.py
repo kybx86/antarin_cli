@@ -30,9 +30,12 @@ class Env(Base):
 			if token != "":
 				env_flag = config.get('user_details','PROJECT_ENV')
 				env_name = config.get('user_details','PROJECT_ENV_NAME')
-				if int(env_flag):
-					print "PROJECT_ENV_NAME -- " + env_name
-				else:
+				instance_flag = config.get('user_details','INSTANCE_ENV')
+				if int(env_flag) and int(instance_flag)==0:
+					print "Inside Project - " + env_name
+				elif int(env_flag) and int(instance_flag):
+					print "Inside cloud "
+				elif int(env_flag)==0 and int(instance_flag)==0:
 					print "Inside file system env"
 			else:
 				error_flag = 1

@@ -12,8 +12,8 @@ class ImportFile(Base):
 
 	def send_request(self,token,path,env_name,instance_id,section):
 		try:
-			#url = "http://127.0.0.1:8000/rest-importfile/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-importfile/"
+			url = "http://127.0.0.1:8000/rest-importfile/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-importfile/"
 			connection = requests.post(url, data = {'token':token,'path':path,'env_name':env_name,'instance_id':instance_id,'section':section})
 		except requests.ConnectionError, e:
 			connection = e

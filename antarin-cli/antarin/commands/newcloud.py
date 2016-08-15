@@ -7,12 +7,12 @@ from os.path import expanduser
 import requests,json,sys,os
 from _color import ax_blue, bold
 
-class NewInstance(Base):
+class NewCloud(Base):
 
 	def send_request(self,token,instance_name,ami_id,instance_type,projectname,region):
 		try:
-			#url = "http://127.0.0.1:8000/rest-newinstance/"
-			url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-newinstance/"
+			url = "http://127.0.0.1:8000/rest-newinstance/"
+			#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-newinstance/"
 			payload = {'token':token,'projectname':projectname, 'instance_name':instance_name,'ami_id':ami_id,'instance_type':instance_type,'region':region}
 			connection = requests.post(url, data = payload)
 		except requests.ConnectionError, e:
@@ -33,16 +33,18 @@ class NewInstance(Base):
 			if token != "":
 				if int(env_flag):
 					try:
-						instance_name = str(raw_input(ax_blue(bold('Instance Name: '))))
-						ami_id = str(raw_input(ax_blue(bold('Machine Image ID (AntarinX Linux AMI - ami-bf9b50df): '))))
+						instance_name = json.loads(json.dumps(self.options))['<name>']
+						ami_id = str(raw_input(ax_blue(bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
 						instance_type = str(raw_input(ax_blue(bold('Instance Type (t2.micro): '))))
 						region = str(raw_input(ax_blue(bold('Region (us-west-2):'))))
 
-						connection = NewInstance.send_request(self, token, instance_name,ami_id,instance_type,env_name,region)
+						connection = NewCloud.send_request(self, token, instance_name,ami_id,instance_type,env_name,region)
 						data = json.loads(connection.text)    
-
+						message = data['message']
+						status_code = data['status_code']
+						access_key_val = data['access_key']
 						if connection.status_code == 200:
-							print(connection.text)					
+							print ax_blue(message + ' with access key: '+ str(access_key_val))					
 						elif connection.status_code == 404:
 							print ax_blue('\nError: Session token is not valid')
 						else:

@@ -15,8 +15,8 @@ class Login(Base):
 
 	def verify(self,userdict):
 		method = 'POST'
-		#url = "http://127.0.0.1:8000/rest-auth/login/"
-		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-auth/login/"
+		url = "http://127.0.0.1:8000/rest-auth/login/"
+		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-auth/login/"
 		handler = urllib2.HTTPHandler()
 		opener = urllib2.build_opener(handler)
 		data = urllib.urlencode(userdict)

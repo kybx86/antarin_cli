@@ -10,8 +10,8 @@ from _color import ax_blue
 class RemoveObject(Base):
 	def send_request(self,token,id_val,object_name,r_value,env_flag,env_name):
 		payload = {'object_name':object_name,'id':id_val,'r_value':r_value,'token':token,'env_flag':env_flag,'env_name':env_name}
-		#url = "http://127.0.0.1:8000/rest-rm/"
-		url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-rm/"
+		url = "http://127.0.0.1:8000/rest-rm/"
+		#url = "http://webapp-test.us-west-2.elasticbeanstalk.com/rest-rm/"
 		try:
 			connection = requests.post(url, data = payload)
 		except requests.ConnectionError, e:

@@ -8,7 +8,7 @@ import requests,json
 from antarin.config import write
 from _color import ax_blue
 
-class ExitInstance(Base):
+class ExitCloud(Base):
 
 	def run(self):
 		config = SafeConfigParser()
@@ -24,7 +24,7 @@ class ExitInstance(Base):
 				if int(instance_flag):
 					write("INSTANCE_ENV",'0')
 					write("INSTANCE_ENV_ID",'')
-					print ax_blue("\nExited instance")
+					print ax_blue("\nExited cloud")
 					####TODO:customize shell prompt 
 				else: #inside file system environment
 					print ax_blue("Error: You are currently not inside an instance environment--try 'ax enterinstance <accesskey>' to load a project environment")

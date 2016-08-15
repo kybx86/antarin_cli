@@ -26,16 +26,21 @@ Usage:
   ax leaveproject <projectid>
   ax checklog
   ax exitproject
-  ax newinstance
-  ax listinstances
-  ax enterinstance <accesskey>
+  ax newcloud <name>
+  ax listcloud
+  ax entercloud <accesskey>
+  ax add --env <packagename>
+  ax add --algo <path_in_package> <filename>
+  ax add --data <path_in_package> <filename>
+  ax initialisesession <packagename>
+  ax run <shell_command> <packagename>
   ax importfile --algo <filename>
   ax importfile --data <filename>
   ax listfiles --algo
   ax listfiles --data
   ax rmfile --data <filename>
   ax rmfile --algo <filename>
-  ax exitinstance
+  ax exitcloud
   ax launchinstance <accesskey>
   ax help
 

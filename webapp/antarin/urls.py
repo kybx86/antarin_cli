@@ -52,7 +52,9 @@ urlpatterns = [
 	url(r'^rest-importfile/$',antarin_views.ImportFileView.as_view()),
 	url(r'^rest-rmfile/$',antarin_views.RemoveFileView.as_view()),
 	url(r'^rest-listfiles/$',antarin_views.list_filesView.as_view()),
-	url(r'^rest-launchinstance/$',antarin_views.LaunchInstanceView.as_view()),
+	url(r'^rest-adddata/$',antarin_views.AddDataView.as_view()),
+	url(r'^rest-initialisesession/$',antarin_views.InitialiseSessionView.as_view()),
+	url(r'^rest-runcommand/$',antarin_views.RunCommandView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

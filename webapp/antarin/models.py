@@ -98,6 +98,11 @@ class UserInstances(models.Model):
     instance_type = models.CharField(max_length=60)
     security_group = models.CharField(max_length=60,default='launch-wizard-2')
     dns_name = models.CharField(max_length=60,default='')
+    is_active = models.BooleanField(default=False)
+    
+class InstanceFolders(models.Model):
+    instance = models.ForeignKey(UserInstances,related_name='instancefolders')
+    project_folder_ref = models.ForeignKey(ProjectFolders,related_name='instance_folder_ref')
 
 class algoFiles(models.Model):
     instance = models.ForeignKey(UserInstances,related_name='algofiles_instance_object')

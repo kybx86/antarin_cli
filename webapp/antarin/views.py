@@ -1350,14 +1350,14 @@ class NewInstanceView(APIView):
 			# 	new_key_record.save()
 			# print("new key record added.")
 
-			all_user_instances = user_object.user.userinstances.all()
+			all_project_instances = project_object.projectinstances.all()
+			#all_user_instances = user_object.user.userinstances.all()
 			accesskey_list = []
-			for item in all_user_instances:
+			for item in all_project_instances:
 				accesskey_list.append(item.access_key)
 
 			num = NewInstanceView.generate_rand(4)
 			while num in accesskey_list:
-				print("NEW")
 				num = generate_rand(4)
 
 			access_key = num
@@ -1365,7 +1365,11 @@ class NewInstanceView(APIView):
 
 			new_instances_object = UserInstances(user=user_object.user,project=project_object,instance_name=instance_name,ami_id=ami_id,region=region,instance_type=instance_type,access_key=access_key)
 			new_instances_object.save()
-			message={'message':'New instance record added','access_key':new_instances_object.access_key,'status_code':200}
+
+			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' created cloud '+ new_instances_object.instance_name)
+			new_projectlogs_object.save()
+
+			message={'message':'New cloud details were recorded','access_key':new_instances_object.access_key,'status_code':200}
 			return Response(message,status=200)
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
@@ -1380,12 +1384,11 @@ class ListInstancesView(APIView):
 		try:
 			user_object = Token.objects.get(key=token)
 			project_object = Projects.objects.get(name=projectname)
-			all_instances = UserInstances.objects.filter(user=user_object.user,project=project_object)
-			ret_val = []
+			all_instances = project_object.projectinstances.all()
+			ret_val = {}
 			for item in all_instances:
 				print(item.instance_name)
-				ret_val.append(item.instance_name)
-				ret_val.append(item.access_key)
+				ret_val[item.instance_name + '[' + item.user.username + ']']= item.access_key 
 			message = {'message':ret_val,'status_code':200}
 			return Response(message,status=200)
 		except Token.DoesNotExist:
@@ -1396,20 +1399,68 @@ class EnterInstanceView(APIView):
 	def post(self,request):
 		token = self.request.data['token']
 		instance_access_id = self.request.data['access_key']
+		projectname = self.request.data['projectname']
+		print(instance_access_id)
 
 		try:
-			user_object = Token.objects.get(key=token)
-			user_instance_object = UserInstances.objects.get(user=user_object.user,access_key=instance_access_id)
-			data = {'id':user_instance_object.pk,'name':user_instance_object.instance_name}
-			message = {'message':data,'status_code':200}
-			return Response(message,status=200)
+			if instance_access_id.isnumeric():
+				user_object = Token.objects.get(key=token)
+				project_object = Projects.objects.get(name=projectname)
+				user_instance_object = UserInstances.objects.get(access_key=instance_access_id,project=project_object)
+				data = {'id':user_instance_object.pk,'name':user_instance_object.instance_name}
+				message = {'message':data,'status_code':200}
+				return Response(message,status=200)
+			else:
+				message = {'message':'ERROR: Not a valid access key','status_code':401}
+				return Response(message,status=401)
 		except UserInstances.DoesNotExist:
-			message = {'message':'No instance with given access key','status_code':400}
+			message = {'message':'ERROR: No instance with exists with this access key','status_code':400}
 			return Response(message,status=400)
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
+class AddDataView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['env_name']
+		filename = self.request.data['filename']
+		instance_id = self.request.data['instance_id']
+		section = self.request.data['section']
+		path = self.request.data['path']
+		packagename = self.request.data['packagename']
+		try:
+			user_object = Token.objects.get(key=token)
+			project_object = Projects.objects.get(name=projectname)
+			instance_object = UserInstances.objects.get(project=project_object,pk=int(instance_id))	
+			if section == 'package':
+				project_folder_object = None
+				all_project_folders = project_object.projectfolders.all()
+				for item in all_project_folders:
+					if item.folder_ref.name == packagename:
+						project_folder_object = item
+						break
+				if project_folder_object:
+					all_instance_folders = instance_object.instancefolders.all()
+					for item in all_instance_folders:
+						if item.project_folder_ref.folder_ref.name == packagename:
+							message = {'message':'Package with same name exists in the cloud.','status_code':400}
+							return Response(message,status=400)
+
+					new_instance_folder_object = InstanceFolders(instance=instance_object,project_folder_ref=project_folder_object)
+					new_instance_folder_object.save()
+					message = {'message':'Package added to cloud.','status_code':200}
+					return Response(message,status=200)
+				else:
+					message={'message':'Folder does not exist in this project','status_code':400}
+					return Response(message,status=400)
+			elif section == 'data':
+				pass
+			elif section == 'algo':
+				pass
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
 
 class ImportFileView(APIView):
 	def post(self,request):
@@ -1513,7 +1564,7 @@ class RemoveFileView(APIView):
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
-class LaunchInstanceView(APIView):
+class InitialiseSessionView(APIView):
 	@hosts('localhost')
 	def launch_instance(ami,keyname,instance_type,security_group):
 		client = boto3.resource('ec2')
@@ -1568,59 +1619,274 @@ class LaunchInstanceView(APIView):
 			disconnect_all()
 		return output
 
+	def add_files_to_dir(foldername,folderid,commands,parentpath=None):
+		if parentpath:
+			commands.append('cd '+parentpath+' && mkdir '+foldername)
+			print('with cd '+ parentpath)
+			print('mkdir ' + foldername)
+			parent = parentpath + '/'+foldername
+		else:
+			commands.append('mkdir '+foldername)
+			print('mkdir ' + foldername)
+			parent = foldername
+		folder_object = UserFolder.objects.get(pk=folderid)
+		all_files = folder_object.foldername.all()
+		for item in all_files:
+			commands.append('cd '+parent+' && aws s3 cp ' + 's3://antarin-test/media/'+item.file.name+' '+os.path.basename(item.file.name))
+			print('with cd '+ parent)
+			print('add file '+os.path.basename(item.file.name))
+
+			#&& aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name)
+		all_folders_list = UserFolder.objects.filter(parentfolder=folder_object)
+		all_folders = []
+		for item in all_folders_list:
+			all_folders.append(item.name)
+			all_folders.append(item.pk)
+			all_folders.append(parent)
+		
+		return all_folders,commands
+
 	def post(self,request):
 		token = self.request.data['token']
-		access_key = int(self.request.data['access_key'])
+		projectname = self.request.data['projectname']
+		instance_id = self.request.data['instance_id']
+		packagename = self.request.data['packagename']
 		try:
 			user_object = Token.objects.get(key=token)
-			all_instances = user_object.user.userinstances.all()
-			instance_object = None
-			for item in all_instances:
-				if item.access_key == access_key:
-					instance_object = item
+			project_object = Projects.objects.get(name=projectname)
+			instance_object = UserInstances.objects.get(project=project_object,pk=int(instance_id))	
+			all_instance_packages = instance_object.instancefolders.all()
+			instance_package_object = None
+
+			for item in all_instance_packages:
+				if item.project_folder_ref.folder_ref.name == packagename:
+					instance_package_object = item
 					break
-			if instance_object:
-				print (instance_object.ami_id,instance_object.instance_type,instance_object.keyval,instance_object.security_group)
-				
-				all_algo_files = instance_object.algofiles_instance_object.all()
-				all_data_files = instance_object.datafiles_instance_object.all()
-				
+			
+			if instance_package_object:
+
+				#launch instance
 				sec_group = []
 				sec_group.append(instance_object.security_group)
 				key_name = 'ec2test'
 
-				res = execute(LaunchInstanceView.launch_instance,instance_object.ami_id,key_name,instance_object.instance_type,sec_group)
-				print (res['localhost'][0])
-				
-				#if True:
-				if res['localhost'][0]:
-					instance_object.dns_name=res['localhost'][0]
-					instance_object.save()
-					#commands = ['uname -a','pwd',]
-					commands = []
-					commands.append('mkdir '+ user_object.user.username)
-					val = 'cd '+ user_object.user.username
-					commands.append(val + ' && mkdir data-section')
-					v = 'cd '+ user_object.user.username+'/data-section'
-					for item in all_data_files:
-						commands.append(v + ' && aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name))
-					commands.append(val + '&& mkdir algo-section')
-					v = 'cd '+ user_object.user.username+'/algo-section'
-					for item in all_algo_files:
-						commands.append(v + ' && aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name))
-					commands.append('ls -l')
-					output = execute(LaunchInstanceView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
-					output_text = output[instance_object.dns_name[0]]
-					print(output)
-					message = {'message': 'Instance Launched','status_code':200}
-					return Response(message,status=200)
+				if instance_object.is_active == False:
+					res = execute(InitialiseSessionView.launch_instance,instance_object.ami_id,key_name,instance_object.instance_type,sec_group)
+					print (res['localhost'][0])
 
-			elif instance_object==None:
-				message = {'message': 'No instance found with given access key','status_code':400}
+					if res['localhost'][0]:
+						dns_name = res['localhost'][0][0]
+						instance_id_val = res['localhost'][1][0]
+						instance_object.dns_name = res['localhost'][0][0]
+						instance_object.instance_id = instance_id_val
+						instance_object.is_active = True
+						instance_object.save()
+
+						folder_object = instance_package_object.project_folder_ref.folder_ref
+						folder_name = folder_object.name
+						folder_id = folder_object.pk
+						commands = []
+						value = InitialiseSessionView.add_files_to_dir(folder_name,folder_id,commands)
+						all_folders = value[0]
+						final_list = []
+						commands = value[1]
+						if all_folders:
+							n = len(all_folders)
+							i = 0
+							final_list.extend(all_folders)
+							while i<n:
+								val = InitialiseSessionView.add_files_to_dir(all_folders[i],all_folders[i+1],commands,all_folders[i+2])
+								if val:
+									all_folders.extend(val[0])
+									final_list.extend(val[0])
+									commands = val[1]
+									#print(all_folders,final_list)
+								i += 3
+								n = len(all_folders)
+						for command in commands:
+							print(command)
+						#commands.append('sudo apt-get build-dep python-matplotlib')
+						commands.append('cd ' + packagename +' && sudo pip install -r requirements.txt')
+						output = execute(InitialiseSessionView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
+						#output_text = output[instance_object.dns_name[0]]
+						print(output)
+						message = {'message': 'Cloud initilization successful.','status_code':200}
+						return Response(message,status=200)
+					else:
+						message = {'message': 'Error in launching instance','status_code':401}
+						return Response(message,status=401)
+				else:
+					message = {'message': 'Instance in running state','status_code':200}
+					return Response(message,status=200)
+			else:
+				message = {'message': 'No package with given packagename','status_code':400}
 				return Response(message,status=400)
 		except Token.DoesNotExist:
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
+
+class RunCommandView(APIView):
+	def setup_instance(key_path,commands): 
+		output = []
+		try:
+			env.user = 'ubuntu'
+			env.key_filename = key_path
+			for command in commands:
+				print(command)
+				output.append(run(command))
+		finally:
+			disconnect_all()
+		return output
+
+	def post(self,request):
+		token = self.request.data['token']
+		projectname = self.request.data['projectname']
+		instance_id = self.request.data['instance_id']
+		packagename = self.request.data['packagename']
+		shell_command = self.request.data['shell_command']
+		print(shell_command)
+		commands = []
+		try:
+			user_object = Token.objects.get(key=token)
+			project_object = Projects.objects.get(name=projectname)
+			instance_object = UserInstances.objects.get(project=project_object,pk=int(instance_id))	
+			all_instance_packages = instance_object.instancefolders.all()
+			instance_package_object = None
+
+			for item in all_instance_packages:
+				if item.project_folder_ref.folder_ref.name == packagename:
+					instance_package_object = item
+					break
+			print('dns name = '+ str(instance_object.dns_name))
+			print('\n')
+			if instance_package_object:
+				if instance_object.is_active == True:
+					commands.append(shell_command)
+					#host = list(instance_object.dns_name)
+					output = execute(RunCommandView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
+					output_text = output[instance_object.dns_name]
+					for item in output_text:
+						print(item)
+					message = {'message': output_text,'status_code':200}
+					return Response(message,status=200)
+				else:
+					message = {'message': 'Cloud is in not running state','status_code':200}
+					return Response(message,status=200)
+			else:
+				message = {'message': 'No package with given packagename','status_code':400}
+				return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = {'message':'Session token is not valid.','status_code':404}
+			return Response(message,status=404)
+
+# class LaunchInstanceView(APIView):
+# 	@hosts('localhost')
+# 	def launch_instance(ami,keyname,instance_type,security_group):
+# 		client = boto3.resource('ec2')
+# 		host_list = []
+# 		ids = []	
+# 		print ('Launching instance..')
+# 		instances = client.create_instances(
+# 			ImageId=ami,
+# 			MinCount=1,
+# 	    	MaxCount=1,
+# 	        KeyName=keyname,
+# 	        InstanceType=instance_type,
+# 	        SecurityGroups=security_group)	
+# 		instance = None
+# 		while 1:
+# 			sys.stdout.flush()
+# 			dns_name = instances[0].public_dns_name
+# 			if dns_name:
+# 				instance = instances[0]
+# 				host_list.append(instance.public_dns_name)
+# 				ids.append(instance.instance_id)
+# 				break
+# 			time.sleep(5.0)
+# 			instances[0].load()
+# 		print ('\nInstance launched.Public DNS:', instance.public_dns_name)
+# 		print ('Connecting to instance.')
+# 		while instance.state['Name'] != 'running':
+# 			print ('.',end='')
+# 			time.sleep(5)
+# 			instance.load()
+# 		print ('Instance in Running state')
+# 		print ('Initializing instance')
+# 		c = boto3.client('ec2')
+# 		while True:
+# 			response = c.describe_instance_status(InstanceIds=ids)
+# 			print ('.')
+# 			if response['InstanceStatuses'][0]['InstanceStatus']['Details'][0]['Status'] == 'passed' and response['InstanceStatuses'][0]['SystemStatus']['Details'][0]['Status']=='passed':
+# 				break
+# 			time.sleep(1)
+# 		time.sleep(5)
+# 		return host_list,ids
+
+# 	def setup_instance(key_path,commands): 
+# 		output = []
+# 		try:
+# 			env.user = 'ubuntu'
+# 			env.key_filename = key_path
+# 			for command in commands:
+# 				print(command)
+# 				output.append(run(command))
+# 		finally:
+# 			disconnect_all()
+# 		return output
+
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		access_key = int(self.request.data['access_key'])
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			all_instances = user_object.user.userinstances.all()
+# 			instance_object = None
+# 			for item in all_instances:
+# 				if item.access_key == access_key:
+# 					instance_object = item
+# 					break
+# 			if instance_object:
+# 				print (instance_object.ami_id,instance_object.instance_type,instance_object.keyval,instance_object.security_group)
+				
+# 				all_algo_files = instance_object.algofiles_instance_object.all()
+# 				all_data_files = instance_object.datafiles_instance_object.all()
+				
+# 				sec_group = []
+# 				sec_group.append(instance_object.security_group)
+# 				key_name = 'ec2test'
+
+# 				res = execute(LaunchInstanceView.launch_instance,instance_object.ami_id,key_name,instance_object.instance_type,sec_group)
+# 				print (res['localhost'][0])
+				
+# 				#if True:
+# 				if res['localhost'][0]:
+# 					instance_object.dns_name=res['localhost'][0]
+# 					instance_object.save()
+# 					#commands = ['uname -a','pwd',]
+# 					commands = []
+# 					commands.append('mkdir '+ user_object.user.username)
+# 					val = 'cd '+ user_object.user.username
+# 					commands.append(val + ' && mkdir data-section')
+# 					v = 'cd '+ user_object.user.username+'/data-section'
+# 					for item in all_data_files:
+# 						commands.append(v + ' && aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name))
+# 					commands.append(val + '&& mkdir algo-section')
+# 					v = 'cd '+ user_object.user.username+'/algo-section'
+# 					for item in all_algo_files:
+# 						commands.append(v + ' && aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name))
+# 					commands.append('ls -l')
+# 					output = execute(LaunchInstanceView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
+# 					output_text = output[instance_object.dns_name[0]]
+# 					print(output)
+# 					message = {'message': 'Instance Launched','status_code':200}
+# 					return Response(message,status=200)
+
+# 			elif instance_object==None:
+# 				message = {'message': 'No instance found with given access key','status_code':400}
+# 				return Response(message,status=400)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 
 

@@ -189,7 +189,7 @@ class Upload(Base):
 					file_flag = 1
 					name = os.path.basename(filename)
 					connection = Upload.file_upload(self,token,filename,name,env_flag,file_flag,id_val)
-					if connection.status_code == 204:`
+					if connection.status_code == 204:
 						print ax_blue("Uploaded file : %s" %filename)
 					elif connection.status_code == 400: #--duplicate files names
 						#print json.loads(connection.text)

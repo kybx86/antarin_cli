@@ -24,7 +24,7 @@ class Login(Base):
 		request.add_header("Content-Type",'application/json')
 		try:
 			connection = opener.open(request)
-		except urllib2.HTTPError,e:
+		except urllib2.HTTPError as e:
 			connection = e
 		return connection
 

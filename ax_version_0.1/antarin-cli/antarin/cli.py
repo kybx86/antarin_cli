@@ -52,12 +52,16 @@ from inspect import getmembers, isclass
 
 def main():
 
-  import commands
+  from . import commands
   options = docopt(__doc__,version=VERSION)
-  #print options
+  #print (options)
+  #print("\n")
+
   all_false = 1
   for key, value in options.iteritems():
+    #print(key,hasattr(commands,key))
     if hasattr(commands, key) and value:
+      print(key,value)
       all_false = 0
       module = getattr(commands, key)
       commands = getmembers(module, isclass)

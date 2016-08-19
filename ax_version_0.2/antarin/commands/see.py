@@ -28,6 +28,7 @@ class See(Base):
 			((argument == 'log'or argument == 'clouds') and self.config.space_env()) or \
 			((argument == 'path' or argument == 'spaces') and self.config.file_system_env()):
 			return True
+		
 		else:
 			return False
 

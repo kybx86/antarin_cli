@@ -16,7 +16,67 @@ def print_text_bold(message):
 
 def print_exception_error(message):
 	print(cl.ax_red(message))
-	
+
+def print_not_inside_space_message():
+	message = 'Error: You are not inside a space environment. Please try this command after entering a space--see "ax enter <space>"'
+	print_text('\n'+ message)
+
+def print_not_inside_cloud_message():
+	message = 'Error: You are not inside a cloud environment. Please try this command after entering a cloud--see "ax enter <cloud>"'
+	print_text('\n'+ message)
+
+def print_log(message):
+	pass
+	# print_text_bold('\nProject log:\n')
+	# for item in message:
+	# 	print_text('\t%s %s' %(item[0], item[1]))
+
+def print_file_list(message):
+	pass
+
+def print_spaces_clouds(message):
+	pass
+
+def print_summary(message,env):
+	pass
+	# if env == 'space':
+	# 	summary_file = message
+	# 	project_name = summary_file['projectname'].split(':')[1]
+
+	# 	print_text_bold('\nProject Details:\n')
+	# 	print_text_bold('\n\tProject Name: ') + print_text(project_name)
+	# 	print_text_bold('\n\tAdmin: ') + print_text(summary_file['admin'])
+		
+	# 	#--iterating for fields that can contain variable length fields
+	# 	print_text_bold('\n\tContributors: \n')
+	# 	for i in xrange(len(summary_file['contributors'])):
+	# 		username = summary_file['contributors'][i][0]
+	# 		user_status = summary_file['contributors'][i][1]
+	# 		print_text("\t\t%s \t%s" %(username, user_status))
+
+	# 	out(ax_blue(bold('\tProject Files: \n')))
+	# 	for i in xrange(len(summary_file['file_list'])):
+	# 		filename = summary_file['file_list'][i][0]
+	# 		owner = summary_file['file_list'][i][1]
+	# 		print_text("\t\t%s \t%s" %(owner, filename))
+		
+	# 	out(ax_blue(bold('\tProject Folders: \n')))
+	# 	for i in xrange(len(summary_file['folder_list'])):
+	# 		foldername = summary_file['folder_list'][i][0]
+	# 		owner = summary_file['folder_list'][i][1]
+	# 		print_text("\t\t%s \t%s" %(owner, foldername))
+
+	# if env == 'filesystem':
+	# 	summary_file = message     
+	# 	print_text_bold('\nAccount:\n')
+	# 	print_text_bold('\n\tUser: ')
+	# 	cl.ax_blue(summary_file['firstname']+' ') + cl.ax_blue(summary_file['lastname'])
+	# 	print_text_bold('\n\tAntarin ID: ')
+	# 	cl.ax_blue(summary_file['username'])
+	# 	print_text_bold('\n\tStorage Use: ')
+	# 	cl.ax_blue('%s / %s' %(summary_file['data_storage_used'], summary_file['data_storage_available']))
+	# 	print('\n')
+
 def get_user_auth_details():
 	userdata = {}
 	try:

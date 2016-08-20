@@ -49,12 +49,15 @@ urlpatterns = [
 	url(r'^rest-newinstance/$',antarin_views.NewInstanceView.as_view()),
 	url(r'^rest-listallinstances/$',antarin_views.ListInstancesView.as_view()),
 	url(r'^rest-enterinstance/$',antarin_views.EnterInstanceView.as_view()),
-	url(r'^rest-importfile/$',antarin_views.ImportFileView.as_view()),
 	url(r'^rest-rmfile/$',antarin_views.RemoveFileView.as_view()),
 	url(r'^rest-listfiles/$',antarin_views.list_filesView.as_view()),
 	url(r'^rest-adddata/$',antarin_views.AddDataView.as_view()),
 	url(r'^rest-initialisesession/$',antarin_views.InitialiseSessionView.as_view()),
 	url(r'^rest-runcommand/$',antarin_views.RunCommandView.as_view()),
+
+	url(r'^see/$',antarin_views.SeeView.as_view()),
+	url(r'^enter/$',antarin_views.EnterView.as_view()),
+	url(r'^new/$',antarin_views.NewView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -39,6 +39,7 @@ from fabric.tasks import execute
 import boto3,sys,time
 from fabric.exceptions import NetworkError
 from fabric.state import connections
+from antarin import api_exceptions
 
 #S3 Bucket details
 conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
@@ -243,6 +244,470 @@ def userHomepage(request):
 # 			return Response(return_val)
 # 		except Token.DoesNotExist:
 # 			return None
+
+class SeeView(APIView):
+	def list_all_spaces(user_object):
+		return_val = []
+		all_projects = user_object.user.userprojects.all()
+		for project in all_projects:
+			if project.status == 'A':
+				status = 'Admin'
+			else:
+				status = 'Contributor'
+			return_val.append(project.project.name+"\t"+status+"\t"+str(project.access_key))
+		return return_val
+
+	def show_current_directory(user_object,id_val):
+		pk = id_val
+		return_val = '~antarin'
+		if pk != "":
+			path_val = []
+			string_val = ""
+			folder_object = user_object.user.userfolders.get(pk=int(pk))
+			while folder_object.parentfolder is not None:
+				path_val.append(folder_object.name)
+				folder_object = folder_object.parentfolder
+			path_val.append(folder_object.name)
+			for i in range(len(path_val)-1,-1,-1):
+				string_val = string_val + "/" + path_val[i]
+			
+			return_val = return_val + string_val
+		return return_val
+
+	def show_project_log(user_object,spacename):
+		projectname = spacename
+		try:
+			project_object = Projects.objects.get(name=projectname)
+			all_logs = ProjectDetailsLogger.objects.filter(project=project_object)
+			return_val = []
+			
+			for item in all_logs:
+				logs = []
+				logs.append(item.timestamp.strftime("[%d/%B/%Y %H:%M:%S]"))
+				logs.append(item.action)
+				return_val.append(logs)
+			
+			message = {'message': return_val,'status_code':200}
+
+		except Projects.DoesNotExist:
+			message = api_exceptions.project_DoesNotExist()
+		
+		return message
+
+	def show_clouds(user_object,spacename):
+		projectname = spacename
+		try:
+			project_object = Projects.objects.get(name=projectname)
+			all_instances = project_object.projectinstances.all()
+			ret_val = {}
+			for item in all_instances:
+				print(item.instance_name)
+				ret_val[item.instance_name + '[' + item.user.username + ']']= item.access_key
+			message = {'message':ret_val,'status_code':200}
+
+		except Projects.DoesNotExist:
+			message = {'message':'Space does not exist.','status_code':404}
+		
+		return message
+
+	def show_summary(user_object,env,spacename,cloud_id):
+		
+		if env == 'filesystem':
+			user_data = {'firstname':user_object.user.first_name,
+						'lastname':user_object.user.last_name,
+						'username':user_object.user.username,
+						'data_storage_available':user_object.user.userprofile.total_data_storage,
+						'data_storage_used':user_object.user.userprofile.data_storage_used
+						}
+			message = {'message':user_data,'status_code':200}
+		
+		if env == 'space':
+			projectname = spacename
+			try:
+				project_object = Projects.objects.get(name=projectname)
+				all_userproject_objects = project_object.projectdetails.all()
+				all_projectfiles = project_object.projectfiles.all()
+				all_projectfolders = project_object.projectfolders.all()
+				
+				contributor_list=[]
+				file_list=[]
+				folder_list=[]
+				admin = ''
+
+				for item in all_userproject_objects:
+					contributor_list.append((item.user.first_name+' '+item.user.last_name,item.status))
+					if item.status == 'A':
+						admin = item.user.first_name + ' '+ item.user.last_name +'('+item.user.username+')'
+
+				for item in all_projectfiles:
+					file_list.append((os.path.basename(item.file_ref.file.name),item.file_ref.user.first_name+' '+item.file_ref.user.last_name+'('+item.file_ref.user.username+')'))
+
+				for item in all_projectfolders:
+					folder_list.append(('/'+item.folder_ref.name,item.folder_ref.user.first_name+ ' '+item.folder_ref.user.last_name+'('+item.folder_ref.user.username+')'))
+
+				data = {'projectname':projectname,'contributors':contributor_list,'admin':admin,'file_list':file_list,'folder_list':folder_list}
+				message = {'message':data,'status_code':200}
+			except Projects.DoesNotExist:
+				message = api_exceptions.project_DoesNotExist()
+		
+		if env == 'cloud':
+			cloud_id = cloud_id
+			#cloud summary
+			message = {'message':'cloud summary','status_code':200}
+
+		return message
+
+	def show_files(user_object,env,spacename,cloud_id,dir_id):
+
+		if env == 'filesystem':
+			pk = dir_id
+			list_val = []
+			if pk != "":
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			else:
+				folder_object = None
+			
+			for file in user_object.user.useruploadedfiles.all():
+				if file.folder == folder_object:
+					list_val.append(os.path.basename(file.file.name))
+			
+			for folder in user_object.user.userfolders.all():
+				if folder.parentfolder == folder_object:
+					list_val.append("/"+folder.name)
+			
+			message = {'message':list_val,'status_code':200}
+
+		if env == 'space':
+			try:
+				list_val=[]
+				projectname = spacename
+				project_object = Projects.objects.get(name=projectname)
+				all_projectfiles = project_object.projectfiles.all()
+				all_projectfolders = project_object.projectfolders.all()
+
+				for file in all_projectfiles:
+					list_val.append(os.path.basename(file.file_ref.file.name))
+
+				for folder in all_projectfolders:
+					list_val.append("/"+folder.folder_ref.name)
+				
+				message = {'message':list_val,'status_code':200}
+
+			except Projects.DoesNotExist:
+				message = api_exceptions.project_DoesNotExist()
+
+		if env == 'cloud':
+			instance_pk = cloud_id
+			user_instance_object = UserInstances.objects.get(pk=int(instance_pk))
+			all_instance_folders = user_instance_object.instancefolders.all()
+
+			list_val = []
+			for item in all_instance_folders:
+				list_val.append("/" + item.project_folder_ref.folder_ref.name)
+
+			message = {'message':list_val, 'status_code':200}
+
+		return message
+
+	def post(self,request):
+		token = self.request.data['token']
+		argument = self.request.data['argument']
+		argument = argument.strip()
+		try:
+			user_object = Token.objects.get(key=token)
+			if argument == 'spaces':
+				return_val = SeeView.list_all_spaces(user_object)
+				message = {'message':return_val}
+				return Response(message,status=200)
+
+			if argument == 'path':
+				id_val = self.request.data['id']
+				return_val = SeeView.show_current_directory(user_object,id_val)
+				message = {'message':json.dumps(return_val)}
+				return Response(message,status=200)
+
+			if argument == 'log' or argument == 'clouds':
+				spacename = self.request.data['spacename'].strip()
+				if argument == 'log':
+					return_val = SeeView.show_project_log(user_object,spacename)
+				if argument == 'clouds':
+					return_val = SeeView.show_clouds(user_object,spacename)
+				
+				message = {'message':return_val['message']}
+				
+				if return_val['status_code'] == 200:
+					return Response(message,status=200)
+				elif return_val['status_code'] == 404:
+					return Response(message,status=404)
+
+			if argument == 'summary' or argument == 'files':
+				env = self.request.data['env'].strip() # env - filesystem/space/cloud
+				spacename = self.request.data['spacename'].strip()
+				dir_id = self.request.data['id']
+				cloud_id = self.request.data['cloud_id']
+
+				if argument == 'summary':	
+					return_val = SeeView.show_summary(user_object,env,spacename,cloud_id)
+				if argument == 'files':
+					return_val = SeeView.show_files(user_object,env,spacename,cloud_id,dir_id)
+
+				message = {'message':return_val['message']}
+				
+				if return_val['status_code'] == 200:
+					return Response(message,status=200)
+				elif return_val['status_code'] == 404:
+					return Response(message,status=404)
+
+
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+class EnterView(APIView):
+
+	def enter_folder(user_object,argval,dir_id):
+		pk = dir_id
+		foldername = argval
+		if pk != "":
+			folder_object = user_object.user.userfolders.get(pk=int(pk))
+		else:
+			folder_object = None
+		if foldername == '..':
+			if folder_object is not None and folder_object.parentfolder is not None:
+				current_directory = folder_object.parentfolder.name
+				id_val = folder_object.parentfolder.pk
+			else:
+				current_directory = "/antarin"
+				id_val = ""
+			data = {'current_directory':current_directory,'id':id_val}
+			message = {'message':json.dumps(data),'status_code':200}
+		elif foldername == '~antarin':
+			current_directory = "/antarin"
+			id_val = ""
+			data = {'current_directory':current_directory,'id':id_val}
+			message = {'message':json.dumps(data),'status_code':200}
+		else:
+			flag = 0
+			all_folders = user_object.user.userfolders.all()
+			for folder in all_folders:
+				if folder.parentfolder == folder_object and folder.name == foldername:
+					current_directory = folder.name
+					id_val = folder.pk
+					data = {'current_directory':current_directory,'id':id_val}
+					flag = 1
+					break
+			if flag==1:
+				message = {'message':json.dumps(data),'status_code':200}
+			else:
+				message = api_exceptions.folder_DoesNotExist()
+		return message
+
+	def enter_project(user_object,spacename,access_key):
+		projectid = int(access_key)
+		project_flag=0
+		all_projects = user_object.user.userprojects.all()
+		for project in all_projects:
+			if project.access_key == projectid:
+				project_flag=1
+				data = {'spacename':project.project.name}
+				message = {'message':data,'status_code':200}
+
+		if project_flag==0:
+			message = api_exceptions.project_DoesNotExist()
+			
+		return message
+
+	def enter_cloud(user_object,spacename,access_key):
+		projectname = spacename
+		instance_access_id = access_key
+		try:
+			project_object = Projects.objects.get(name=projectname)
+			user_instance_object = UserInstances.objects.get(access_key=instance_access_id,project=project_object)
+			data = {'id':user_instance_object.pk,'name':user_instance_object.instance_name}
+			message = {'message':data,'status_code':200}
+			
+		except UserInstances.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+		
+		return message			
+
+	def post(self,request):
+		token = self.request.data['token']
+		argument = self.request.data['argument'].strip()
+		argval = self.request.data['argval'].strip()
+		try:
+			user_object = Token.objects.get(key=token)
+			if argument == 'folder':
+				dir_id = self.request.data['id']
+				return_val = EnterView.enter_folder(user_object,argval,dir_id)
+				message = {'message':return_val['message']}
+				print(message)
+				if return_val['status_code'] == 200:
+					return Response(message,200)
+				elif return_val['status_code'] == 400:
+					return Response(message,400)
+
+			if argument == 'space':
+				spacename = self.request.data['spacename'].strip()
+				return_val = EnterView.enter_project(user_object,spacename,argval)
+				message = {'message':return_val['message']}
+				if return_val['status_code'] == 200:
+					return Response(message,200)
+				elif return_val['status_code'] == 404:
+					return Response(message,404)
+
+			if argument == 'cloud':
+				cloud_id = self.request.data['cloud_id']
+				spacename = self.request.data['spacename'].strip()
+				return_val = EnterView.enter_cloud(user_object,spacename,argval)
+				message = {'message':return_val['message']}
+				if return_val['status_code'] == 200:
+					return Response(message,200)
+				elif return_val['status_code'] == 400:
+					return Response(message,400)
+
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+class NewView(APIView):
+
+	def generate_rand(n):
+		llimit = 10**(n-1)
+		ulimit = (10**n)-1
+		return random.randint(llimit,ulimit)
+
+	def new_folder(user_object,value,id_val):
+		pk = id_val
+		foldername = value
+		if pk != "":
+			folder_object = user_object.user.userfolders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+		dup_name_flag = 0
+		all_folders_inside_currdir = user_object.user.userfolders.filter(parentfolder=folder_object)
+		for  item in all_folders_inside_currdir:
+			if item.name == foldername:
+				dup_name_flag = 1
+				break
+				print("duplicate names")
+		if dup_name_flag:
+			message = api_exceptions.folder_exists()
+			return message
+		
+		new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
+		new_folder_object.save()
+		data = {'id':new_folder_object.pk}
+		message = {'message':json.dumps(data),'status_code':200}		
+		return message
+
+	def new_project(user_object,argval):
+		projectname = argval
+		try:
+			projectname = user_object.user.username + ':' + projectname
+			
+			#create project object
+			new_project_object = Projects(name=projectname)
+			new_project_object.save()
+			
+			#generate accesskey
+			all_user_projects = user_object.user.userprojects.all()
+			accesskey_list = []
+			for item in all_user_projects:
+				accesskey_list.append(item.access_key)
+
+			num = NewProjectView.generate_rand(4)
+			while num in accesskey_list:
+				print("NEW")
+				num = generate_rand(4)
+
+			access_key = num
+			print(access_key)
+			#create userprojects object
+			new_userprojects_object = UserProjects(user=user_object.user,project=new_project_object,status='A',access_key=access_key)
+			new_userprojects_object.save()
+			
+			#add to logs
+			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=new_project_object,action=user_object.user.username + ' created '+ projectname)
+			new_projectlogs_object.save()
+			
+			data = {'projectname':new_project_object.name,'access_key':access_key}
+			message = {'message':data,'status_code':200}
+			return message
+		except IntegrityError:
+			message = api_exceptions.project_exists()
+			return message
+		
+
+	def new_cloud(user_object,spacename,argval,ami_id,instance_type,region):
+		projectname = spacename
+		instance_name = argval
+
+		project_object = Projects.objects.get(name=projectname)
+		all_project_instances = project_object.projectinstances.all()
+		
+		dup_name_flag = 0
+		for  item in all_project_instances:
+			if item.instance_name == instance_name:
+				dup_name_flag = 1
+				break
+				print("duplicate names")
+		
+		if dup_name_flag:
+			message = api_exceptions.instance_exists()
+			return message
+
+		accesskey_list = []
+		for item in all_project_instances:
+			accesskey_list.append(item.access_key)
+
+		num = NewInstanceView.generate_rand(4)
+		while num in accesskey_list:
+			num = generate_rand(4)
+
+		access_key = num
+		print(access_key)
+
+		new_instances_object = UserInstances(user=user_object.user,project=project_object,instance_name=instance_name,ami_id=ami_id,region=region,instance_type=instance_type,access_key=access_key)
+		new_instances_object.save()
+
+		new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' created cloud '+ new_instances_object.instance_name)
+		new_projectlogs_object.save()
+
+		message={'message':'New cloud details were recorded','access_key':new_instances_object.access_key,'status_code':200}
+		return message
+
+	def post(self,request):
+		token = self.request.data['token']
+		argument = self.request.data['argument'].strip()
+		argval = self.request.data['argval'].strip()
+
+		try:
+			user_object = Token.objects.get(key=token)
+			if argument == 'folder':
+				dir_id = self.request.data['id']
+				return_val = NewView.new_folder(user_object,argval,dir_id)
+				
+			if argument == 'space':
+				return_val = NewView.new_project(user_object,argval)
+
+			if argument == 'cloud':
+				ami_id = self.request.data['ami_id'].strip()
+				instance_type = self.request.data['instance_type'].strip()
+				region = self.request.data['region'].strip()
+				spacename = self.request.data['spacename'].strip()
+				return_val = NewView.new_cloud(user_object,spacename,argval,ami_id,instance_type,region)
+			
+			message = {'message':return_val['message']}
+			if return_val['status_code'] == 200:
+				return Response(message,200)
+			elif return_val['status_code'] == 400:
+				return Response(message,400)
+
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
 
 class ListFilesView(APIView):
 	def post(self,request):
@@ -450,13 +915,15 @@ class UserSummaryView(APIView):
 
 class LogoutView(APIView):
 	def post(self,request):
+		print('token='+self.request.data['token'])
 		try:
 			instance = Token.objects.get(key=self.request.data['token'])
 			instance.delete()
-			message = {'message':'Token deleted. Logout Successful.','status_code':204}
-			return Response(message,status=204)
+			message = {'message':'antarinX logout succesful!'+ '\n' + 'Deleted token and user account details.'}
+			return Response(message,status=200)
 		except Token.DoesNotExist:
-			message = {'message':'ERROR:Session token is not valid.','status_code':404}
+			print('here')
+			message = {'message':'ERROR:Session token is not valid.'}
 			return Response(message,status=404)
 
 class CreateDirectoryView(APIView):
@@ -1462,54 +1929,54 @@ class AddDataView(APIView):
 			message = {'message':'Session token is not valid.','status_code':404}
 			return Response(message,status=404)
 
-class ImportFileView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		projectname = self.request.data['env_name']
-		filename = self.request.data['path']
-		instance_id = self.request.data['instance_id']
-		section = self.request.data['section']
-		try:
-			user_object = Token.objects.get(key=token)
-			instance_object = UserInstances.objects.get(user=user_object.user,pk=int(instance_id))
-			project_object = Projects.objects.get(name=projectname)
-			all_project_files = project_object.projectfiles.all()
-			project_file_object = None
-			for item in all_project_files:
-				if os.path.basename(item.file_ref.file.name)==filename:
-					project_file_object = item
-					break
+# class ImportFileView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectname = self.request.data['env_name']
+# 		filename = self.request.data['path']
+# 		instance_id = self.request.data['instance_id']
+# 		section = self.request.data['section']
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			instance_object = UserInstances.objects.get(user=user_object.user,pk=int(instance_id))
+# 			project_object = Projects.objects.get(name=projectname)
+# 			all_project_files = project_object.projectfiles.all()
+# 			project_file_object = None
+# 			for item in all_project_files:
+# 				if os.path.basename(item.file_ref.file.name)==filename:
+# 					project_file_object = item
+# 					break
 
-			if project_file_object:
-				if section == 'algo':
-					all_instance_files = instance_object.algofiles_instance_object.all()
-					for item in all_instance_files:
-						if os.path.basename(item.projectfile.file_ref.file.name)==filename:
-							error=1
-							message = {'message':'File exists.','status_code':400}
-							return Response(message,status=400)
+# 			if project_file_object:
+# 				if section == 'algo':
+# 					all_instance_files = instance_object.algofiles_instance_object.all()
+# 					for item in all_instance_files:
+# 						if os.path.basename(item.projectfile.file_ref.file.name)==filename:
+# 							error=1
+# 							message = {'message':'File exists.','status_code':400}
+# 							return Response(message,status=400)
 
-					new_algofiles_object = algoFiles(instance=instance_object,projectfile=project_file_object)
-					new_algofiles_object.save()
-					message = {'message':'File import successful.','status_code':200}
-					return Response(message,status=200)
-				elif section == 'data':
-					all_instance_files = instance_object.datafiles_instance_object.all()
-					for item in all_instance_files:
-						if os.path.basename(item.projectfile.file_ref.file.name)==filename:
-							error=1
-							message = {'message':'File exists.','status_code':400}
-							return Response(message,status=400)
-					new_datafiles_object = dataFiles(instance=instance_object,projectfile=project_file_object)
-					new_datafiles_object.save()
-					message = {'message':'File import successful.','status_code':200}
-					return Response(message,status=200)
-			else:
-				message={'message':'File does not exist.','status_code':400}
-				return Response(message,status=400)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 					new_algofiles_object = algoFiles(instance=instance_object,projectfile=project_file_object)
+# 					new_algofiles_object.save()
+# 					message = {'message':'File import successful.','status_code':200}
+# 					return Response(message,status=200)
+# 				elif section == 'data':
+# 					all_instance_files = instance_object.datafiles_instance_object.all()
+# 					for item in all_instance_files:
+# 						if os.path.basename(item.projectfile.file_ref.file.name)==filename:
+# 							error=1
+# 							message = {'message':'File exists.','status_code':400}
+# 							return Response(message,status=400)
+# 					new_datafiles_object = dataFiles(instance=instance_object,projectfile=project_file_object)
+# 					new_datafiles_object.save()
+# 					message = {'message':'File import successful.','status_code':200}
+# 					return Response(message,status=200)
+# 			else:
+# 				message={'message':'File does not exist.','status_code':400}
+# 				return Response(message,status=400)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 class list_filesView(APIView):
 	def post(self,request):

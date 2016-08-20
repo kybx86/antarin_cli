@@ -1,5 +1,5 @@
 """
-login command
+	ax login
 """
 
 from .base import Base

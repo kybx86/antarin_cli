@@ -1,5 +1,5 @@
 """
-	logout command
+	ax logout
 """
 
 from .base import Base

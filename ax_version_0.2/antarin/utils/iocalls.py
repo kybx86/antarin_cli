@@ -25,6 +25,14 @@ def print_not_inside_cloud_message():
 	message = 'Error: You are not inside a cloud environment. Please try this command after entering a cloud--see "ax enter <cloud>"'
 	print_text('\n'+ message)
 
+def print_not_num_text():
+	message = 'Error: Not a valid argument value. Accepted value is a 4 digit number.'
+	print_text(message)
+
+def print_not_valid_argument():
+	message = 'This argument is not valid in the current anatrinX environment. Verify your current environment -- check "ax see <env>"'
+	print_text(message)
+
 def print_log(message):
 	pass
 	# print_text_bold('\nProject log:\n')
@@ -85,4 +93,18 @@ def get_user_auth_details():
 		userdata['username'] = str(input(cl.ax_blue(cl.bold('Antarin ID: '))))
 	userdata['password'] = getpass.getpass(cl.ax_blue(cl.bold('Password:(will be hidden as you type) ')))
 	return userdata
+
+def get_cloud_data():
+	#TODO --> set default values when user entered value is empty
+	cloud_data = {}
+	try:
+		cloud_data['ami_id'] = str(raw_input(cl.ax_blue(cl.bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
+		cloud_data['instance_type'] = str(raw_input(cl.ax_blue(cl.bold('Instance Type (t2.micro): '))))
+		cloud_data['region'] = str(raw_input(cl.ax_blue(cl.bold('Region (us-west-2):'))))
+	except NameError:
+		cloud_data['ami_id'] = str(input(cl.ax_blue(cl.bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
+		cloud_data['instance_type'] = str(input(cl.ax_blue(cl.bold('Instance Type (t2.micro): '))))
+		cloud_data['region'] = str(input(cl.ax_blue(cl.bold('Region (us-west-2):'))))
+	return cloud_data
+
 

@@ -6,6 +6,7 @@
 
 import os
 import sys
+import json
 try:
 	import ConfigParser as cparser # python 2.7
 except ImportError:
@@ -40,8 +41,7 @@ class Config(cparser.SafeConfigParser):
 		return super(Config,self).read(self.file_path)
 
 	def get_values(self):
-		self.read_config()
-		return (self._sections)[section_name]
+		return (self._sections)[self.section_name]
 
 	def get_val_from_config(self,item):
 		try:
@@ -115,8 +115,35 @@ class Config(cparser.SafeConfigParser):
 		self.write_to_config('cloud','0')
 
 
+	def update_config_dir(self,message):
+		message = json.loads(message)
 
+		dir_name = message['current_directory']
+		id_val = message['id']
+		
+		self.write_to_config('dir',dir_name)
+		self.write_to_config('id',str(id_val))
 
+	def update_config_space(self,message):
 
+		spacename = message['spacename']
+		self.write_to_config('space','1')
+		self.write_to_config('spacename',spacename)
+
+	def update_config_cloud(self,message):
+
+		cloud_id = message['id']
+		self.write_to_config('cloud','1')
+		self.write_to_config('cloud_id',str(cloud_id))
+
+	def quit_space(self):
+		self.write_to_config('space','0')
+		self.write_to_config('spacename','')
+		self.write_to_config('cloud','0')
+		self.write_to_config('cloud_id','')
+
+	def quit_cloud(self):
+		self.write_to_config('cloud','0')
+		self.write_to_config('cloud_id','')
 
 

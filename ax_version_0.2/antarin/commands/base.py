@@ -2,7 +2,7 @@
 	Base class for all antarinX commands
 """
 
-import os,sys
+import os,sys,json
 from ..config import Config
 from ..utils import iocalls,apicalls
 from ..__main__ import __doc__
@@ -36,7 +36,7 @@ class Base(object):
 		"""
 		arguments = []
 		for key,value in self.option_dict.items():
-			if value and key not in commands:
+			if value == True and key not in commands:
 				arguments.append(key)
 		return arguments
 
@@ -45,7 +45,6 @@ class Base(object):
 			This method performs a safe exit() by either doing a sys.exit() or os.exit() -- usually called during
 			keyboard interrupt/ payload request exceptions
 		"""
-		print("\n")
 		try:
 			sys.exit(0)
 		except SystemExit:
@@ -81,7 +80,9 @@ class Base(object):
 				else:
 					iocalls.print_text('Invalid username and/or password\n')
 		except KeyboardInterrupt:
+			print('\n')
 			self.system_exit()
+			
 
 	def get_env(self):
 		if self.config.file_system_env():
@@ -93,11 +94,11 @@ class Base(object):
 
 	def display_env(self):
 		value = self.get_env().strip()
-		if value is 'filesystem':
+		if value == 'filesystem':
 			message = 'FILE SYSTEM'
-		elif value is 'space':
+		elif value == 'space':
 			message = 'SPACE'
-		elif value is 'cloud':
+		elif value == 'cloud':
 			message = 'CLOUD'
 		iocalls.print_text(message)
 
@@ -105,12 +106,28 @@ class Base(object):
 		help_text = __doc__
 		iocalls.print_text(help_text)
 
-	def send_request(self,api_endpoint,argument,argval=None):
-		config_data = self.config.get_values()
-		config_data['argument'] = argument
-		config_data['env'] = self.get_env().strip()
-		config_data['argval'] = argval
-
-		payload  = apicalls.api_send_request(api_endpoint,'POST',config_data)
+	def send_request(self,api_endpoint,argument,argval=None,cloud_data=None):
+		config_data_val = dict(self.config.get_values())
+		config_data_val['argument'] = argument
+		config_data_val['env'] = self.get_env().strip()
+		config_data_val['argval'] = argval
+		if cloud_data:
+			config_data_val['ami_id'] = cloud_data['ami_id'] 
+			config_data_val['instance_type'] = cloud_data['instance_type']
+			config_data_val['region'] = cloud_data['region']
+		
+		payload  = apicalls.api_send_request(api_endpoint,'POST',config_data_val)
+		
 		return payload
+
+	def quit_env(self,argument=None):
+		if not argument:
+			value = self.get_env().strip()
+		else:
+			value = argument
+		if value == 'space':
+			self.config.quit_space()
+		elif value == 'cloud':
+			self.config.quit_cloud()
+
 

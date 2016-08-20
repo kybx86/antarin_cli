@@ -28,7 +28,6 @@ class See(Base):
 			((argument == 'log'or argument == 'clouds') and self.config.space_env()) or \
 			((argument == 'path' or argument == 'spaces') and self.config.file_system_env()):
 			return True
-		
 		else:
 			return False
 
@@ -48,5 +47,5 @@ class See(Base):
 			 		payload = self.send_request(self.endpoint,argument)
 			 		self.response_handler(payload,argument)
 			 	else:
-			 		iocalls.print_text('This argument is not valid in the current anatrinX environment. Verify your current environment -- check "ax see <env>"')
-
+			 		iocalls.print_not_valid_argument()
+			 		

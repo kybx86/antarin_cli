@@ -107,4 +107,25 @@ def get_cloud_data():
 		cloud_data['region'] = str(input(cl.ax_blue(cl.bold('Region (us-west-2):'))))
 	return cloud_data
 
+def get_user_choice():
+	try:
+		user_input = str(raw_input(cl.ax_blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
+	except NameError:
+		user_input = str(input(cl.ax_blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
+	
+	user_input = user_input.strip()
+	if user_input.strip() == "yes":
+		return True
+	elif user_input == "no":
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os._exit(0)
+	else:
+		print_text("Invalid response. Please type 'yes' or 'no'")
 
+def get_password():
+	pwd = getpass.getpass(cl.ax_blue('Enter your antarinX password:(will be hidden as you type) '))
+	return pwd
+
+		

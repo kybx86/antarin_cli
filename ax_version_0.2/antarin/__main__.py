@@ -5,7 +5,7 @@ Usage:
 	ax login
 	ax see (files|spaces|clouds|path|env|summary|log|help)
 	ax enter ((folder) <name> | (space|cloud) <id>)
-	ax delete ([space|cloud] <id> | <item>)
+	ax delete ((space|cloud) <id> | -i <item>)
 	ax new (folder|space|cloud) <name>
 	ax upload <item>
 	ax add ([--env|--data|--code] <packagename> <item> | <item> | contributor <username>)

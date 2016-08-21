@@ -28,20 +28,21 @@ class New(Base):
 		self.endpoint = '/new/'
 		argument = self.get_arguments()[0]
 		value = self.option_dict['<name>']
-
-		if New.check_env_argument(self,argument):
-			if argument != 'cloud':
-				payload = self.send_request(self.endpoint,argument,value)
-				self.response_handler(payload,argument,value)
+		
+		if config.auth():			
+			if New.check_env_argument(self,argument):
+				if argument != 'cloud':
+					payload = self.send_request(self.endpoint,argument,value)
+					self.response_handler(payload,argument,value)
+				else:
+					try:
+						cloud_data = iocalls.get_cloud_data()
+					except KeyboardInterrupt:
+						print('\n')
+						self.system_exit()
+					payload = self.send_request(self.endpoint,argument,value,cloud_data)
+					self.response_handler(payload,argument,value)
 			else:
-				try:
-					cloud_data = iocalls.get_cloud_data()
-				except KeyboardInterrupt:
-					print('\n')
-					self.system_exit()
-				payload = self.send_request(self.endpoint,argument,value,cloud_data)
-				self.response_handler(payload,argument,value)
-		else:
-			iocalls.print_not_valid_argument()
+				iocalls.print_not_valid_argument()
 
 

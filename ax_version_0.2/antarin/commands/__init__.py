@@ -5,4 +5,6 @@ from .see import See
 from .enter import Enter
 from .exit import Exit
 from .new import New
+from .delete import Delete
+from .upload import Upload
 

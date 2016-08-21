@@ -106,7 +106,7 @@ class Base(object):
 		help_text = __doc__
 		iocalls.print_text(help_text)
 
-	def send_request(self,api_endpoint,argument,argval=None,cloud_data=None):
+	def send_request(self,api_endpoint,argument,argval=None,cloud_data=None,pwd=None):
 		config_data_val = dict(self.config.get_values())
 		config_data_val['argument'] = argument
 		config_data_val['env'] = self.get_env().strip()
@@ -115,7 +115,8 @@ class Base(object):
 			config_data_val['ami_id'] = cloud_data['ami_id'] 
 			config_data_val['instance_type'] = cloud_data['instance_type']
 			config_data_val['region'] = cloud_data['region']
-		
+		if pwd:
+			config_data_val['pwd'] = pwd
 		payload  = apicalls.api_send_request(api_endpoint,'POST',config_data_val)
 		
 		return payload
@@ -130,4 +131,26 @@ class Base(object):
 		elif value == 'cloud':
 			self.config.quit_cloud()
 
+	def has_permissions(self,api_endpoint,argval):
+		config_data_val = dict(self.config.get_values())
+		config_data_val['argval'] = argval
+		payload = apicalls.api_send_request(api_endpoint,'GET',config_data_val)
+		print(payload)
+		if payload[0]:
+			return True
+		else:
+			iocalls.print_text(payload[1]['message'])
+			self.system_exit()
 
+	def delete_space(self,api_endpoint,argument,argval):
+		if self.has_permissions(api_endpoint,argval):
+			if iocalls.get_user_choice():
+				pwd = iocalls.get_password()
+				payload = self.send_request(api_endpoint,argument,argval,None,pwd)
+				print(payload)
+				if payload[0]:
+					iocalls.print_text("\nProject deleted from antarinX")
+				else:
+					iocalls.print_text(payload[1]['message'])
+				self.system_exit()
+			

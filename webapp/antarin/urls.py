@@ -58,6 +58,7 @@ urlpatterns = [
 	url(r'^see/$',antarin_views.SeeView.as_view()),
 	url(r'^enter/$',antarin_views.EnterView.as_view()),
 	url(r'^new/$',antarin_views.NewView.as_view()),
+	url(r'^delete/$',antarin_views.DeleteView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

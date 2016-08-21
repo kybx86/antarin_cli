@@ -709,6 +709,367 @@ class NewView(APIView):
 			message = api_exceptions.invalid_session_token()
 			return Response(message,status=404)
 
+class DeleteView(APIView):
+
+	def remove_all_files_dirs(user_object,all_files,all_folders,pk,foldername):
+		
+		if pk!='':
+			folder_object = user_object.user.userfolders.get(pk=int(pk))
+		else:
+			folder_object = None
+		print ("folder object = "+str(folder_object))
+		for file in all_files:
+			if file.folder == folder_object:
+				path_val=[]
+				string_val = ''
+				original_value = file.folder
+				if file.folder is not None:
+					while file.folder.parentfolder is not None:
+						path_val.append(file.folder.name)
+						file.folder = file.folder.parentfolder
+					path_val.append(file.folder.name)
+					for i in range(len(path_val)-1,-1,-1):
+						string_val = string_val + "/" + path_val[i]
+					file.folder = original_value
+					argument_val = string_val[1:]+'/'
+				else:
+					argument_val = ''
+
+				file.delete()
+				print("deleted file "+str(file.file.name))
+				k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
+				print (k.key)
+				b.delete_key(k)
+		
+		return_list=[]
+		for item in all_folders:
+			if item.parentfolder == folder_object:
+				return_list.append(item.pk)
+				return_list.append(item.name)
+
+		return return_list
+	
+	def delete_file(user_object,argval,id_val):
+		pk = id_val
+		name = argval
+		file_flag = 0 # 1 - file;0-not a file
+		ref_fodler=None
+		return_list=[]
+		final_list =[]
+
+		all_files = user_object.user.useruploadedfiles.all()
+		all_folders = user_object.user.userfolders.all()
+
+		if pk!='':
+			folder_object = user_object.user.userfolders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+		for file in all_files:
+			if file.folder == folder_object and os.path.basename(file.file.name) == name:
+				file_flag = 1
+
+				path_val=[]
+				string_val = ''
+				original_value = file.folder
+				if file.folder is not None:
+					while file.folder.parentfolder is not None:
+						path_val.append(file.folder.name)
+						file.folder = file.folder.parentfolder
+					path_val.append(file.folder.name)
+					for i in range(len(path_val)-1,-1,-1):
+						string_val = string_val + "/" + path_val[i]
+					file.folder = original_value
+					argument_val = string_val[1:]+'/'
+				else:
+					argument_val = ''
+
+				file.delete()
+				k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
+				print (k.key)
+				b.delete_key(k)
+				message = {'message':"File deleted.",'status_code':200}
+				return message
+
+		ref_folder = None
+		if file_flag == 0:
+			for folder in all_folders:
+				if folder.parentfolder == folder_object and folder.name == name:
+					ref_folder = folder
+					break
+			if ref_folder is not None:
+				folder_empty_flag = 1 # 1 is empty and 0 is non-empty
+				for folder in all_folders:
+					if folder.parentfolder == ref_folder:
+						folder_empty_flag = 0
+						break	
+				if folder_empty_flag:
+					for file in all_files:
+						if file.folder == ref_folder:
+							folder_empty_flag = 0
+							break
+				if folder_empty_flag:
+					ref_folder.delete()
+					message = {'message':'Folder deleted.','status_code':200}
+					return message
+				else:
+					ref_folder = None
+					if file_flag == 0:
+						#recursive delete
+						for folder in all_folders:
+							if folder.parentfolder == folder_object and folder.name == name:
+								ref_folder = folder
+								break
+						if ref_folder is not None:
+							#call delete function
+							ref_folder_pk = ref_folder.pk
+							ref_folder_name = ref_folder.name
+							return_list = RemoveObjectView.remove_all_files_dirs(user_object,all_files,all_folders,ref_folder_pk,ref_folder_name)
+							if return_list:
+								#print(return_list)
+								final_list.extend(return_list)
+								n = len(return_list)
+								i = 0
+								while i < n:
+								#for i in range(0,len(return_list),2):
+									val = RemoveObjectView.remove_all_files_dirs(user_object,all_files,all_folders,return_list[i],return_list[i+1])
+									if val:
+										return_list.extend(val)
+										final_list.extend(val)
+										print(return_list,len(return_list))
+									i = i + 2
+									n = len(return_list)
+							print("\n")
+							print ("final_list"+str(final_list))
+							
+							folder_object = user_object.user.userfolders.get(pk=int(ref_folder_pk))
+							print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
+							folder_object.delete()
+							message = {'message':"Folder deleted.",'status_code':200}
+							return message
+							
+						else:
+							message = api_exceptions.folder_DoesNotExist()
+							return message
+			else:
+				message = api_exceptions.file_DoesNotExist()
+				return message
+
+	def project_file(user_object,argval,spacename):
+		projectname = spacename
+		name = argval
+
+		project_object = Projects.objects.get(name=projectname)
+		project_files = ProjectFiles.objects.filter(project=project_object)
+		all_files = user_object.user.useruploadedfiles.all()
+		all_folders = user_object.user.userfolders.all()
+
+		file_object = None
+		found = 0
+		is_owner = 0
+		for item in project_files: #check if file exists in projectFiles
+			if os.path.basename(item.file_ref.file.name) == name:
+				file_object = item.file_ref
+				found = 1
+				break
+
+		if found:
+			for item in all_files:
+				if item == file_object:
+					is_owner = 1
+					break
+		
+		if found and is_owner:
+			project_files_object = ProjectFiles.objects.get(project=project_object,file_ref=file_object)
+			project_files_object.delete()
+
+			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
+			new_projectlogs_object.save()
+
+			message = {'message':"File removed.",'status_code':200}
+			return message
+
+		if found and is_owner == 0:
+			message = api_exceptions.permission_denied()
+			return message
+
+		if not found:
+			project_folders = ProjectFolders.objects.filter(project=project_object)
+			folder_object = None
+			found = 0
+			is_owner = 0
+			for item in project_folders: #check if file exists in projectFolders
+				if os.path.basename(item.folder_ref.name) == name:
+					folder_object = item.folder_ref
+					found = 1
+					break
+			if found:
+				for item in all_folders:
+					if item == folder_object:
+						is_owner = 1
+						break
+			if found == 0:
+				message = api_exceptions.file_DoesNotExist()
+				return message
+			if is_owner == 0:
+				message = api_exceptions.permission_denied()
+				return message
+			if found and is_owner:
+				project_folder_object = ProjectFolders.objects.get(project=project_object,folder_ref=folder_object)
+				project_folder_object.delete()
+				
+				new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
+				new_projectlogs_object.save()
+
+				message = {'message':"Directory removed.",'status_code':200}
+				return message
+
+	def delete_cloud_file(user_object,argval,cloud_id):
+		foldername = argval
+		instance_object = UserInstances.objects.get(pk=int(cloud_id))
+		all_cloud_files = instance_object.instancefolders.all()
+		
+		found = 0
+		is_owner = 0
+		for item in all_cloud_files: #check if file exists in projectFiles
+			if os.path.basename(item.project_folder_ref.folder_ref.name) == name:
+				folder_object = item
+				found = 1
+				break
+
+		if found:
+			if folder_object.project_folder_ref.folder_ref.user.username == user_object.user.username:
+				is_owner = 1
+		else:
+			message = api_exceptions.file_DoesNotExist()
+			return message
+		
+		if not is_owner:
+			message = api_exceptions.permission_denied()
+			return message
+		
+		if found and is_owner:
+			folder_object.delete()
+			message = {'message':"File removed.",'status_code':200}
+			return message
+
+
+	def delete_space(user_object,argval,pwd):
+		
+		projectid = argval
+		password = pwd
+
+		username = user_object.user.username
+		user_val = User.objects.get(username__exact=username)
+
+		if user_val.check_password(password):
+			
+			user_project_object = user_object.user.userprojects.get(access_key=projectid)
+			project_object = user_project_object.project
+			project_object.delete()
+			
+			message = {'message':'Project deleted.','status_code':200}
+		else:
+			print('incorrect password')
+			message = api_exceptions.incorrect_password()
+		return message
+
+	def delete_cloud(user_object,argval,spacename):
+		projectname = spacename
+
+		project_object = Projects.objects.get(name=projectname)
+		all_instances = project_object.projectinstances.all()
+
+		found = False
+		has_permissions = False
+		for item in all_instances:
+			if item.access_key == int(argval):
+				found = True
+				break
+		if found and item.user.username == user_object.user.username:
+			has_permissions = True
+
+		if not found:
+			message = api_exceptions.instance_DoesNotExist()
+			return message
+		if not has_permissions:
+			message = api_exceptions.permission_denied()
+			return message
+		
+		instance_object = item
+		instance_object.delete()
+		message = {'message':'Cloud deleted.','status_code':200}
+		return message
+
+	def get(self,request):
+		token = self.request.data['token']
+		projectid = self.request.data['argval'].strip()
+
+		try:
+			user_object = Token.objects.get(key=token)
+			user_project_object = user_object.user.userprojects.get(access_key=projectid)
+			if user_project_object.status != 'A':
+				message = api_exceptions.permission_denied()
+				return Response(message,status=400)
+			else:
+				message = {'message':'Has permissions','status_code':200}
+				return Response(message,status=200)
+		except UserProjects.DoesNotExist:
+			message = api_exceptions.project_DoesNotExist()
+			return Response(message,status=404)
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+	def post(self,request):
+		token = self.request.data['token']
+		argument = self.request.data['argument'].strip()
+		argval = self.request.data['argval'].strip()
+		
+		try:
+			user_object = Token.objects.get(key=token)
+			if argument == 'space':
+				pwd = self.request.data['pwd']
+				return_val = DeleteView.delete_space(user_object,argval,pwd)
+				message = {'message':return_val['message']}
+				if return_val['status_code'] == 200:
+					return Response(message,200)
+				elif return_val['status_code'] == 404:
+					return Response(message,404)
+
+			if argument == 'cloud':
+				spacename = self.request.data['spacename'].strip()
+				return_val = DeleteView.delete_cloud(user_object,argval,spacename)
+				message = {'message':return_val['message']}
+				if return_val['status_code'] == 200:
+					return Response(message,200)
+				elif return_val['status_code'] == 400:
+					return Response(message,400)
+
+			if argument == '-i':
+				env = self.request.data['env'].strip()
+				if env == 'filesystem':
+					id_val = self.request.data['id']
+					return_val = DeleteView.delete_file(user_object,argval,id_val)
+					
+				elif env == 'space':
+					return_val = DeleteView.delete_project_file(user_object,argval)
+					return_val = DeleteView.delete_file(user_object,argval,id_val)
+					
+				elif env == 'cloud':
+					cloud_id = self.request.data['cloud_id']
+					return_val = DeleteView.delete_cloud_file(user_object,argval,cloud_id)
+
+				message = {'message':return_val['message']}
+				if return_val['status_code'] == 200:
+					return Response(message,200)
+				elif return_val['status_code'] == 400:
+					return Response(message,400)
+
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
 class ListFilesView(APIView):
 	def post(self,request):
 		print(self.request.data)

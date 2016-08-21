@@ -15,6 +15,12 @@ def invalid_session_token():
 
 	return return_dict
 
+def file_DoesNotExist():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "File does not exist."
+	return return_dict
+
 def folder_DoesNotExist():
 	return_dict = {}
 	return_dict['status_code'] = 400
@@ -43,4 +49,16 @@ def instance_exists():
 	return_dict = {}
 	return_dict['status_code'] = 400
 	return_dict['message'] = message + "Cloud with the same name exists in this project environment."
+	return return_dict
+
+def permission_denied():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "Permission denied."
+	return return_dict
+
+def incorrect_password():
+	return_dict = {}
+	return_dict['status_code'] = 404
+	return_dict['message'] = message + "Invalid password."
 	return return_dict

@@ -30,7 +30,7 @@ def print_not_num_text():
 	print_text(message)
 
 def print_not_valid_argument():
-	message = 'This argument is not valid in the current anatrinX environment. Verify your current environment -- check "ax see <env>"'
+	message = 'This argument is not valid in the current anatrinX environment. Verify your current environment -- check "ax see env"'
 	print_text(message)
 
 def print_log(message):
@@ -129,3 +129,39 @@ def get_password():
 	return pwd
 
 		
+def get_user_choice_rename():
+	try:
+		user_input = str(raw_input(cl.ax_blue("Do you want to rename the file? (yes/no): ")))
+	except NameError:
+		user_input = str(input(cl.ax_blue("Do you want to rename the file? (yes/no): ")))
+
+	user_input = user_input.strip()
+	if user_input.strip() == "yes":
+		return True
+	elif user_input == "no":
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os._exit(0)
+	else:
+		print_text("Invalid response. Please type 'yes' or 'no'")
+		return False
+
+def get_new_filename():
+	try:
+		new_filename = str(raw_input(cl.ax_blue("Enter new file name with extension (cannot be empty): ")))
+	except NameError:
+	 	new_filename = str(input(cl.ax_blue("Enter new file name with extension (cannot be empty): ")))
+	new_filename = new_filename.strip()
+	if new_filename != "" and new_filename != " ":
+		return new_filename
+	else:
+		print_text("Invalid file name.")
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os._exit(0)
+
+
+
+

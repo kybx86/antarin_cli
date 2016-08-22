@@ -7,4 +7,5 @@ from .exit import Exit
 from .new import New
 from .delete import Delete
 from .upload import Upload
+from .add import Add
 

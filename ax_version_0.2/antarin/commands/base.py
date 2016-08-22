@@ -106,7 +106,7 @@ class Base(object):
 		help_text = __doc__
 		iocalls.print_text(help_text)
 
-	def send_request(self,api_endpoint,argument,argval=None,cloud_data=None,pwd=None):
+	def send_request(self,api_endpoint,argument,argval=None,cloud_data=None,pwd=None,packagename=None):
 		config_data_val = dict(self.config.get_values())
 		config_data_val['argument'] = argument
 		config_data_val['env'] = self.get_env().strip()
@@ -117,6 +117,9 @@ class Base(object):
 			config_data_val['region'] = cloud_data['region']
 		if pwd:
 			config_data_val['pwd'] = pwd
+		if packagename:
+			config_data_val['packagename'] = packagename
+
 		payload  = apicalls.api_send_request(api_endpoint,'POST',config_data_val)
 		
 		return payload
@@ -135,7 +138,6 @@ class Base(object):
 		config_data_val = dict(self.config.get_values())
 		config_data_val['argval'] = argval
 		payload = apicalls.api_send_request(api_endpoint,'GET',config_data_val)
-		print(payload)
 		if payload[0]:
 			return True
 		else:
@@ -153,4 +155,106 @@ class Base(object):
 				else:
 					iocalls.print_text(payload[1]['message'])
 				self.system_exit()
-			
+	
+	def send_upload_request(self,api_endpoint,argval,filename=None):
+		config_data_val = dict(self.config.get_values())
+		config_data_val['env'] = self.get_env().strip()
+		config_data_val['argval'] = argval
+		config_data_val['flag'] = 'file'
+		if filename:
+			config_data_val['newfilename'] = filename	
+		payload = apicalls.api_send_request(api_endpoint,'POST',config_data_val,argval)
+		if payload[0]:
+			if not filename:
+				iocalls.print_text('Uploaded file: %s'%argval)
+			else:
+				iocalls.print_text('Uploaded file: %s'%argval+' as '+filename)
+			self.system_exit()
+		return payload
+
+	def file_upload(self,api_endpoint,argval):
+		payload = self.send_upload_request(api_endpoint,argval)
+		while True:
+			if not payload[0] and (payload[1]['message']['status_code'] == 400): #duplicate file name
+				try:
+					iocalls.print_text("\nError: a file with the name already exists in this location.")
+					while True:
+						if iocalls.get_user_choice_rename():
+							new_filename = iocalls.get_new_filename()
+							filename = new_filename
+							payload = self.send_upload_request(api_endpoint,argval,filename)
+							break
+				except KeyboardInterrupt:
+					print('\n')
+					self.system_exit()
+			else:
+				iocalls.print_text(payload[1]['message'])
+				self.system_exit()
+
+	def tree_traversal(self,top, topdown=True, onerror=None, followlinks=False):
+		islink, join, isdir = os.path.islink, os.path.join, os.path.isdir
+		try:
+			names = os.listdir(top)
+		except (error,err):
+			if onerror is not None:
+				onerror(err)
+			return
+		dirs, nondirs = [], []
+		for name in names:
+			if isdir(join(top, name)):
+				dirs.append(name)
+			else:
+				nondirs.append(name)
+		if topdown:
+			yield top, dirs, nondirs
+
+		for name in dirs:
+			new_path = join(top, name)
+			if followlinks or not islink(new_path):
+				for x in self.tree_traversal(self,new_path, topdown, onerror, followlinks):
+					yield x
+		if not topdown:
+			yield top, dirs, nondirs
+
+	def folder_upload_send_request(self,api_endpoint,action,foldername=None,parentdir=None,idval=None,argval=None):
+		config_data_val = dict(self.config.get_values())
+		config_data_val['flag'] = 'folder'
+		action = action.strip()
+		config_data_val['action'] = action
+		if action == 'create':
+			config_data_val['foldername'] = foldername
+			config_data_val['parentdir'] = parentdir
+		if action == 'upload':
+			config_data_val['idval'] = idval
+			config_data_val['argval'] = argval
+		payload = apicalls.api_send_request(api_endpoint,'POST',config_data_val,argval)
+		if payload[0]:
+			if action == 'create':
+				return payload[1]['id']
+			elif action == 'upload':
+				return
+		else:
+			iocalls.print_text(payload[1])
+			self.system_exit()
+
+	def folder_upload(self,api_endpoint,filename):
+		if filename[-1] == '/':
+			filename = filename[:len(filename)-1]
+		parentdir = os.path.abspath(os.path.join(filename, os.pardir))
+		result = os.walk(filename)
+		for root, dirs, files in result:
+			pdir = os.path.abspath(os.path.join(root, os.pardir))
+			pdir = pdir[len(parentdir):]
+			foldername = os.path.basename(root)
+			print('Creating directory: ' + os.path.basename(root))
+			value = self.folder_upload_send_request(api_endpoint,'create',foldername,pdir)
+			files = [f for f in files if f[0] != '.']
+			for item in files:
+				print('Uploading file: '+ os.path.basename(item))
+				argval = os.path.join(root,item)
+				self.folder_upload_send_request(api_endpoint,'upload',None,None,value,argval)
+			print('\n')
+
+	
+
+

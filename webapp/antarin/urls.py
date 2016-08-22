@@ -61,6 +61,9 @@ urlpatterns = [
 	url(r'^delete/$',antarin_views.DeleteView.as_view()),
 	url(r'^upload/$',antarin_views.UploadView.as_view()),
 	url(r'^add/$',antarin_views.AddView.as_view()),
+	url(r'^initialize/$',antarin_views.InitializeView.as_view()),
+	url(r'^run/$',antarin_views.RunView.as_view()),
+	url(r'^sleep/$',antarin_views.SleepView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

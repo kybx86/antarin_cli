@@ -1434,6 +1434,286 @@ class AddView(APIView):
 			message = api_exceptions.invalid_session_token()
 			return Response(message,status=404)
 
+class InitializeView(APIView):
+
+	@hosts('localhost')
+	def launch_instance(ami,keyname,instance_type,security_group):
+		client = boto3.resource('ec2')
+		host_list = []
+		ids = []	
+		print ('Launching instance..')
+		instances = client.create_instances(
+			ImageId=ami,
+			MinCount=1,
+	    	MaxCount=1,
+	        KeyName=keyname,
+	        InstanceType=instance_type,
+	        SecurityGroups=security_group)	
+		instance = None
+		while 1:
+			sys.stdout.flush()
+			dns_name = instances[0].public_dns_name
+			if dns_name:
+				instance = instances[0]
+				host_list.append(instance.public_dns_name)
+				ids.append(instance.instance_id)
+				break
+			time.sleep(5.0)
+			instances[0].load()
+		print ('\nInstance launched.Public DNS:', instance.public_dns_name)
+		print ('Connecting to instance.')
+		while instance.state['Name'] != 'running':
+			print ('.',end='')
+			time.sleep(5)
+			instance.load()
+		print ('Instance in Running state')
+		print ('Initializing instance')
+		c = boto3.client('ec2')
+		while True:
+			response = c.describe_instance_status(InstanceIds=ids)
+			print ('.')
+			if response['InstanceStatuses'][0]['InstanceStatus']['Details'][0]['Status'] == 'passed' and response['InstanceStatuses'][0]['SystemStatus']['Details'][0]['Status']=='passed':
+				break
+			time.sleep(1)
+		time.sleep(5)
+		return host_list,ids
+
+	def setup_instance(key_path,commands): 
+		output = []
+		try:
+			env.user = 'ubuntu'
+			env.key_filename = key_path
+			for command in commands:
+				print(command)
+				output.append(run(command))
+		finally:
+			disconnect_all()
+		return output
+
+	def add_files_to_dir(foldername,folderid,commands,parentpath=None):
+		if parentpath:
+			commands.append('cd '+parentpath+' && mkdir '+foldername)
+			print('with cd '+ parentpath)
+			print('mkdir ' + foldername)
+			parent = parentpath + '/'+foldername
+		else:
+			commands.append('mkdir '+foldername)
+			print('mkdir ' + foldername)
+			parent = foldername
+		folder_object = UserFolder.objects.get(pk=folderid)
+		all_files = folder_object.foldername.all()
+		for item in all_files:
+			commands.append('cd '+parent+' && aws s3 cp ' + 's3://antarin-test/media/'+item.file.name+' '+os.path.basename(item.file.name))
+			print('with cd '+ parent)
+			print('add file '+os.path.basename(item.file.name))
+
+			#&& aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name)
+		all_folders_list = UserFolder.objects.filter(parentfolder=folder_object)
+		all_folders = []
+		for item in all_folders_list:
+			all_folders.append(item.name)
+			all_folders.append(item.pk)
+			all_folders.append(parent)
+		
+		return all_folders,commands
+
+	def post(self,request):
+		token = self.request.data['token']
+		#print(self.request.data)
+		try:
+			user_object = Token.objects.get(key = token)
+			projectname = self.request.data['spacename']
+			packagename = self.request.data['packagename']
+
+			project_object = Projects.objects.get(name=projectname)
+			accesskey = None
+			if 'argval' in self.request.data:
+				accesskey = self.request.data['argval'] 
+			if accesskey:
+				instance_object = project_object.projectinstances.get(access_key=int(accesskey))
+			else:
+				cloud_id = self.request.data['cloud_id']
+				instance_object = UserInstances.objects.get(project=project_object,pk=int(cloud_id))	
+
+			all_instance_packages = instance_object.instancefolders.all()
+			instance_package_object = None
+
+			for item in all_instance_packages:
+				if item.project_folder_ref.folder_ref.name == packagename:
+					instance_package_object = item
+					break
+			
+			if instance_package_object:
+
+				#launch instance
+				sec_group = []
+				sec_group.append(instance_object.security_group)
+				key_name = 'ec2test'
+
+				if instance_object.is_active == False:
+					res = execute(InitializeView.launch_instance,instance_object.ami_id,key_name,instance_object.instance_type,sec_group)
+					print (res['localhost'][0])
+
+					if res['localhost'][0]:
+						dns_name = res['localhost'][0][0]
+						instance_id_val = res['localhost'][1][0]
+						instance_object.dns_name = res['localhost'][0][0]
+						instance_object.instance_id = instance_id_val
+						instance_object.is_active = True
+						instance_object.save()
+
+						folder_object = instance_package_object.project_folder_ref.folder_ref
+						folder_name = folder_object.name
+						folder_id = folder_object.pk
+						commands = []
+						value = InitializeView.add_files_to_dir(folder_name,folder_id,commands)
+						all_folders = value[0]
+						final_list = []
+						commands = value[1]
+						if all_folders:
+							n = len(all_folders)
+							i = 0
+							final_list.extend(all_folders)
+							while i<n:
+								val = InitializeView.add_files_to_dir(all_folders[i],all_folders[i+1],commands,all_folders[i+2])
+								if val:
+									all_folders.extend(val[0])
+									final_list.extend(val[0])
+									commands = val[1]
+									#print(all_folders,final_list)
+								i += 3
+								n = len(all_folders)
+						for command in commands:
+							print(command)
+						#commands.append('sudo apt-get build-dep python-matplotlib')
+						commands.append('cd ' + packagename +' && sudo pip install -r requirements.txt')
+						output = execute(InitializeView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
+						#output_text = output[instance_object.dns_name[0]]
+						print(output)
+						message = {'message': 'Cloud initilization successful.','status_code':200}
+						return Response(message,status=200)
+					else:
+						message = {'message': 'Error in launching instance','status_code':401}
+						return Response(message,status=401)
+				else:
+					message = {'message': 'Instance in running state','status_code':200}
+					return Response(message,status=200)
+			else:
+				message = {'message': 'Package does not exist','status_code':400}
+				return Response(message,status=400)
+		
+		except UserInstances.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+			return Response(message,status=400)
+
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+class RunView(APIView):
+
+	def setup_instance(key_path,commands): 
+		output = []
+		try:
+			env.user = 'ubuntu'
+			env.key_filename = key_path
+			for command in commands:
+				print(command)
+				output.append(run(command))
+		finally:
+			disconnect_all()
+		return output
+
+	def post(self,request):
+		token = self.request.data['token']
+		#print(self.request.data)
+		try:
+			user_object = Token.objects.get(key = token)
+			projectname = self.request.data['spacename']
+			packagename = self.request.data['packagename']
+			shell_command = self.request.data['shell_command']
+			commands = []
+
+			project_object = Projects.objects.get(name=projectname)
+			accesskey = None
+			if 'argval' in self.request.data:
+				accesskey = self.request.data['argval'] 
+			if accesskey:
+				instance_object = project_object.projectinstances.get(access_key=int(accesskey))
+			else:
+				cloud_id = self.request.data['cloud_id']
+				instance_object = UserInstances.objects.get(project=project_object,pk=int(cloud_id))	
+
+			all_instance_packages = instance_object.instancefolders.all()
+			instance_package_object = None
+
+			for item in all_instance_packages:
+				if item.project_folder_ref.folder_ref.name == packagename:
+					instance_package_object = item
+					break
+			print('dns name = '+ str(instance_object.dns_name))
+			print('\n')
+			if instance_package_object:
+				if instance_object.is_active == True:
+					commands.append(shell_command)
+					#host = list(instance_object.dns_name)
+					output = execute(RunCommandView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
+					output_text = output[instance_object.dns_name]
+					for item in output_text:
+						print(item)
+					message = {'message': output_text,'status_code':200}
+					return Response(message,status=200)
+				else:
+					message = {'message': 'Cloud is in not running state','status_code':200}
+					return Response(message,status=200)
+			else:
+				message = {'message': 'Package does not exist','status_code':400}
+				return Response(message,status=400)
+
+		except UserInstances.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+			return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+class SleepView(APIView):
+
+	def post(self,request):
+		token = self.request.data['token']
+		try:
+			user_object = Token.objects.get(key = token)
+			projectname = self.request.data['spacename']
+			project_object = Projects.objects.get(name=projectname)
+			accesskey = None
+			if 'argval' in self.request.data:
+				accesskey = self.request.data['argval'] 
+			if accesskey:
+				instance_object = project_object.projectinstances.get(access_key=int(accesskey))
+			else:
+				cloud_id = self.request.data['cloud_id']
+				instance_object = UserInstances.objects.get(project=project_object,pk=int(cloud_id))
+
+			if instance_object.is_active == True:
+				instance_id = []
+				instance_id.append(instance_object.instance_id)
+				client = boto3.client('ec2')
+				response = client.stop_instances( InstanceIds=instance_id)
+				instance_object.is_active = False
+				instance_object.save()
+				print (response)
+				message = {'message':'Cloud stopped.','status_code':200}
+				return Response(message,status=200)
+			else:
+				message = api_exceptions.instance_not_running()
+				return Response(message,status=400)
+		except UserInstances.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+			return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
 class ListFilesView(APIView):
 	def post(self,request):
 		print(self.request.data)

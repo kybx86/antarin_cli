@@ -87,3 +87,8 @@ def package_exists():
 	return_dict['message'] = message + "Package with same name exists in the cloud."
 	return return_dict
 	
+def instance_not_running():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "Cloud not in running state."
+	return return_dict

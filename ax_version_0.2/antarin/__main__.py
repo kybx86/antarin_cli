@@ -10,8 +10,8 @@ Usage:
 	ax upload <item>
 	ax add (--env <packagename> |(--data|--code) <packagename> <item> | -i <item> | contributor <username>)
 	ax exit [space|cloud]
-	ax run <shell_command> <package_name>
-	ax initialize [<id>]
+	ax initialize <packagename> [<id>]
+	ax run <shell_command> <packagename> [<id>]
 	ax sleep [<id>]
 	ax logout
 

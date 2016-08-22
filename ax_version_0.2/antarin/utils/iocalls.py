@@ -33,6 +33,10 @@ def print_not_valid_argument():
 	message = 'This argument is not valid in the current anatrinX environment. Verify your current environment -- check "ax see env"'
 	print_text(message)
 
+def print_specify_accesskey():
+	message = 'Error: Please specify accesskey of the cloud.'
+	print_text(message)
+
 def print_log(message):
 	pass
 	# print_text_bold('\nProject log:\n')

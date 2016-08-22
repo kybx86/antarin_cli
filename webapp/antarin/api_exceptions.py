@@ -39,6 +39,12 @@ def folder_exists():
 	return_dict['message'] = message + "Folder with the same name exists."
 	return return_dict
 
+def file_exists():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "File with the same name exists."
+	return return_dict
+
 def project_exists():
 	return_dict = {}
 	return_dict['status_code'] = 400
@@ -62,3 +68,22 @@ def incorrect_password():
 	return_dict['status_code'] = 404
 	return_dict['message'] = message + "Invalid password."
 	return return_dict
+
+def user_DoesNotExist():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "No antarinX user found with specified username."
+	return return_dict
+
+def contributor_exists():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "Specified user is already a contributor to this space."
+	return return_dict
+
+def package_exists():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "Package with same name exists in the cloud."
+	return return_dict
+	

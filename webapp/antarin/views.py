@@ -413,6 +413,7 @@ class SeeView(APIView):
 		token = self.request.data['token']
 		argument = self.request.data['argument']
 		argument = argument.strip()
+
 		try:
 			user_object = Token.objects.get(key=token)
 			if argument == 'spaces':
@@ -620,7 +621,7 @@ class NewView(APIView):
 			num = NewProjectView.generate_rand(4)
 			while num in accesskey_list:
 				print("NEW")
-				num = generate_rand(4)
+				num = NewView.generate_rand(4)
 
 			access_key = num
 			print(access_key)
@@ -855,7 +856,7 @@ class DeleteView(APIView):
 				message = api_exceptions.file_DoesNotExist()
 				return message
 
-	def project_file(user_object,argval,spacename):
+	def delete_project_file(user_object,argval,spacename):
 		projectname = spacename
 		name = argval
 
@@ -928,7 +929,8 @@ class DeleteView(APIView):
 		foldername = argval
 		instance_object = UserInstances.objects.get(pk=int(cloud_id))
 		all_cloud_files = instance_object.instancefolders.all()
-		
+		name = argval
+
 		found = 0
 		is_owner = 0
 		for item in all_cloud_files: #check if file exists in projectFiles
@@ -1053,8 +1055,8 @@ class DeleteView(APIView):
 					return_val = DeleteView.delete_file(user_object,argval,id_val)
 					
 				elif env == 'space':
-					return_val = DeleteView.delete_project_file(user_object,argval)
-					return_val = DeleteView.delete_file(user_object,argval,id_val)
+					spacename = self.request.data['spacename']
+					return_val = DeleteView.delete_project_file(user_object,argval,spacename)
 					
 				elif env == 'cloud':
 					cloud_id = self.request.data['cloud_id']
@@ -1065,6 +1067,368 @@ class DeleteView(APIView):
 					return Response(message,200)
 				elif return_val['status_code'] == 400:
 					return Response(message,400)
+
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+class UploadView(APIView):
+
+	def add_file(user_object,file_object,filename,id_val):
+		pk = id_val
+
+		filename = os.path.basename(filename)
+		if pk!="":
+			folder_object = user_object.user.userfolders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+		all_files_in_currdir = user_object.user.useruploadedfiles.filter(folder=folder_object)
+		
+		dup_name_flag = 0
+		for item in all_files_in_currdir:
+			if os.path.basename(item.file.file.name) == filename:
+				dup_name_flag = 1
+				break
+		if dup_name_flag:
+			message = api_exceptions.file_exists()
+			return message
+
+
+		user_files = UserUploadedFiles()
+		user_files.user = user_object.user
+		user_files.file = file_object
+		user_files.file.name = filename
+		user_files.folder = folder_object
+		
+		all_files = user_object.user.useruploadedfiles.all()
+		used_data_storage = calculate_used_data_storage(all_files)
+		user_object.user.userprofile.data_storage_used = str(used_data_storage)
+		user_object.user.save()
+		user_object.user.userprofile.save()
+		user_files.save()
+		
+		#catch error when save didn't work fine and return status 400
+		print("\n")
+		message = {'message':"File upload successful.",'status_code':200}
+		return message
+
+	def get_parentdir_id(user_object,parentpath,id_val):
+		if parentpath[0] == '/':
+			parentpath = parentpath[1:]
+		l = parentpath.split('/')
+		if id_val:
+			id_val = int(id_val)
+			for item in l:
+				folder_object = user_object.user.userfolders.get(pk=id_val)
+				next_folder_object = folder_object.parentfoldername.get(name=item)
+				id_val = next_folder_object.pk
+		else:
+			folder_object = user_object.user.userfolders.get(name=l[0],parentfolder=None)
+			id_val = folder_object.pk
+			for item in l[1:]:
+				next_folder_object = folder_object.parentfoldername.get(name=item)
+				id_val = next_folder_object.pk
+				folder_object = user_object.user.userfolders.get(pk=id_val)
+
+		return str(id_val)
+
+	def create_folder(user_object,foldername,parentdir,id_val):
+		pk = id_val
+
+		if not parentdir:
+			if pk != "":
+				folder_object = user_object.user.userfolders.get(pk=int(pk))
+			else:
+				folder_object = None
+
+			dup_name_flag = 0
+			all_folders_inside_currdir = user_object.user.userfolders.filter(parentfolder=folder_object)
+			for  item in all_folders_inside_currdir:
+				if item.name == foldername:
+					dup_name_flag = 1
+					break
+					print("duplicate names")
+			if dup_name_flag:
+				message = api_exceptions.folder_exists()
+				return message
+
+		if parentdir:
+			print(parentdir)
+			value = UploadView.get_parentdir_id(user_object,parentdir,id_val)
+			print('value = '+value)
+			folder_object = user_object.user.userfolders.get(pk=int(value))
+
+		new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
+		new_folder_object.save()
+		data = {'id':new_folder_object.pk}
+		message = {'message':data,'status_code':200}		
+		return message
+
+	def post(self,request):
+		
+		token = self.request.data['token']
+
+		try:
+			user_object = Token.objects.get(key = token)
+			flag = self.request.data['flag'].strip()
+			if flag == 'file':
+				argval = self.request.data['argval'].strip() #--filename
+				file_object = self.request.data['file']
+
+				if 'newfilename' in self.request.data:
+					new_filename = self.request.data['newfilename']
+					filename = new_filename
+				else:	
+					filename = argval
+
+				if ' ' in filename:
+					filename = filename.replace(' ','_')
+			
+				id_val = self.request.data['id']
+				return_val = UploadView.add_file(user_object,file_object,filename,id_val)
+				message = {'message':return_val}
+				if return_val['status_code'] == 200:
+					return Response(message,200)
+				elif return_val['status_code'] == 400:
+					return Response(message,400)
+			elif flag == 'folder':
+				action = self.request.data['action'].strip()
+				if action == 'create':
+					print('HERE')
+					foldername = self.request.data['foldername']
+					parentpath = self.request.data['parentdir']
+					id_val = self.request.data['id']
+					return_val = UploadView.create_folder(user_object,foldername,parentpath,id_val)
+					message = return_val['message']
+					if return_val['status_code'] == 200:
+						return Response(message,200)
+					elif return_val['status_code'] == 400:
+						return Response(message,400)
+				elif action == 'upload':
+					id_val = self.request.data['idval']
+					file_object = self.request.data['file']
+					filename = self.request.data['argval'].strip()
+					if ' ' in filename:
+						filename = filename.replace(' ','_')
+					return_val = UploadView.add_file(user_object,file_object,filename,id_val)
+					message = {'message':return_val}
+					if return_val['status_code'] == 200:
+						return Response(message,200)
+					elif return_val['status_code'] == 400:
+						return Response(message,400)
+
+
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+class AddView(APIView):
+
+	def generate_rand(n):
+		llimit = 10**(n-1)
+		ulimit = (10**n)-1
+		return random.randint(llimit,ulimit)
+
+	def add_contributor(user_object,username,spacename):
+		projectname = spacename
+		project_object = Projects.objects.get(name=projectname)
+		user_project_object = user_object.user.userprojects.get(project=project_object)
+		all_userprojects = UserProjects.objects.all()
+		error_flag=0 #0-new contributor object
+
+		if user_project_object.status!='C':
+			try:
+				contributor_obj = User.objects.get(username=username)
+				for projects in all_userprojects:
+					print(project_object.pk ,projects.project.pk,projects.user.pk,projects.user.username,contributor_obj.pk,contributor_obj.username)
+					if projects.project == project_object and projects.user == contributor_obj:
+						error_flag=1
+						print("here" )
+						break
+				if error_flag==0 :
+
+					all_user_projects = contributor_obj.userprojects.all()
+					accesskey_list = []
+					for item in all_user_projects:
+						accesskey_list.append(item.access_key)
+
+					num = AddView.generate_rand(4)
+					while num in accesskey_list:
+						num = generate_rand(4)
+
+					access_key = num
+					print(access_key)
+
+					new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C',access_key=access_key)
+					new_userprojects_object.save()
+					print("Added " + new_userprojects_object.user.username + " as contributor to "+ new_userprojects_object.project.name  )
+					
+					new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added '+ new_userprojects_object.user.username + ' as contributor.' )
+					new_projectlogs_object.save()
+
+					data = {'user':new_userprojects_object.user.username,'acess_key':access_key}
+					message = {'message':data,'status_code':200}
+					return message
+				else:
+					message = api_exceptions.contributor_exists()
+					return message				
+			except User.DoesNotExist:
+				message = api_exceptions.user_DoesNotExist()
+				return message
+		else:
+			message = api_exceptions.permission_denied()
+			return message
+
+	def find_folder(foldername,parentfolder,all_folders):
+		folder_flag = 0
+		for item in all_folders:
+			if item.name == foldername and item.parentfolder == parentfolder:
+				folder_object = item
+				folder_flag = 1
+				break
+		if folder_flag == 0:
+			return -1
+		return folder_object
+
+	def find_file(filename,parentfolder,all_files):
+		file_flag = 0
+		for item in all_files:
+			if item.folder == parentfolder and os.path.basename(item.file.name) == filename:
+				file_object = item
+				file_flag = 1
+				break
+		if file_flag == 0:
+			return -1
+		return file_object
+
+	def add_to_space(user_object,spacename,item):
+		path = item
+		projectname = spacename
+		project_object = Projects.objects.get(name=projectname)
+		all_folders = user_object.user.userfolders.all()
+		error_flag = 0
+		plist = path
+		plist = plist.split('/')
+		if path[0]=='/' and path[-1]=='/':
+		    plist = plist[1:-1]
+		elif path[0]=='/'and path[-1]!='/':
+		    plist = plist[1:]
+		elif path[0]!='/' and path[-1]=='/':
+		    plist = plist[:-1]
+		print (plist)
+		parentfolder = None
+		if len(plist) == 1:
+			val = AddView.find_folder(plist[0],parentfolder,all_folders)
+			if val != -1:
+				parentfolder = val
+				print (parentfolder.name)
+			else:
+				message = api_exceptions.folder_DoesNotExist()
+				return message
+		else:
+			for i in range(1,len(plist)):
+				val = AddView.find_folder(plist[i],parentfolder,all_folders)
+				if val != -1:
+					parentfolder = val
+					print (parentfolder.name)
+				else:
+					message = api_exceptions.folder_DoesNotExist()
+					return message
+		folder_object = val
+		all_projectfolders = ProjectFolders.objects.filter(project=project_object)
+		for item in all_projectfolders:
+			if item.folder_ref == folder_object:
+				print("Duplicate folder ref")
+				error_flag = 1
+				break
+
+		for item in all_projectfolders:
+			if item.folder_ref.name == folder_object.name:
+				print("Duplicate folder ref")
+				error_flag = 1
+				break
+
+		if error_flag ==0:
+			
+			new_projectfolder_object = ProjectFolders(project=project_object,folder_ref=folder_object)
+			print("Adding "  + new_projectfolder_object.folder_ref.name + " to " + new_projectfolder_object.project.name)
+			new_projectfolder_object.save()
+
+			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added directory '+ new_projectfolder_object.folder_ref.name)
+			new_projectlogs_object.save()
+
+			message = {'message':'Imported directory.','status_code':200}
+			return message
+		else:
+			message = api_exceptions.folder_exists()
+			return message
+
+	def add_to_cloud(user_object,argument,spacename,item,cloud_id,packagename):
+		projectname = spacename
+		instance_id = cloud_id
+		section = argument[2:]
+		
+		project_object = Projects.objects.get(name=projectname)
+		instance_object = UserInstances.objects.get(project=project_object,pk=int(instance_id))	
+		if section == 'env':
+			project_folder_object = None
+			all_project_folders = project_object.projectfolders.all()
+			for item in all_project_folders:
+				if item.folder_ref.name == packagename:
+					project_folder_object = item
+					break
+			if project_folder_object:
+				all_instance_folders = instance_object.instancefolders.all()
+				for item in all_instance_folders:
+					if item.project_folder_ref.folder_ref.name == packagename:
+						message = api_exceptions.package_exists()
+						return message
+
+				new_instance_folder_object = InstanceFolders(instance=instance_object,project_folder_ref=project_folder_object)
+				new_instance_folder_object.save()
+				message = {'message':'Package added to cloud.','status_code':200}
+				return message
+			else:
+				message=api_exceptions.folder_DoesNotExist()
+				return message
+		elif section == 'data':
+			message = {'message':'Method not implemented.','status_code':200}
+			return message
+		elif section == 'code':
+			message = {'message':'Method not implemented.','status_code':200}
+			return message
+
+	def post(self,request):
+		token = self.request.data['token']
+		argument = self.request.data['argument'].strip()
+		try:
+			user_object = Token.objects.get(key = token)
+			if argument == 'contributor':
+				username = self.request.data['argval']
+				spacename = self.request.data['spacename']
+				return_val = AddView.add_contributor(user_object,username,spacename)
+				
+			if argument == '-i':
+				item = self.request.data['argval']
+				spacename = self.request.data['spacename']
+				return_val = AddView.add_to_space(user_object,spacename,item)
+
+			if argument[0] == '-' and argument[1] == '-':
+				argument = self.request.data['argument']
+				item = None
+				if 'argval' in self.request.data:
+					item = self.request.data['argval']
+				spacename = self.request.data['spacename']
+				packagename = self.request.data['packagename']
+				cloud_id = self.request.data['cloud_id']
+				return_val = AddView.add_to_cloud(user_object,argument,spacename,item,cloud_id,packagename)
+
+			message = {'message':return_val}
+			if return_val['status_code'] == 200:
+				return Response(message,200)
+			elif return_val['status_code'] == 400:
+				return Response(message,400)
 
 		except Token.DoesNotExist:
 			message = api_exceptions.invalid_session_token()

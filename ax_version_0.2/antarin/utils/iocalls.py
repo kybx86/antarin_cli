@@ -9,13 +9,13 @@ import getpass
 from . import _color as cl
 
 def print_text(message):
-	print(cl.ax_blue(message))
+	cl.out(cl.blue('\n' + message + '\n'))
 
 def print_text_bold(message):
-	print(cl.ax_blue(cl.bold(message)))
+	print(cl.blue(cl.bold(message)))
 
 def print_exception_error(message):
-	print(cl.ax_red(message))
+	print(cl.red(message))
 
 def print_not_inside_space_message():
 	message = 'Error: You are not inside a space environment. Please try this command after entering a space--see "ax enter <space>"'
@@ -44,78 +44,106 @@ def print_log(message):
 	# 	print_text('\t%s %s' %(item[0], item[1]))
 
 def print_file_list(message):
-	pass
+	cl.out(cl.blue(cl.bold('\nMy files:\n')))
+	for item in range(len(message)):
+		cl.out(cl.blue('\n\t' + message[item]))
+	cl.out('\n')
+	#pass
 
-def print_spaces_clouds(message):
-	pass
+def print_clouds(message, argument):
+	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
+	print('\n')
+	for item in range(len(message)):
+		space_entry = message[item]
+		space_entry = space_entry.split('\t')
+		space_name = space_entry[0].split(':')[1]
+		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title())) + 
+			cl.blue('{:12s}'.format(space_name[:12])))
+		# cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(space_entry[1])))
+		# cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()) + cl.blue(space_entry[2])))
+		# cl.out('\n')
+
+def print_spaces(message, argument):
+	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
+	print('\n')
+	for item in range(len(message)):
+		space_entry = message[item]
+		space_entry = space_entry.split('\t')
+		space_name = space_entry[0].split(':')[1]
+		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title())) + 
+			cl.blue('{:12s}'.format(space_name[:12])))
+		cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(space_entry[1])))
+		cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()) + 
+			cl.blue(space_entry[2])))
+		cl.out('\n')
 
 def print_summary(message,env):
-	pass
-	# if env == 'space':
-	# 	summary_file = message
-	# 	project_name = summary_file['projectname'].split(':')[1]
-
-	# 	print_text_bold('\nProject Details:\n')
-	# 	print_text_bold('\n\tProject Name: ') + print_text(project_name)
-	# 	print_text_bold('\n\tAdmin: ') + print_text(summary_file['admin'])
+	summary = message
+	if env == 'space':
+		space_name = summary['projectname'].split(':')[1]
+		admin = summary['admin'].split('(')
 		
-	# 	#--iterating for fields that can contain variable length fields
-	# 	print_text_bold('\n\tContributors: \n')
-	# 	for i in xrange(len(summary_file['contributors'])):
-	# 		username = summary_file['contributors'][i][0]
-	# 		user_status = summary_file['contributors'][i][1]
-	# 		print_text("\t\t%s \t%s" %(username, user_status))
+		cl.out(cl.blue(cl.bold('\nSpace details\n')))
+		cl.out(cl.blue(cl.bold('\n\tSpace name: ')) + cl.blue(space_name))
+		cl.out(cl.blue(cl.bold('\n\tAdmin: ') + cl.blue(admin[0].title()) + 
+			cl.blue(' -> ') + cl.blue(admin[1][:-1])))
+		#--iterating for fields of variable length
+		cl.out(cl.blue(cl.bold('\n\tContributors: \n')))
+		for item in range(len(summary['contributors'])):
+			usr = summary['contributors'][item][0]
+			usr_perms = summary['contributors'][item][1]
+			cl.out(cl.blue("\t\t{0} \t{1}").format(usr.title(), usr_perms))
+			print('\n')
+		cl.out(cl.blue(cl.bold('\nProject files: \n')))
+		for item in range(len(summary['file_list'])):
+			filename = summmary['file_list'][item][0]
+			owner = summmary['file_list'][item][1]
+			cl.out(cl.blue("\t\t{0} \t{1}").format(owner.title(), filename))
+			print('\n')
+		cl.out(cl.blue(cl.bold('\nProject folders: \n')))
+		for item in range(len(summary['folder_list'])):
+			filename = summary['folder_list'][item][0]
+			owner = summary['folder_list'][item][1].split('(')[0]
+			cl.out(cl.blue("\t\t{0} \t{1}").format(owner.title(), filename))
+			print('\n')
 
-	# 	out(ax_blue(bold('\tProject Files: \n')))
-	# 	for i in xrange(len(summary_file['file_list'])):
-	# 		filename = summary_file['file_list'][i][0]
-	# 		owner = summary_file['file_list'][i][1]
-	# 		print_text("\t\t%s \t%s" %(owner, filename))
-		
-	# 	out(ax_blue(bold('\tProject Folders: \n')))
-	# 	for i in xrange(len(summary_file['folder_list'])):
-	# 		foldername = summary_file['folder_list'][i][0]
-	# 		owner = summary_file['folder_list'][i][1]
-	# 		print_text("\t\t%s \t%s" %(owner, foldername))
-
-	# if env == 'filesystem':
-	# 	summary_file = message     
-	# 	print_text_bold('\nAccount:\n')
-	# 	print_text_bold('\n\tUser: ')
-	# 	cl.ax_blue(summary_file['firstname']+' ') + cl.ax_blue(summary_file['lastname'])
-	# 	print_text_bold('\n\tAntarin ID: ')
-	# 	cl.ax_blue(summary_file['username'])
-	# 	print_text_bold('\n\tStorage Use: ')
-	# 	cl.ax_blue('%s / %s' %(summary_file['data_storage_used'], summary_file['data_storage_available']))
-	# 	print('\n')
+	if env == 'filesystem':
+		cl.out(cl.blue(cl.bold('\nAccount\n')))
+		cl.out(cl.blue(cl.bold('\n\tUser: ')) + 
+			cl.blue('{0} {1}').format(summary['firstname'].title(), summary['lastname'].title()))
+		cl.out(cl.blue(cl.bold('\n\tAntarin ID: ')) + cl.blue(summary['username']))
+		cl.out(cl.blue(cl.bold('\n\tStorage Use: ')) + 
+			cl.blue('{0} / {1}').format(summary['data_storage_used'], summary['data_storage_available']))
+		# can add more to summary: 'status bar': spaces, clouds running, etc...
+		print('\n')
 
 def get_user_auth_details():
 	userdata = {}
 	try:
-		userdata['username'] = str(raw_input(cl.ax_blue(cl.bold('Antarin ID: '))))
+		userdata['username'] = str(raw_input(cl.blue(cl.bold('Antarin ID: '))))
 	except NameError:
-		userdata['username'] = str(input(cl.ax_blue(cl.bold('Antarin ID: '))))
-	userdata['password'] = getpass.getpass(cl.ax_blue(cl.bold('Password:(will be hidden as you type) ')))
+		userdata['username'] = str(input(cl.blue(cl.bold('Antarin ID: '))))
+	userdata['password'] = getpass.getpass(cl.blue(cl.bold('Password:(will be hidden as you type) ')))
 	return userdata
 
 def get_cloud_data():
 	#TODO --> set default values when user entered value is empty
 	cloud_data = {}
 	try:
-		cloud_data['ami_id'] = str(raw_input(cl.ax_blue(cl.bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
-		cloud_data['instance_type'] = str(raw_input(cl.ax_blue(cl.bold('Instance Type (t2.micro): '))))
-		cloud_data['region'] = str(raw_input(cl.ax_blue(cl.bold('Region (us-west-2):'))))
+		cloud_data['ami_id'] = str(raw_input(cl.blue(cl.bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
+		cloud_data['instance_type'] = str(raw_input(cl.blue(cl.bold('Instance Type (t2.micro): '))))
+		cloud_data['region'] = str(raw_input(cl.blue(cl.bold('Region (us-west-2):'))))
 	except NameError:
-		cloud_data['ami_id'] = str(input(cl.ax_blue(cl.bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
-		cloud_data['instance_type'] = str(input(cl.ax_blue(cl.bold('Instance Type (t2.micro): '))))
-		cloud_data['region'] = str(input(cl.ax_blue(cl.bold('Region (us-west-2):'))))
+		cloud_data['ami_id'] = str(input(cl.blue(cl.bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
+		cloud_data['instance_type'] = str(input(cl.blue(cl.bold('Instance Type (t2.micro): '))))
+		cloud_data['region'] = str(input(cl.blue(cl.bold('Region (us-west-2):'))))
 	return cloud_data
 
 def get_user_choice():
 	try:
-		user_input = str(raw_input(cl.ax_blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
+		user_input = str(raw_input(cl.blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
 	except NameError:
-		user_input = str(input(cl.ax_blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
+		user_input = str(input(cl.blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
 	
 	user_input = user_input.strip()
 	if user_input.strip() == "yes":
@@ -129,15 +157,15 @@ def get_user_choice():
 		print_text("Invalid response. Please type 'yes' or 'no'")
 
 def get_password():
-	pwd = getpass.getpass(cl.ax_blue('Enter your antarinX password:(will be hidden as you type) '))
+	pwd = getpass.getpass(cl.blue('Enter your antarinX password:(will be hidden as you type) '))
 	return pwd
 
 		
 def get_user_choice_rename():
 	try:
-		user_input = str(raw_input(cl.ax_blue("Do you want to rename the file? (yes/no): ")))
+		user_input = str(raw_input(cl.blue("Do you want to rename the file? (yes/no): ")))
 	except NameError:
-		user_input = str(input(cl.ax_blue("Do you want to rename the file? (yes/no): ")))
+		user_input = str(input(cl.blue("Do you want to rename the file? (yes/no): ")))
 
 	user_input = user_input.strip()
 	if user_input.strip() == "yes":
@@ -153,9 +181,9 @@ def get_user_choice_rename():
 
 def get_new_filename():
 	try:
-		new_filename = str(raw_input(cl.ax_blue("Enter new file name with extension (cannot be empty): ")))
+		new_filename = str(raw_input(cl.blue("Enter new file name with extension (cannot be empty): ")))
 	except NameError:
-	 	new_filename = str(input(cl.ax_blue("Enter new file name with extension (cannot be empty): ")))
+	 	new_filename = str(input(cl.blue("Enter new file name with extension (cannot be empty): ")))
 	new_filename = new_filename.strip()
 	if new_filename != "" and new_filename != " ":
 		return new_filename

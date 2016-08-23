@@ -513,7 +513,7 @@ class EnterView(APIView):
 		for project in all_projects:
 			if project.access_key == projectid:
 				project_flag=1
-				data = {'spacename':project.project.name}
+				data = {'name':project.project.name}
 				message = {'message':data,'status_code':200}
 
 		if project_flag==0:
@@ -621,7 +621,7 @@ class NewView(APIView):
 			for item in all_user_projects:
 				accesskey_list.append(item.access_key)
 
-			num = NewProjectView.generate_rand(4)
+			num = NewView.generate_rand(4)
 			while num in accesskey_list:
 				print("NEW")
 				num = NewView.generate_rand(4)
@@ -666,7 +666,7 @@ class NewView(APIView):
 		for item in all_project_instances:
 			accesskey_list.append(item.access_key)
 
-		num = NewInstanceView.generate_rand(4)
+		num = NewView.generate_rand(4)
 		while num in accesskey_list:
 			num = generate_rand(4)
 
@@ -828,7 +828,7 @@ class DeleteView(APIView):
 							#call delete function
 							ref_folder_pk = ref_folder.pk
 							ref_folder_name = ref_folder.name
-							return_list = RemoveObjectView.remove_all_files_dirs(user_object,all_files,all_folders,ref_folder_pk,ref_folder_name)
+							return_list = DeleteView.remove_all_files_dirs(user_object,all_files,all_folders,ref_folder_pk,ref_folder_name)
 							if return_list:
 								#print(return_list)
 								final_list.extend(return_list)
@@ -836,7 +836,7 @@ class DeleteView(APIView):
 								i = 0
 								while i < n:
 								#for i in range(0,len(return_list),2):
-									val = RemoveObjectView.remove_all_files_dirs(user_object,all_files,all_folders,return_list[i],return_list[i+1])
+									val = DeleteView.remove_all_files_dirs(user_object,all_files,all_folders,return_list[i],return_list[i+1])
 									if val:
 										return_list.extend(val)
 										final_list.extend(val)
@@ -1574,9 +1574,9 @@ class InitializeView(APIView):
 			all_instance_packages = instance_object.instancefolders.all()
 			instance_package_object = None
 
-			packages = self.request.data['packagename']
+			packages = json.loads(self.request.data['packages'])
 			
-			print(type(self.request.data['packagename']))
+			print(type(packages))
 			print(packages)
 			if instance_object.is_active == False:
 				#launch instance
@@ -1714,7 +1714,7 @@ class RunView(APIView):
 			else:
 				message = api_exceptions.package_DoesNotExist()
 				return Response(message,status=400)
-
+		#except System1
 		except UserInstances.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)

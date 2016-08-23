@@ -36,7 +36,10 @@ def instance_DoesNotExist():
 def package_DoesNotExist(packagename=None):
 	return_dict = {}
 	return_dict['status_code'] = 400
-	return_dict['message'] = message + "Package %s does not exist in the cloud." %packagename
+	if packagename:
+		return_dict['message'] = message + "Package %s does not exist in the cloud." %packagename
+	else:
+		return_dict['message'] = message + "Package does not exist in the cloud."
 	return return_dict
 
 def folder_exists():

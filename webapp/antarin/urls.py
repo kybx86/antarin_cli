@@ -26,7 +26,7 @@ urlpatterns = [
 	url(r'^passwordreset/success/$',antarin_views.password_reset_success),
 	url(r'^passwordreset/activation/(?P<key>.+)$', antarin_views.password_key_activation),
 	url(r'^passwordreset/redirect/$', antarin_views.password_reset_redirect),
-	# url(r'^rest-auth/', include('rest_auth.urls')),
+	url(r'^rest-auth/', include('rest_auth.urls')),
 	# url(r'^rest-summary/',antarin_views.UserSummaryView.as_view()),
 	# url(r'^rest-ls/',antarin_views.ListFilesView.as_view()),
 	# url(r'^rest-fileupload/$',antarin_views.UploadFileView.as_view()),

@@ -20,11 +20,12 @@ class Initialize(Base):
 				self.system_exit()
 			else:
 				accesskey = None
-				packagename = self.option_dict['<packagename>']
+				packagename = self.option_dict['<packagename>'] #returns a list
+				print(packagename,type(packagename))
 				if config.space_env(): 	
-					if self.option_dict['<id>']:
-						if self.option_dict['<id>'].isdigit():
-							accesskey = self.option_dict['<id>']
+					if self.option_dict['--cloud']:
+						if self.option_dict['--cloud'].isdigit():
+							accesskey = self.option_dict['--cloud']
 						else:
 							iocalls.print_not_num_text()
 							self.system_exit()

@@ -25,7 +25,7 @@ class Add(Base):
 			iocalls.print_text(message['message'])
 
 	def check_env_argument(self,argument):
-		if (argument=='-i' and ('<item>' in self.option_dict) and self.config.space_env()) or \
+		if (argument=='-i' and self.config.space_env()) or \
 		(argument=='contributor' and self.config.space_env()) or\
 		(argument[0:2] == '--' and self.config.cloud_env()):
 			return True
@@ -38,7 +38,7 @@ class Add(Base):
 
 		if config.auth():
 			argument = self.get_arguments()[0]
-			if not self.config.file_system_env() or Add.check_env_argument(self,argument):
+			if not self.config.file_system_env() and Add.check_env_argument(self,argument):
 				if argument == 'contributor' or argument == '-i':
 					if argument == 'contributor':
 						value = self.option_dict['<username>']

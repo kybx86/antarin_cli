@@ -272,6 +272,7 @@ class SeeView(APIView):
 				string_val = string_val + "/" + path_val[i]
 			
 			return_val = return_val + string_val
+			return_val = return_val.strip('"')
 		return return_val
 
 	def show_project_log(user_object,spacename):
@@ -299,10 +300,12 @@ class SeeView(APIView):
 		try:
 			project_object = Projects.objects.get(name=projectname)
 			all_instances = project_object.projectinstances.all()
-			ret_val = {}
+			ret_val = []
 			for item in all_instances:
-				print(item.instance_name)
-				ret_val[item.instance_name + '[' + item.user.username + ']']= item.access_key
+				
+				ret_val.append(item.instance_name+"\t"+item.user.username+"\t"+str(item.access_key))
+				#ret_val[item.instance_name + '[' + item.user.username + ']']= item.access_key
+			print(ret_val)
 			message = {'message':ret_val,'status_code':200}
 
 		except Projects.DoesNotExist:
@@ -1113,6 +1116,33 @@ class UploadView(APIView):
 		message = {'message':"File upload successful.",'status_code':200}
 		return message
 
+	def add_file_folder(user_object,file_object,filename,id_val):
+		pk = id_val
+
+		filename = os.path.basename(filename)
+		if pk!="":
+			folder_object = user_object.user.userfolders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+		user_files = UserUploadedFiles()
+		user_files.user = user_object.user
+		user_files.file = file_object
+		user_files.file.name = filename
+		user_files.folder = folder_object
+		
+		all_files = user_object.user.useruploadedfiles.all()
+		used_data_storage = calculate_used_data_storage(all_files)
+		user_object.user.userprofile.data_storage_used = str(used_data_storage)
+		user_object.user.save()
+		user_object.user.userprofile.save()
+		user_files.save()
+		
+		#catch error when save didn't work fine and return status 400
+		print("\n")
+		message = {'message':"File upload successful.",'status_code':200}
+		return message
+
 	def get_parentdir_id(user_object,parentpath,id_val):
 		if parentpath[0] == '/':
 			parentpath = parentpath[1:]
@@ -1211,7 +1241,7 @@ class UploadView(APIView):
 					filename = self.request.data['argval'].strip()
 					if ' ' in filename:
 						filename = filename.replace(' ','_')
-					return_val = UploadView.add_file(user_object,file_object,filename,id_val)
+					return_val = UploadView.add_file_folder(user_object,file_object,filename,id_val)
 					message = {'message':return_val}
 					if return_val['status_code'] == 200:
 						return Response(message,200)
@@ -1441,6 +1471,9 @@ class InitializeView(APIView):
 		client = boto3.resource('ec2')
 		host_list = []
 		ids = []	
+
+		start_time = time.time()
+
 		print ('Launching instance..')
 		instances = client.create_instances(
 			ImageId=ami,
@@ -1471,11 +1504,14 @@ class InitializeView(APIView):
 		c = boto3.client('ec2')
 		while True:
 			response = c.describe_instance_status(InstanceIds=ids)
-			print ('.')
+			#print ('.')
 			if response['InstanceStatuses'][0]['InstanceStatus']['Details'][0]['Status'] == 'passed' and response['InstanceStatuses'][0]['SystemStatus']['Details'][0]['Status']=='passed':
 				break
 			time.sleep(1)
 		time.sleep(5)
+		end_time = time.time()
+		elapsed_time  = (end_time - start_time)/60
+		print( "ELAPSED TIME = " + str(elapsed_time) + "minutes")
 		return host_list,ids
 
 	def setup_instance(key_path,commands): 
@@ -1523,8 +1559,8 @@ class InitializeView(APIView):
 		try:
 			user_object = Token.objects.get(key = token)
 			projectname = self.request.data['spacename']
-			packagename = self.request.data['packagename']
-
+			
+			success = False
 			project_object = Projects.objects.get(name=projectname)
 			accesskey = None
 			if 'argval' in self.request.data:
@@ -1538,70 +1574,79 @@ class InitializeView(APIView):
 			all_instance_packages = instance_object.instancefolders.all()
 			instance_package_object = None
 
-			for item in all_instance_packages:
-				if item.project_folder_ref.folder_ref.name == packagename:
-					instance_package_object = item
-					break
+			packages = self.request.data['packagename']
 			
-			if instance_package_object:
-
+			print(type(self.request.data['packagename']))
+			print(packages)
+			if instance_object.is_active == False:
 				#launch instance
 				sec_group = []
 				sec_group.append(instance_object.security_group)
 				key_name = 'ec2test'
 
-				if instance_object.is_active == False:
-					res = execute(InitializeView.launch_instance,instance_object.ami_id,key_name,instance_object.instance_type,sec_group)
-					print (res['localhost'][0])
+				res = execute(InitializeView.launch_instance,instance_object.ami_id,key_name,instance_object.instance_type,sec_group)
+				print (res['localhost'][0])
 
-					if res['localhost'][0]:
-						dns_name = res['localhost'][0][0]
-						instance_id_val = res['localhost'][1][0]
-						instance_object.dns_name = res['localhost'][0][0]
-						instance_object.instance_id = instance_id_val
-						instance_object.is_active = True
-						instance_object.save()
+				if res['localhost'][0]:
+					dns_name = res['localhost'][0][0]
+					instance_id_val = res['localhost'][1][0]
+					instance_object.dns_name = res['localhost'][0][0]
+					instance_object.instance_id = instance_id_val
+					instance_object.is_active = True
+					instance_object.save()
+					success=True
 
-						folder_object = instance_package_object.project_folder_ref.folder_ref
-						folder_name = folder_object.name
-						folder_id = folder_object.pk
-						commands = []
-						value = InitializeView.add_files_to_dir(folder_name,folder_id,commands)
-						all_folders = value[0]
-						final_list = []
-						commands = value[1]
-						if all_folders:
-							n = len(all_folders)
-							i = 0
-							final_list.extend(all_folders)
-							while i<n:
-								val = InitializeView.add_files_to_dir(all_folders[i],all_folders[i+1],commands,all_folders[i+2])
-								if val:
-									all_folders.extend(val[0])
-									final_list.extend(val[0])
-									commands = val[1]
-									#print(all_folders,final_list)
-								i += 3
+					for package in packages:
+						packagename = package
+
+						for item in all_instance_packages:
+							if item.project_folder_ref.folder_ref.name == packagename:
+								instance_package_object = item
+								break
+						
+						if instance_package_object:							
+							folder_object = instance_package_object.project_folder_ref.folder_ref
+							folder_name = folder_object.name
+							folder_id = folder_object.pk
+							commands = []
+							value = InitializeView.add_files_to_dir(folder_name,folder_id,commands)
+							all_folders = value[0]
+							final_list = []
+							commands = value[1]
+							if all_folders:
 								n = len(all_folders)
-						for command in commands:
-							print(command)
-						#commands.append('sudo apt-get build-dep python-matplotlib')
-						commands.append('cd ' + packagename +' && sudo pip install -r requirements.txt')
-						output = execute(InitializeView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
-						#output_text = output[instance_object.dns_name[0]]
-						print(output)
-						message = {'message': 'Cloud initilization successful.','status_code':200}
-						return Response(message,status=200)
-					else:
-						message = {'message': 'Error in launching instance','status_code':401}
-						return Response(message,status=401)
-				else:
-					message = {'message': 'Instance in running state','status_code':200}
+								i = 0
+								final_list.extend(all_folders)
+								while i<n:
+									val = InitializeView.add_files_to_dir(all_folders[i],all_folders[i+1],commands,all_folders[i+2])
+									if val:
+										all_folders.extend(val[0])
+										final_list.extend(val[0])
+										commands = val[1]
+										#print(all_folders,final_list)
+									i += 3
+									n = len(all_folders)
+							for command in commands:
+								print(command)
+							#commands.append('sudo apt-get build-dep python-matplotlib')
+							commands.append('cd ' + packagename +' && sudo pip install -r requirements.txt')
+							output = execute(InitializeView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
+							#output_text = output[instance_object.dns_name[0]]
+							print(output)
+						else:
+							message = api_exceptions.package_DoesNotExist(packagename)
+							return Response(message,status=400)
+					
+					message = {'message': 'Cloud initilization successful.','status_code':200}
 					return Response(message,status=200)
+				
+				else:
+					message = api_exceptions.intance_launch_error()
+					return Response(message,status=400)
 			else:
-				message = {'message': 'Package does not exist','status_code':400}
-				return Response(message,status=400)
-		
+				message = {'message': 'Instance in running state','status_code':200}
+				return Response(message,status=200)
+
 		except UserInstances.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)
@@ -1664,10 +1709,10 @@ class RunView(APIView):
 					message = {'message': output_text,'status_code':200}
 					return Response(message,status=200)
 				else:
-					message = {'message': 'Cloud is in not running state','status_code':200}
-					return Response(message,status=200)
+					message = api_exceptions.cloud_notRunning()
+					return Response(message,status=400)
 			else:
-				message = {'message': 'Package does not exist','status_code':400}
+				message = api_exceptions.package_DoesNotExist()
 				return Response(message,status=400)
 
 		except UserInstances.DoesNotExist:
@@ -1714,210 +1759,6 @@ class SleepView(APIView):
 			message = api_exceptions.invalid_session_token()
 			return Response(message,status=404)
 
-class ListFilesView(APIView):
-	def post(self,request):
-		print(self.request.data)
-		token = self.request.data['token']
-		pk = self.request.data['id']
-		env_flag = int(self.request.data['env_flag'])
-		projectname = self.request.data['env_name']
-		pid = self.request.data['pid']
-		try:
-			user_object = Token.objects.get(key = token)
-			if env_flag: #inside project environment
-				list_val=[]
-				print (projectname)
-				project_object = Projects.objects.get(name=projectname)
-				if pid != "":
-					project_folder_object = project_object.projectfolders.get(pk=int(pid))
-				else:
-					project_folder_object = None
-
-				if project_folder_object is None:
-					all_projectfiles = project_object.projectfiles.all()
-					all_projectfolders = project_object.projectfolders.all()
-
-					for file in all_projectfiles:
-						list_val.append(os.path.basename(file.file_ref.file.name))
-
-					for folder in all_projectfolders:
-						list_val.append("/"+folder.folder_ref.name)
-					
-					message = {'message':list_val,'status_code':200}
-					return Response(message,status=200)
-				else:
-					folder_object = project_folder_object.folder_ref
-					usr_obj = folder_object.user
-					for file in usr_obj.useruploadedfiles.all():
-						if file.folder == folder_object:
-							list_val.append(os.path.basename(file.file.name))
-				
-					for folder in usr_obj.userfolders.all():
-						if folder.parentfolder == folder_object:
-							list_val.append("/"+folder.name)
-					
-					message = {'message':list_val,'status_code':200}
-					return Response(message,status=200)
-			else:#inside file system environment
-				list_val = []
-				if pk != "":
-					folder_object = user_object.user.userfolders.get(pk=int(pk))
-				else:
-					folder_object = None
-				
-				for file in user_object.user.useruploadedfiles.all():
-					if file.folder == folder_object:
-						list_val.append(os.path.basename(file.file.name))
-				
-				for folder in user_object.user.userfolders.all():
-					if folder.parentfolder == folder_object:
-						list_val.append("/"+folder.name)
-				
-				message = {'message':list_val,'status_code':200}
-				return Response(message,status=200)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-		
-class UploadFileView(APIView):
-	def post(self,request):
-		token = request.data['token']
-		foldername = self.request.data['foldername']
-		pk = self.request.data['id']
-		try:
-			user_object = Token.objects.get(key = token)
-			if pk != "":
-				folder_object = user_object.user.userfolders.get(pk=int(pk))
-			else:
-				folder_object = None
-
-			dup_name_flag = 0
-			all_folders_inside_currdir = user_object.user.userfolders.filter(parentfolder=folder_object)
-			for  item in all_folders_inside_currdir:
-				if item.name == foldername:
-					dup_name_flag = 1
-					break
-					print("duplicate names")
-			if dup_name_flag:
-				message = {'message':"ERROR: Folder exists.",'status_code':400}
-				return Response(message,status=400)
-			message = {'message':"File upload successful.",'status_code':200}
-			return Response(message,status=200)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-	def put(self, request,format=None):
-		file_object = request.data['file']
-		token = request.data['token'].strip('"')
-		pk = request.data['id_val'].strip('"')
-		env_flag = int(request.data['env_flag'].strip('"'))
-		filename = request.data['filename'].strip('"')
-		print(filename)
-		if ' ' in filename:
-			filename = filename.replace(' ','_')
-		file_flag = request.data['file_flag'].strip('"')
-		try:
-			user_val = Token.objects.get(key = token)
-			if env_flag:
-				pass
-			else:
-				if pk!="":
-					folder_object = user_val.user.userfolders.get(pk=int(pk))
-					#print(str(folder_object.pk),str(folder_object.name))
-				else:
-					folder_object = None
-
-				if file_flag:
-					all_files_in_currdir = user_val.user.useruploadedfiles.filter(folder=folder_object)
-					dup_name_flag = 0
-					for item in all_files_in_currdir:
-						if os.path.basename(item.file.file.name) == filename:
-							dup_name_flag = 1
-							break
-					if dup_name_flag:
-						message = {'message':"ERROR: File exists.",'status_code':400}
-						return Response(message,status=400)
-
-				user_files = UserUploadedFiles()
-				user_files.user = user_val.user
-				user_files.file = file_object
-				user_files.file.name = filename
-				user_files.folder = folder_object
-				#print(user_val.user.userprofile.data_storage_used)
-
-				all_files = user_val.user.useruploadedfiles.all()
-				used_data_storage = calculate_used_data_storage(all_files)
-				user_val.user.userprofile.data_storage_used = str(used_data_storage)
-				user_val.user.save()
-				user_val.user.userprofile.save()
-				user_files.save()
-				#print("Uploaded file " + str(file_object) + "inside folder with pk = "+ str(folder_object.pk) + " name = " +str(folder_object.name))
-				#print("Success!")
-				#print(user_val.user.userprofile.data_storage_used)
-				#catch error when save didn't work fine and return status 400
-				print("\n")
-				message = {'message':"File upload successful.",'status_code':204}
-				return Response(message,status=204)
-		except Token.DoesNotExist:
-			message = {'message':'ERROR: Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-
-class UserSummaryView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		env_flag = int(self.request.data['env_flag'])
-		projectname = self.request.data['env_name']
-		try:
-			user_object = Token.objects.get(key=token)
-			if env_flag:#project env
-				try:
-					project_object = Projects.objects.get(name=projectname)
-					all_userproject_objects = project_object.projectdetails.all()
-					all_projectfiles = project_object.projectfiles.all()
-					all_projectfolders = project_object.projectfolders.all()
-					
-					contributor_list=[]
-					file_list=[]
-					folder_list=[]
-					admin = ''
-
-					for item in all_userproject_objects:
-						contributor_list.append((item.user.first_name+' '+item.user.last_name,item.status))
-						if item.status == 'A':
-							admin = item.user.first_name + ' '+ item.user.last_name +'('+item.user.username+')'
-
-					for item in all_projectfiles:
-						file_list.append((os.path.basename(item.file_ref.file.name),item.file_ref.user.first_name+' '+item.file_ref.user.last_name+'('+item.file_ref.user.username+')'))
-
-					for item in all_projectfolders:
-						folder_list.append(('/'+item.folder_ref.name,item.folder_ref.user.first_name+ ' '+item.folder_ref.user.last_name+'('+item.folder_ref.user.username+')'))
-
-					data = {'projectname':projectname,'contributors':contributor_list,'admin':admin,'file_list':file_list,'folder_list':folder_list}
-					print (file_list)
-					print(folder_list)
-					message = {'message':data,'status_code':200}
-					return Response(message,status=200)
-				except Projects.DoesNotExist:
-					message = {'message':"ERROR: Project does not exist",'status_code':404}
-					return Response(message,status=404)
-			else:
-				user_data = {'firstname':user_object.user.first_name,
-							 'lastname':user_object.user.last_name,
-							 'username':user_object.user.username,
-							 'data_storage_available':user_object.user.userprofile.total_data_storage,
-							 'data_storage_used':user_object.user.userprofile.data_storage_used
-							}
-				#user_data = (user_object.user.first_name,user_object.user.last_name,user_object.user.username,user_object.user.userprofile.total_data_storage,user_object.user.userprofile.data_storage_used)
-				#print(user_data)
-				message = {'message':user_data,'status_code':200}
-				return Response(message,status=200)
-		except Token.DoesNotExist:
-			message = {'message':'ERROR:Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-
 class LogoutView(APIView):
 	def post(self,request):
 		print('token='+self.request.data['token'])
@@ -1928,1011 +1769,1216 @@ class LogoutView(APIView):
 			return Response(message,status=200)
 		except Token.DoesNotExist:
 			print('here')
-			message = {'message':'ERROR:Session token is not valid.'}
+			message = api_exceptions.invalid_session_token()
 			return Response(message,status=404)
 
-class CreateDirectoryView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		foldername = self.request.data['foldername']
-		pk = self.request.data['id']
-		env_flag = int(self.request.data['env_flag'])
-		count = None
-		alt_foldername = None
-		if 'count' in self.request.data:
-			count = int(self.request.data['count'])
-		if 'alt_foldername' in self.request.data:
-			alt_foldername = self.request.data['alt_foldername']
-			foldername = alt_foldername
-		print(count,alt_foldername)
-		try:
-			user_object = Token.objects.get(key = token)
-			if env_flag:
-				pass
-			else:
-				if pk != "":
-					folder_object = user_object.user.userfolders.get(pk=int(pk))
-				else:
-					folder_object = None
+### ax0.1 CLI views---
+# class ListFilesView(APIView):
+# 	def post(self,request):
+# 		print(self.request.data)
+# 		token = self.request.data['token']
+# 		pk = self.request.data['id']
+# 		env_flag = int(self.request.data['env_flag'])
+# 		projectname = self.request.data['env_name']
+# 		pid = self.request.data['pid']
+# 		try:
+# 			user_object = Token.objects.get(key = token)
+# 			if env_flag: #inside project environment
+# 				list_val=[]
+# 				print (projectname)
+# 				project_object = Projects.objects.get(name=projectname)
+# 				if pid != "":
+# 					project_folder_object = project_object.projectfolders.get(pk=int(pid))
+# 				else:
+# 					project_folder_object = None
 
-				dup_name_flag = 0
-				all_folders_inside_currdir = user_object.user.userfolders.filter(parentfolder=folder_object)
-				for  item in all_folders_inside_currdir:
-					if item.name == foldername:
-						dup_name_flag = 1
-						break
-						print("duplicate names")
-				if dup_name_flag:
-					message = {'message':"ERROR: Folder exists.",'status_code':400}
-					return Response(message,status=400)
-				if count==0:
-					#print("here -- count=0")
-					new_folder_object = UserFolder(user=user_object.user,name=alt_foldername,parentfolder=folder_object)
-				else:
-					new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
-				new_folder_object.save()
-				data = {'id':new_folder_object.pk}
-				message = {'message':json.dumps(data),'status_code':200}
-				#print ("created directory {0} with pk {1} and parentfodler {2}" .format(new_folder_object.name,new_folder_object.pk,new_folder_object.parentfolder.name))
-				return Response(message,status=200)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 				if project_folder_object is None:
+# 					all_projectfiles = project_object.projectfiles.all()
+# 					all_projectfolders = project_object.projectfolders.all()
 
-class ChangeDirectoryView(APIView):
-	def post(self,request):
-		flag = 0
-		token = self.request.data['token']
-		foldername = self.request.data['foldername']
-		pk = self.request.data['id']
-		env_flag =int(self.request.data['env_flag'])
-		projectname = self.request.data['env_name']
-		pid = self.request.data['pid']
-		#print(foldername,pk)
-		try:
-			user_object = Token.objects.get(key=token)
-			if env_flag:
-				try:
-					project_object = Projects.objects.get(name=projectname)
-					all_projectfolders = project_object.projectfolders.all()
-					folder_flag=0
-					for item in all_projectfolders:
-						if item.folder_ref.name == foldername:
-							folder_object = item
-							folder_flag=1
-							break
-					if folder_flag:
-						data = {'pid':folder_object.pk}
-						message = {'message':json.dumps(data),'status_code':200}
-						return Response(message,status=200)
-					else:
-						message = {'message':"ERROR: Folder does not exist in this project",'status_code':404}
-						return Response(message,status=404)
-				except Projects.DoesNotExist:
-					message = {'message':"ERROR: Project does not exist",'status_code':404}
-					return Response(message,status=404)
+# 					for file in all_projectfiles:
+# 						list_val.append(os.path.basename(file.file_ref.file.name))
 
-			else: #inside filesystem env
-				if pk != "":
-					folder_object = user_object.user.userfolders.get(pk=int(pk))
-				else:
-					folder_object = None
-				if foldername == '..':
-					if folder_object.parentfolder is not None:
-						current_directory = folder_object.parentfolder.name
-						id_val = folder_object.parentfolder.pk
-					else:
-						current_directory = "/antarin"
-						id_val = ""
-					data = {'current_directory':current_directory,'id':id_val}
-					message = {'message':json.dumps(data),'status_code':200}
-					return Response(message,status=200)
-				else:
-					all_folders = user_object.user.userfolders.all()
-					for folder in all_folders:
-						if folder.parentfolder == folder_object and folder.name == foldername:
-							current_directory = folder.name
-							id_val = folder.pk
-							data = {'current_directory':current_directory,'id':id_val}
-							flag = 1
-							break
-					if flag==1:
-						message = {'message':json.dumps(data),'status_code':200}
-						return Response(message,status=200)
-					else:
-						return Response("ERROR: Folder does not exist.",status=404)
-		except Token.DoesNotExist:			
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-
-class CurrentWorkingDirectoryView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		pk = self.request.data['id']
-		env_flag = int(self.request.data['env_flag'])
-		projectname = self.request.data['env_name']
-		pid = self.request.data['pid']
-		if projectname:
-			nameval = projectname.split(':')[1]
-		try:
-			user_object = Token.objects.get(key=token)
-			if env_flag:
-				project_object = Projects.objects.get(name=projectname)
-				if pid != "":
-					path_val = []
-					string_val = ""
-					folder_object = user_object.user.userfolders.get(pk=int(pid))
-					while folder_object.parentfolder is not None:
-						path_val.append(folder_object.name)
-						folder_object = folder_object.parentfolder
-					path_val.append(folder_object.name)
-					for i in range(len(path_val)-1,-1,-1):
-						string_val = string_val + "/" + path_val[i]
-					#print(string_val)
-					message = {'message':json.dumps(nameval + ' : /'+string_val),'status_code':200}
-					return Response(message,status=200)
+# 					for folder in all_projectfolders:
+# 						list_val.append("/"+folder.folder_ref.name)
 					
-				else:
-					message = {'message':json.dumps(nameval + ' : /'),'status_code':200}
-					return Response(message,status=200)
-			else:
-				if pk != "":
-					path_val = []
-					string_val = ""
-					folder_object = user_object.user.userfolders.get(pk=int(pk))
-					while folder_object.parentfolder is not None:
-						path_val.append(folder_object.name)
-						folder_object = folder_object.parentfolder
-					path_val.append(folder_object.name)
-					for i in range(len(path_val)-1,-1,-1):
-						string_val = string_val + "/" + path_val[i]
-					#print(string_val)
-					message = {'message':json.dumps('~antarin'+string_val),'status_code':200}
-					return Response(message,status=200)
-				else:
-					folder_object = None
-					message = {'message':json.dumps('~antarin'),'status_code':200}
-					return Response(message,status=200)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-class RemoveObjectView(APIView):
-
-	def remove_all_files_dirs(token,all_files,all_folders,pk,foldername):
-		print("Inside remove all function" + "\t" + foldername)
-		user_object = Token.objects.get(key=token)
-		if pk!='':
-			folder_object = user_object.user.userfolders.get(pk=int(pk))
-		else:
-			folder_object = None
-		#folder_object = user_object.user.userfolders.get(pk=int(pk))
-		print ("folder object = "+str(folder_object))
-		for file in all_files:
-			#print(file.folder.name +"\t"+file.file.name+"\t"+foldername)
-
-			if file.folder == folder_object:
-				path_val=[]
-				string_val = ''
-				original_value = file.folder
-				if file.folder is not None:
-					while file.folder.parentfolder is not None:
-						path_val.append(file.folder.name)
-						file.folder = file.folder.parentfolder
-					path_val.append(file.folder.name)
-					for i in range(len(path_val)-1,-1,-1):
-						string_val = string_val + "/" + path_val[i]
-					file.folder = original_value
-					argument_val = string_val[1:]+'/'
-				else:
-					argument_val = ''
-
-				file.delete()
-				print("deleted file "+str(file.file.name))
-				k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
-				print (k.key)
-				b.delete_key(k)
+# 					message = {'message':list_val,'status_code':200}
+# 					return Response(message,status=200)
+# 				else:
+# 					folder_object = project_folder_object.folder_ref
+# 					usr_obj = folder_object.user
+# 					for file in usr_obj.useruploadedfiles.all():
+# 						if file.folder == folder_object:
+# 							list_val.append(os.path.basename(file.file.name))
+				
+# 					for folder in usr_obj.userfolders.all():
+# 						if folder.parentfolder == folder_object:
+# 							list_val.append("/"+folder.name)
+					
+# 					message = {'message':list_val,'status_code':200}
+# 					return Response(message,status=200)
+# 			else:#inside file system environment
+# 				list_val = []
+# 				if pk != "":
+# 					folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 				else:
+# 					folder_object = None
+				
+# 				for file in user_object.user.useruploadedfiles.all():
+# 					if file.folder == folder_object:
+# 						list_val.append(os.path.basename(file.file.name))
+				
+# 				for folder in user_object.user.userfolders.all():
+# 					if folder.parentfolder == folder_object:
+# 						list_val.append("/"+folder.name)
+				
+# 				message = {'message':list_val,'status_code':200}
+# 				return Response(message,status=200)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 		
-		return_list=[]
-		for item in all_folders:
-			if item.parentfolder == folder_object:
-				return_list.append(item.pk)
-				return_list.append(item.name)
+# class UploadFileView(APIView):
+# 	def post(self,request):
+# 		token = request.data['token']
+# 		foldername = self.request.data['foldername']
+# 		pk = self.request.data['id']
+# 		try:
+# 			user_object = Token.objects.get(key = token)
+# 			if pk != "":
+# 				folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 			else:
+# 				folder_object = None
 
-		return return_list
+# 			dup_name_flag = 0
+# 			all_folders_inside_currdir = user_object.user.userfolders.filter(parentfolder=folder_object)
+# 			for  item in all_folders_inside_currdir:
+# 				if item.name == foldername:
+# 					dup_name_flag = 1
+# 					break
+# 					print("duplicate names")
+# 			if dup_name_flag:
+# 				message = {'message':"ERROR: Folder exists.",'status_code':400}
+# 				return Response(message,status=400)
+# 			message = {'message':"File upload successful.",'status_code':200}
+# 			return Response(message,status=200)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
-	def post(self,request):
-		token = self.request.data['token']
-		pk = self.request.data['id']
-		name = self.request.data['object_name']
-		r_val = self.request.data['r_value']
-		env_flag = int(self.request.data['env_flag'])
-		projectname = self.request.data['env_name']
-		file_flag = 0 # 1 - file;0-not a file
-		ref_fodler=None
-		return_list=[]
-		final_list =[]
-		print (name,r_val)
-		try:
-			user_object = Token.objects.get(key=token)
-			all_files = user_object.user.useruploadedfiles.all()
-			all_folders = user_object.user.userfolders.all()
-			if env_flag:
-				if r_val == 'False':
-					project_object = Projects.objects.get(name=projectname)
-					project_files = ProjectFiles.objects.filter(project=project_object)
-					file_object = None
-					found = 0
-					is_owner = 0
-					for item in project_files: #check if file exists in projectFiles
-						if os.path.basename(item.file_ref.file.name) == name:
-							file_object = item.file_ref
-							found = 1
-							break
+# 	def put(self, request,format=None):
+# 		file_object = request.data['file']
+# 		token = request.data['token'].strip('"')
+# 		pk = request.data['id_val'].strip('"')
+# 		env_flag = int(request.data['env_flag'].strip('"'))
+# 		filename = request.data['filename'].strip('"')
+# 		print(filename)
+# 		if ' ' in filename:
+# 			filename = filename.replace(' ','_')
+# 		file_flag = request.data['file_flag'].strip('"')
+# 		try:
+# 			user_val = Token.objects.get(key = token)
+# 			if env_flag:
+# 				pass
+# 			else:
+# 				if pk!="":
+# 					folder_object = user_val.user.userfolders.get(pk=int(pk))
+# 					#print(str(folder_object.pk),str(folder_object.name))
+# 				else:
+# 					folder_object = None
 
-					if found:
-						for item in all_files:
-							if item == file_object:
-								is_owner = 1
-								break
-					if found == 0:
-						message = {'message':"File does not exist.",'status_code':404}
-						return Response(message,status=404)
-					if is_owner == 0:
-						message = {'message':"Permission denied.",'status_code':404}
-						return Response(message,status=404)
-					if found and is_owner:
-						project_files_object = ProjectFiles.objects.get(project=project_object,file_ref=file_object)
-						project_files_object.delete()
+# 				if file_flag:
+# 					all_files_in_currdir = user_val.user.useruploadedfiles.filter(folder=folder_object)
+# 					dup_name_flag = 0
+# 					for item in all_files_in_currdir:
+# 						if os.path.basename(item.file.file.name) == filename:
+# 							dup_name_flag = 1
+# 							break
+# 					if dup_name_flag:
+# 						message = {'message':"ERROR: File exists.",'status_code':400}
+# 						return Response(message,status=400)
 
-						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
-						new_projectlogs_object.save()
+# 				user_files = UserUploadedFiles()
+# 				user_files.user = user_val.user
+# 				user_files.file = file_object
+# 				user_files.file.name = filename
+# 				user_files.folder = folder_object
+# 				#print(user_val.user.userprofile.data_storage_used)
 
-						message = {'message':"File removed.",'status_code':204}
-						return Response(message,status=204)
-				else:
-					project_object = Projects.objects.get(name=projectname)
-					project_folders = ProjectFolders.objects.filter(project=project_object)
-					folder_object = None
-					found = 0
-					is_owner = 0
-					for item in project_folders: #check if file exists in projectFolders
-						if os.path.basename(item.folder_ref.name) == name:
-							folder_object = item.folder_ref
-							found = 1
-							break
-					if found:
-						for item in all_folders:
-							if item == folder_object:
-								is_owner = 1
-								break
-					if found == 0:
-						message = {'message':"Directory does not exist.",'status_code':404}
-						return Response(message,status=404)
-					if is_owner == 0:
-						message = {'message':"Permission denied.",'status_code':404}
-						return Response(message,status=404)
-					if found and is_owner:
-						project_folder_object = ProjectFolders.objects.get(project=project_object,folder_ref=folder_object)
-						project_folder_object.delete()
+# 				all_files = user_val.user.useruploadedfiles.all()
+# 				used_data_storage = calculate_used_data_storage(all_files)
+# 				user_val.user.userprofile.data_storage_used = str(used_data_storage)
+# 				user_val.user.save()
+# 				user_val.user.userprofile.save()
+# 				user_files.save()
+# 				#print("Uploaded file " + str(file_object) + "inside folder with pk = "+ str(folder_object.pk) + " name = " +str(folder_object.name))
+# 				#print("Success!")
+# 				#print(user_val.user.userprofile.data_storage_used)
+# 				#catch error when save didn't work fine and return status 400
+# 				print("\n")
+# 				message = {'message':"File upload successful.",'status_code':204}
+# 				return Response(message,status=204)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'ERROR: Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
+
+
+# class UserSummaryView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		env_flag = int(self.request.data['env_flag'])
+# 		projectname = self.request.data['env_name']
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			if env_flag:#project env
+# 				try:
+# 					project_object = Projects.objects.get(name=projectname)
+# 					all_userproject_objects = project_object.projectdetails.all()
+# 					all_projectfiles = project_object.projectfiles.all()
+# 					all_projectfolders = project_object.projectfolders.all()
+					
+# 					contributor_list=[]
+# 					file_list=[]
+# 					folder_list=[]
+# 					admin = ''
+
+# 					for item in all_userproject_objects:
+# 						contributor_list.append((item.user.first_name+' '+item.user.last_name,item.status))
+# 						if item.status == 'A':
+# 							admin = item.user.first_name + ' '+ item.user.last_name +'('+item.user.username+')'
+
+# 					for item in all_projectfiles:
+# 						file_list.append((os.path.basename(item.file_ref.file.name),item.file_ref.user.first_name+' '+item.file_ref.user.last_name+'('+item.file_ref.user.username+')'))
+
+# 					for item in all_projectfolders:
+# 						folder_list.append(('/'+item.folder_ref.name,item.folder_ref.user.first_name+ ' '+item.folder_ref.user.last_name+'('+item.folder_ref.user.username+')'))
+
+# 					data = {'projectname':projectname,'contributors':contributor_list,'admin':admin,'file_list':file_list,'folder_list':folder_list}
+# 					print (file_list)
+# 					print(folder_list)
+# 					message = {'message':data,'status_code':200}
+# 					return Response(message,status=200)
+# 				except Projects.DoesNotExist:
+# 					message = {'message':"ERROR: Project does not exist",'status_code':404}
+# 					return Response(message,status=404)
+# 			else:
+# 				user_data = {'firstname':user_object.user.first_name,
+# 							 'lastname':user_object.user.last_name,
+# 							 'username':user_object.user.username,
+# 							 'data_storage_available':user_object.user.userprofile.total_data_storage,
+# 							 'data_storage_used':user_object.user.userprofile.data_storage_used
+# 							}
+# 				#user_data = (user_object.user.first_name,user_object.user.last_name,user_object.user.username,user_object.user.userprofile.total_data_storage,user_object.user.userprofile.data_storage_used)
+# 				#print(user_data)
+# 				message = {'message':user_data,'status_code':200}
+# 				return Response(message,status=200)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'ERROR:Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
+
+
+# class CreateDirectoryView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		foldername = self.request.data['foldername']
+# 		pk = self.request.data['id']
+# 		env_flag = int(self.request.data['env_flag'])
+# 		count = None
+# 		alt_foldername = None
+# 		if 'count' in self.request.data:
+# 			count = int(self.request.data['count'])
+# 		if 'alt_foldername' in self.request.data:
+# 			alt_foldername = self.request.data['alt_foldername']
+# 			foldername = alt_foldername
+# 		print(count,alt_foldername)
+# 		try:
+# 			user_object = Token.objects.get(key = token)
+# 			if env_flag:
+# 				pass
+# 			else:
+# 				if pk != "":
+# 					folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 				else:
+# 					folder_object = None
+
+# 				dup_name_flag = 0
+# 				all_folders_inside_currdir = user_object.user.userfolders.filter(parentfolder=folder_object)
+# 				for  item in all_folders_inside_currdir:
+# 					if item.name == foldername:
+# 						dup_name_flag = 1
+# 						break
+# 						print("duplicate names")
+# 				if dup_name_flag:
+# 					message = {'message':"ERROR: Folder exists.",'status_code':400}
+# 					return Response(message,status=400)
+# 				if count==0:
+# 					#print("here -- count=0")
+# 					new_folder_object = UserFolder(user=user_object.user,name=alt_foldername,parentfolder=folder_object)
+# 				else:
+# 					new_folder_object = UserFolder(user=user_object.user,name=foldername,parentfolder=folder_object)
+# 				new_folder_object.save()
+# 				data = {'id':new_folder_object.pk}
+# 				message = {'message':json.dumps(data),'status_code':200}
+# 				#print ("created directory {0} with pk {1} and parentfodler {2}" .format(new_folder_object.name,new_folder_object.pk,new_folder_object.parentfolder.name))
+# 				return Response(message,status=200)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
+
+# class ChangeDirectoryView(APIView):
+# 	def post(self,request):
+# 		flag = 0
+# 		token = self.request.data['token']
+# 		foldername = self.request.data['foldername']
+# 		pk = self.request.data['id']
+# 		env_flag =int(self.request.data['env_flag'])
+# 		projectname = self.request.data['env_name']
+# 		pid = self.request.data['pid']
+# 		#print(foldername,pk)
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			if env_flag:
+# 				try:
+# 					project_object = Projects.objects.get(name=projectname)
+# 					all_projectfolders = project_object.projectfolders.all()
+# 					folder_flag=0
+# 					for item in all_projectfolders:
+# 						if item.folder_ref.name == foldername:
+# 							folder_object = item
+# 							folder_flag=1
+# 							break
+# 					if folder_flag:
+# 						data = {'pid':folder_object.pk}
+# 						message = {'message':json.dumps(data),'status_code':200}
+# 						return Response(message,status=200)
+# 					else:
+# 						message = {'message':"ERROR: Folder does not exist in this project",'status_code':404}
+# 						return Response(message,status=404)
+# 				except Projects.DoesNotExist:
+# 					message = {'message':"ERROR: Project does not exist",'status_code':404}
+# 					return Response(message,status=404)
+
+# 			else: #inside filesystem env
+# 				if pk != "":
+# 					folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 				else:
+# 					folder_object = None
+# 				if foldername == '..':
+# 					if folder_object.parentfolder is not None:
+# 						current_directory = folder_object.parentfolder.name
+# 						id_val = folder_object.parentfolder.pk
+# 					else:
+# 						current_directory = "/antarin"
+# 						id_val = ""
+# 					data = {'current_directory':current_directory,'id':id_val}
+# 					message = {'message':json.dumps(data),'status_code':200}
+# 					return Response(message,status=200)
+# 				else:
+# 					all_folders = user_object.user.userfolders.all()
+# 					for folder in all_folders:
+# 						if folder.parentfolder == folder_object and folder.name == foldername:
+# 							current_directory = folder.name
+# 							id_val = folder.pk
+# 							data = {'current_directory':current_directory,'id':id_val}
+# 							flag = 1
+# 							break
+# 					if flag==1:
+# 						message = {'message':json.dumps(data),'status_code':200}
+# 						return Response(message,status=200)
+# 					else:
+# 						return Response("ERROR: Folder does not exist.",status=404)
+# 		except Token.DoesNotExist:			
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
+
+
+# class CurrentWorkingDirectoryView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		pk = self.request.data['id']
+# 		env_flag = int(self.request.data['env_flag'])
+# 		projectname = self.request.data['env_name']
+# 		pid = self.request.data['pid']
+# 		if projectname:
+# 			nameval = projectname.split(':')[1]
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			if env_flag:
+# 				project_object = Projects.objects.get(name=projectname)
+# 				if pid != "":
+# 					path_val = []
+# 					string_val = ""
+# 					folder_object = user_object.user.userfolders.get(pk=int(pid))
+# 					while folder_object.parentfolder is not None:
+# 						path_val.append(folder_object.name)
+# 						folder_object = folder_object.parentfolder
+# 					path_val.append(folder_object.name)
+# 					for i in range(len(path_val)-1,-1,-1):
+# 						string_val = string_val + "/" + path_val[i]
+# 					#print(string_val)
+# 					message = {'message':json.dumps(nameval + ' : /'+string_val),'status_code':200}
+# 					return Response(message,status=200)
+					
+# 				else:
+# 					message = {'message':json.dumps(nameval + ' : /'),'status_code':200}
+# 					return Response(message,status=200)
+# 			else:
+# 				if pk != "":
+# 					path_val = []
+# 					string_val = ""
+# 					folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 					while folder_object.parentfolder is not None:
+# 						path_val.append(folder_object.name)
+# 						folder_object = folder_object.parentfolder
+# 					path_val.append(folder_object.name)
+# 					for i in range(len(path_val)-1,-1,-1):
+# 						string_val = string_val + "/" + path_val[i]
+# 					#print(string_val)
+# 					message = {'message':json.dumps('~antarin'+string_val),'status_code':200}
+# 					return Response(message,status=200)
+# 				else:
+# 					folder_object = None
+# 					message = {'message':json.dumps('~antarin'),'status_code':200}
+# 					return Response(message,status=200)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
+
+# class RemoveObjectView(APIView):
+
+# 	def remove_all_files_dirs(token,all_files,all_folders,pk,foldername):
+# 		print("Inside remove all function" + "\t" + foldername)
+# 		user_object = Token.objects.get(key=token)
+# 		if pk!='':
+# 			folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 		else:
+# 			folder_object = None
+# 		#folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 		print ("folder object = "+str(folder_object))
+# 		for file in all_files:
+# 			#print(file.folder.name +"\t"+file.file.name+"\t"+foldername)
+
+# 			if file.folder == folder_object:
+# 				path_val=[]
+# 				string_val = ''
+# 				original_value = file.folder
+# 				if file.folder is not None:
+# 					while file.folder.parentfolder is not None:
+# 						path_val.append(file.folder.name)
+# 						file.folder = file.folder.parentfolder
+# 					path_val.append(file.folder.name)
+# 					for i in range(len(path_val)-1,-1,-1):
+# 						string_val = string_val + "/" + path_val[i]
+# 					file.folder = original_value
+# 					argument_val = string_val[1:]+'/'
+# 				else:
+# 					argument_val = ''
+
+# 				file.delete()
+# 				print("deleted file "+str(file.file.name))
+# 				k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
+# 				print (k.key)
+# 				b.delete_key(k)
+		
+# 		return_list=[]
+# 		for item in all_folders:
+# 			if item.parentfolder == folder_object:
+# 				return_list.append(item.pk)
+# 				return_list.append(item.name)
+
+# 		return return_list
+
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		pk = self.request.data['id']
+# 		name = self.request.data['object_name']
+# 		r_val = self.request.data['r_value']
+# 		env_flag = int(self.request.data['env_flag'])
+# 		projectname = self.request.data['env_name']
+# 		file_flag = 0 # 1 - file;0-not a file
+# 		ref_fodler=None
+# 		return_list=[]
+# 		final_list =[]
+# 		print (name,r_val)
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			all_files = user_object.user.useruploadedfiles.all()
+# 			all_folders = user_object.user.userfolders.all()
+# 			if env_flag:
+# 				if r_val == 'False':
+# 					project_object = Projects.objects.get(name=projectname)
+# 					project_files = ProjectFiles.objects.filter(project=project_object)
+# 					file_object = None
+# 					found = 0
+# 					is_owner = 0
+# 					for item in project_files: #check if file exists in projectFiles
+# 						if os.path.basename(item.file_ref.file.name) == name:
+# 							file_object = item.file_ref
+# 							found = 1
+# 							break
+
+# 					if found:
+# 						for item in all_files:
+# 							if item == file_object:
+# 								is_owner = 1
+# 								break
+# 					if found == 0:
+# 						message = {'message':"File does not exist.",'status_code':404}
+# 						return Response(message,status=404)
+# 					if is_owner == 0:
+# 						message = {'message':"Permission denied.",'status_code':404}
+# 						return Response(message,status=404)
+# 					if found and is_owner:
+# 						project_files_object = ProjectFiles.objects.get(project=project_object,file_ref=file_object)
+# 						project_files_object.delete()
+
+# 						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
+# 						new_projectlogs_object.save()
+
+# 						message = {'message':"File removed.",'status_code':204}
+# 						return Response(message,status=204)
+# 				else:
+# 					project_object = Projects.objects.get(name=projectname)
+# 					project_folders = ProjectFolders.objects.filter(project=project_object)
+# 					folder_object = None
+# 					found = 0
+# 					is_owner = 0
+# 					for item in project_folders: #check if file exists in projectFolders
+# 						if os.path.basename(item.folder_ref.name) == name:
+# 							folder_object = item.folder_ref
+# 							found = 1
+# 							break
+# 					if found:
+# 						for item in all_folders:
+# 							if item == folder_object:
+# 								is_owner = 1
+# 								break
+# 					if found == 0:
+# 						message = {'message':"Directory does not exist.",'status_code':404}
+# 						return Response(message,status=404)
+# 					if is_owner == 0:
+# 						message = {'message':"Permission denied.",'status_code':404}
+# 						return Response(message,status=404)
+# 					if found and is_owner:
+# 						project_folder_object = ProjectFolders.objects.get(project=project_object,folder_ref=folder_object)
+# 						project_folder_object.delete()
 						
-						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
-						new_projectlogs_object.save()
+# 						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
+# 						new_projectlogs_object.save()
 
-						message = {'message':"Directory removed.",'status_code':204}
-						return Response(message,status=204)
-			else:
-				if pk!='':
-					folder_object = user_object.user.userfolders.get(pk=int(pk))
-				else:
-					folder_object = None
-				if r_val == 'False':
-					for file in all_files:
-						if file.folder == folder_object and os.path.basename(file.file.name) == name:
-							file_flag = 1
+# 						message = {'message':"Directory removed.",'status_code':204}
+# 						return Response(message,status=204)
+# 			else:
+# 				if pk!='':
+# 					folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 				else:
+# 					folder_object = None
+# 				if r_val == 'False':
+# 					for file in all_files:
+# 						if file.folder == folder_object and os.path.basename(file.file.name) == name:
+# 							file_flag = 1
 
-							path_val=[]
-							string_val = ''
-							original_value = file.folder
-							if file.folder is not None:
-								while file.folder.parentfolder is not None:
-									path_val.append(file.folder.name)
-									file.folder = file.folder.parentfolder
-								path_val.append(file.folder.name)
-								for i in range(len(path_val)-1,-1,-1):
-									string_val = string_val + "/" + path_val[i]
-								file.folder = original_value
-								argument_val = string_val[1:]+'/'
-							else:
-								argument_val = ''
+# 							path_val=[]
+# 							string_val = ''
+# 							original_value = file.folder
+# 							if file.folder is not None:
+# 								while file.folder.parentfolder is not None:
+# 									path_val.append(file.folder.name)
+# 									file.folder = file.folder.parentfolder
+# 								path_val.append(file.folder.name)
+# 								for i in range(len(path_val)-1,-1,-1):
+# 									string_val = string_val + "/" + path_val[i]
+# 								file.folder = original_value
+# 								argument_val = string_val[1:]+'/'
+# 							else:
+# 								argument_val = ''
 
-							file.delete()
-							k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
-							print (k.key)
-							b.delete_key(k)
-							message = {'message':"File deleted.",'status_code':204}
-							return Response(message,status=204)
-					ref_folder = None
-					if file_flag == 0:
-						for folder in all_folders:
-							if folder.parentfolder == folder_object and folder.name == name:
-								ref_folder = folder
-								break
-						if ref_folder is not None:
-							folder_empty_flag = 1 # 1 is empty and 0 is non-empty
-							for folder in all_folders:
-								if folder.parentfolder == ref_folder:
-									folder_empty_flag = 0
-									break	
-							if folder_empty_flag:
-								for file in all_files:
-									if file.folder == ref_folder:
-										folder_empty_flag = 0
-										break
-							if folder_empty_flag:
-								ref_folder.delete()
-								message = {'message':'Folder deleted.','status_code':204}
-								return Response(message,status=204)
-							else:
-								message = {'message':"ERROR: Directory is not empty.",'status_code':400}
-								return Response(message,status=400)
-						else:
-							message = {'message':"ERROR: File does not exist.",'status_code':404}
-							return Response(message,status=404)
+# 							file.delete()
+# 							k.key = 'media/'+'userfiles/' + user_object.user.username + '/'+ argument_val + os.path.basename(file.file.name)
+# 							print (k.key)
+# 							b.delete_key(k)
+# 							message = {'message':"File deleted.",'status_code':204}
+# 							return Response(message,status=204)
+# 					ref_folder = None
+# 					if file_flag == 0:
+# 						for folder in all_folders:
+# 							if folder.parentfolder == folder_object and folder.name == name:
+# 								ref_folder = folder
+# 								break
+# 						if ref_folder is not None:
+# 							folder_empty_flag = 1 # 1 is empty and 0 is non-empty
+# 							for folder in all_folders:
+# 								if folder.parentfolder == ref_folder:
+# 									folder_empty_flag = 0
+# 									break	
+# 							if folder_empty_flag:
+# 								for file in all_files:
+# 									if file.folder == ref_folder:
+# 										folder_empty_flag = 0
+# 										break
+# 							if folder_empty_flag:
+# 								ref_folder.delete()
+# 								message = {'message':'Folder deleted.','status_code':204}
+# 								return Response(message,status=204)
+# 							else:
+# 								message = {'message':"ERROR: Directory is not empty.",'status_code':400}
+# 								return Response(message,status=400)
+# 						else:
+# 							message = {'message':"ERROR: File does not exist.",'status_code':404}
+# 							return Response(message,status=404)
 
-				elif r_val=='True':
-					for file in all_files:
-						if file.folder == folder_object and os.path.basename(file.file.name) == name:
-							file_flag = 1
-							message = {'message':"ERROR: -r option is valid only with directories.",'status_code':400}
-							return Response(message,status=400)
-					ref_folder = None
-					if file_flag == 0:
-						#recursive delete
-						for folder in all_folders:
-							if folder.parentfolder == folder_object and folder.name == name:
-								ref_folder = folder
-								break
-						if ref_folder is not None:
-							#call delete function
-							ref_folder_pk = ref_folder.pk
-							ref_folder_name = ref_folder.name
-							return_list = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,ref_folder_pk,ref_folder_name)
-							if return_list:
-								#print(return_list)
-								final_list.extend(return_list)
-								n = len(return_list)
-								i = 0
-								while i < n:
-								#for i in range(0,len(return_list),2):
-									val = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,return_list[i],return_list[i+1])
-									if val:
-										return_list.extend(val)
-										final_list.extend(val)
-										print(return_list,len(return_list))
-									i = i + 2
-									n = len(return_list)
-							print("\n")
-							print ("final_list"+str(final_list))
-							# if final_list:
-							# 	for i in range(0,len(final_list),2):
-							# 		folder_object = user_object.user.userfolders.get(pk=int(final_list[i]))
-							# 		print("deleting folder  " + folder_object.name+ "   "+str(folder_object.pk))
-							# 		folder_object.delete()
-							folder_object = user_object.user.userfolders.get(pk=int(ref_folder_pk))
-							print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
-							folder_object.delete()
-							message = {'message':"Folder deleted.",'status_code':204}
-							return Response(message,status=204)
+# 				elif r_val=='True':
+# 					for file in all_files:
+# 						if file.folder == folder_object and os.path.basename(file.file.name) == name:
+# 							file_flag = 1
+# 							message = {'message':"ERROR: -r option is valid only with directories.",'status_code':400}
+# 							return Response(message,status=400)
+# 					ref_folder = None
+# 					if file_flag == 0:
+# 						#recursive delete
+# 						for folder in all_folders:
+# 							if folder.parentfolder == folder_object and folder.name == name:
+# 								ref_folder = folder
+# 								break
+# 						if ref_folder is not None:
+# 							#call delete function
+# 							ref_folder_pk = ref_folder.pk
+# 							ref_folder_name = ref_folder.name
+# 							return_list = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,ref_folder_pk,ref_folder_name)
+# 							if return_list:
+# 								#print(return_list)
+# 								final_list.extend(return_list)
+# 								n = len(return_list)
+# 								i = 0
+# 								while i < n:
+# 								#for i in range(0,len(return_list),2):
+# 									val = RemoveObjectView.remove_all_files_dirs(token,all_files,all_folders,return_list[i],return_list[i+1])
+# 									if val:
+# 										return_list.extend(val)
+# 										final_list.extend(val)
+# 										print(return_list,len(return_list))
+# 									i = i + 2
+# 									n = len(return_list)
+# 							print("\n")
+# 							print ("final_list"+str(final_list))
+# 							# if final_list:
+# 							# 	for i in range(0,len(final_list),2):
+# 							# 		folder_object = user_object.user.userfolders.get(pk=int(final_list[i]))
+# 							# 		print("deleting folder  " + folder_object.name+ "   "+str(folder_object.pk))
+# 							# 		folder_object.delete()
+# 							folder_object = user_object.user.userfolders.get(pk=int(ref_folder_pk))
+# 							print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
+# 							folder_object.delete()
+# 							message = {'message':"Folder deleted.",'status_code':204}
+# 							return Response(message,status=204)
 							
-						else:
-							message = {'message':"ERROR: Directory does not exist.",'status_code':404}
-							return Response(message,status=404)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 						else:
+# 							message = {'message':"ERROR: Directory does not exist.",'status_code':404}
+# 							return Response(message,status=404)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 
-class NewProjectView(APIView):
-	def generate_rand(n):
-		llimit = 10**(n-1)
-		ulimit = (10**n)-1
-		return random.randint(llimit,ulimit)
+# class NewProjectView(APIView):
+# 	def generate_rand(n):
+# 		llimit = 10**(n-1)
+# 		ulimit = (10**n)-1
+# 		return random.randint(llimit,ulimit)
 
-	def post(self,request):
-		token = self.request.data['token']
-		projectname = self.request.data['projectname']
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectname = self.request.data['projectname']
 
-		try:
-			user_object = Token.objects.get(key=token)
-			projectname = user_object.user.username + ':' + projectname
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			projectname = user_object.user.username + ':' + projectname
 			
-			#create project object
-			new_project_object = Projects(name=projectname)
-			new_project_object.save()
+# 			#create project object
+# 			new_project_object = Projects(name=projectname)
+# 			new_project_object.save()
 			
-			#generate accesskey
-			all_user_projects = user_object.user.userprojects.all()
-			accesskey_list = []
-			for item in all_user_projects:
-				accesskey_list.append(item.access_key)
+# 			#generate accesskey
+# 			all_user_projects = user_object.user.userprojects.all()
+# 			accesskey_list = []
+# 			for item in all_user_projects:
+# 				accesskey_list.append(item.access_key)
 
-			num = NewProjectView.generate_rand(4)
-			while num in accesskey_list:
-				print("NEW")
-				num = generate_rand(4)
+# 			num = NewProjectView.generate_rand(4)
+# 			while num in accesskey_list:
+# 				print("NEW")
+# 				num = generate_rand(4)
 
-			access_key = num
-			print(access_key)
-			#create userprojects object
-			new_userprojects_object = UserProjects(user=user_object.user,project=new_project_object,status='A',access_key=access_key)
-			new_userprojects_object.save()
+# 			access_key = num
+# 			print(access_key)
+# 			#create userprojects object
+# 			new_userprojects_object = UserProjects(user=user_object.user,project=new_project_object,status='A',access_key=access_key)
+# 			new_userprojects_object.save()
 			
-			#add to logs
-			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=new_project_object,action=user_object.user.username + ' created '+ projectname)
-			new_projectlogs_object.save()
-			## Format time stamp - time.strftime("[%d/%B/%Y %H:%M:%S]")
-			print('created project and userproject object ' + str(new_userprojects_object.pk) + ' ' + new_project_object.name +' ' +str(new_project_object.pk) )
-			data = {'projectname':new_project_object.name,'access_key':access_key}
-			message = {'message':data,'status_code':200}
-			return Response(message,status=200)
-		except IntegrityError:
-			#print("here")
-			message = {'message':"Project exists.",'status_code':400}
-			return Response(message,status=400)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 			#add to logs
+# 			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=new_project_object,action=user_object.user.username + ' created '+ projectname)
+# 			new_projectlogs_object.save()
+# 			## Format time stamp - time.strftime("[%d/%B/%Y %H:%M:%S]")
+# 			print('created project and userproject object ' + str(new_userprojects_object.pk) + ' ' + new_project_object.name +' ' +str(new_project_object.pk) )
+# 			data = {'projectname':new_project_object.name,'access_key':access_key}
+# 			message = {'message':data,'status_code':200}
+# 			return Response(message,status=200)
+# 		except IntegrityError:
+# 			#print("here")
+# 			message = {'message':"Project exists.",'status_code':400}
+# 			return Response(message,status=400)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 
-class AddFileToProjectView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		projectname = self.request.data['projectname']
-		filename = self.request.data['filename']
-		pk = self.request.data['id']
-		file_flag = 0
-		try:
-			user_object = Token.objects.get(key=token)
-			all_files = user_object.user.useruploadedfiles.all()
-			if pk!='':
-				folder_object = user_object.user.userfolders.get(pk=int(pk))
-			else:
-				folder_object = None
-			for item in all_files:
-				if item.folder == folder_object and os.path.basename(item.file.name) == filename:
-					file_object = item
-					file_flag = 1
-					break
-			if file_flag:
-				try:
-					project_object = Projects.objects.get(name=projectname)
-					new_projectfiles_object = ProjectFiles(project=project_object,file_ref=file_object)
-					new_projectfiles_object.save()
-					print('created projectfiles object ' + str(new_projectfiles_object.pk))
-					return Response(status=204)
-				except Projects.DoesNotExist:
-					return Response(status=404)
-			else:
-				return Response(status=404)
-		except Token.DoesNotExist:
-			return Response(status=404)
+# class AddFileToProjectView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectname = self.request.data['projectname']
+# 		filename = self.request.data['filename']
+# 		pk = self.request.data['id']
+# 		file_flag = 0
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			all_files = user_object.user.useruploadedfiles.all()
+# 			if pk!='':
+# 				folder_object = user_object.user.userfolders.get(pk=int(pk))
+# 			else:
+# 				folder_object = None
+# 			for item in all_files:
+# 				if item.folder == folder_object and os.path.basename(item.file.name) == filename:
+# 					file_object = item
+# 					file_flag = 1
+# 					break
+# 			if file_flag:
+# 				try:
+# 					project_object = Projects.objects.get(name=projectname)
+# 					new_projectfiles_object = ProjectFiles(project=project_object,file_ref=file_object)
+# 					new_projectfiles_object.save()
+# 					print('created projectfiles object ' + str(new_projectfiles_object.pk))
+# 					return Response(status=204)
+# 				except Projects.DoesNotExist:
+# 					return Response(status=404)
+# 			else:
+# 				return Response(status=404)
+# 		except Token.DoesNotExist:
+# 			return Response(status=404)
 
-class ListAllProjectsView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		try:
-			return_val=[]
-			user_object = Token.objects.get(key=token)
-			all_projects = user_object.user.userprojects.all()
-			for project in all_projects:
-				if project.status == 'A':
-					status = 'Admin'
-				else:
-					status = 'Contributor'
-				return_val.append(project.project.name+"\t"+status+"\t"+str(project.access_key))
-			message = {'message':return_val,'status_code':200}
-			return Response(message,status=200)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-
-class LoadProjectView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		projectid = int(self.request.data['projectid'])
-		project_flag=0
-		try:
-			user_object = Token.objects.get(key=token)
-			all_projects = user_object.user.userprojects.all()
-			for project in all_projects:
-				if project.access_key == projectid:
-					project_flag=1
-					data = {'projectname':project.project.name,'projectid':project.access_key}
-					message = {'message':data,'status_code':200}
-					print(message)
-					return Response(message,status=200)
-			if project_flag==0:
-				message = {'message':"ERROR: Specified project does not exist in your antarin account",'status_code':404}
-				return Response(message,status=404)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# class ListAllProjectsView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		try:
+# 			return_val=[]
+# 			user_object = Token.objects.get(key=token)
+# 			all_projects = user_object.user.userprojects.all()
+# 			for project in all_projects:
+# 				if project.status == 'A':
+# 					status = 'Admin'
+# 				else:
+# 					status = 'Contributor'
+# 				return_val.append(project.project.name+"\t"+status+"\t"+str(project.access_key))
+# 			message = {'message':return_val,'status_code':200}
+# 			return Response(message,status=200)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 
-class ImportDataView(APIView):
+# class LoadProjectView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectid = int(self.request.data['projectid'])
+# 		project_flag=0
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			all_projects = user_object.user.userprojects.all()
+# 			for project in all_projects:
+# 				if project.access_key == projectid:
+# 					project_flag=1
+# 					data = {'projectname':project.project.name,'projectid':project.access_key}
+# 					message = {'message':data,'status_code':200}
+# 					print(message)
+# 					return Response(message,status=200)
+# 			if project_flag==0:
+# 				message = {'message':"ERROR: Specified project does not exist in your antarin account",'status_code':404}
+# 				return Response(message,status=404)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
-	def find_folder(foldername,parentfolder,all_folders):
-		folder_flag = 0
-		for item in all_folders:
-			if item.name == foldername and item.parentfolder == parentfolder:
-				folder_object = item
-				folder_flag = 1
-				break
-		if folder_flag == 0:
-			return -1
-		return folder_object
 
-	def find_file(filename,parentfolder,all_files):
-		file_flag = 0
-		for item in all_files:
-			if item.folder == parentfolder and os.path.basename(item.file.name) == filename:
-				file_object = item
-				file_flag = 1
-				break
-		if file_flag == 0:
-			return -1
-		return file_object
+# class ImportDataView(APIView):
 
-	def post(self,request):
-		token = self.request.data['token']
-		folder_flag = int(self.request.data['folder_flag'])
-		projectname = self.request.data['env_name']
-		path = self.request.data['path']
-		error_flag = 0
-		try:
-			user_object = Token.objects.get(key=token)
-			project_object = Projects.objects.get(name=projectname)
-			if folder_flag:
-				#FOLDER
-				all_folders = user_object.user.userfolders.all()
-				plist = path
-				plist = plist.split('/')
-				if path[0]=='/' and path[-1]=='/':
-				    plist = plist[1:-1]
-				elif path[0]=='/'and path[-1]!='/':
-				    plist = plist[1:]
-				elif path[0]!='/' and path[-1]=='/':
-				    plist = plist[:-1]
-				print (plist)
-				parentfolder = None
-				if len(plist) == 1:
-					val = ImportDataView.find_folder(plist[0],parentfolder,all_folders)
-					if val != -1:
-						parentfolder = val
-						print (parentfolder.name)
-					else:
-						message = {'message':"ERROR: Directory does not exist.",'status_code':404}
-						return Response(message,status=404)
-				else:
-					for i in range(1,len(plist)):
-						val = ImportDataView.find_folder(plist[i],parentfolder,all_folders)
-						if val != -1:
-							parentfolder = val
-							print (parentfolder.name)
-						else:
-							message = {'message':"ERROR: Directory does not exist.",'status_code':404}
-							return Response(message,status=404)
-				folder_object = val
-				all_projectfolders = ProjectFolders.objects.filter(project=project_object)
-				for item in all_projectfolders:
-					if item.folder_ref == folder_object:
-						print("Duplicate folder ref")
-						error_flag = 1
-						break
+# 	def find_folder(foldername,parentfolder,all_folders):
+# 		folder_flag = 0
+# 		for item in all_folders:
+# 			if item.name == foldername and item.parentfolder == parentfolder:
+# 				folder_object = item
+# 				folder_flag = 1
+# 				break
+# 		if folder_flag == 0:
+# 			return -1
+# 		return folder_object
 
-				for item in all_projectfolders:
-					if item.folder_ref.name == folder_object.name:
-						print("Duplicate folder ref")
-						error_flag = 1
-						break
+# 	def find_file(filename,parentfolder,all_files):
+# 		file_flag = 0
+# 		for item in all_files:
+# 			if item.folder == parentfolder and os.path.basename(item.file.name) == filename:
+# 				file_object = item
+# 				file_flag = 1
+# 				break
+# 		if file_flag == 0:
+# 			return -1
+# 		return file_object
 
-				if error_flag ==0:
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		folder_flag = int(self.request.data['folder_flag'])
+# 		projectname = self.request.data['env_name']
+# 		path = self.request.data['path']
+# 		error_flag = 0
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			project_object = Projects.objects.get(name=projectname)
+# 			if folder_flag:
+# 				#FOLDER
+# 				all_folders = user_object.user.userfolders.all()
+# 				plist = path
+# 				plist = plist.split('/')
+# 				if path[0]=='/' and path[-1]=='/':
+# 				    plist = plist[1:-1]
+# 				elif path[0]=='/'and path[-1]!='/':
+# 				    plist = plist[1:]
+# 				elif path[0]!='/' and path[-1]=='/':
+# 				    plist = plist[:-1]
+# 				print (plist)
+# 				parentfolder = None
+# 				if len(plist) == 1:
+# 					val = ImportDataView.find_folder(plist[0],parentfolder,all_folders)
+# 					if val != -1:
+# 						parentfolder = val
+# 						print (parentfolder.name)
+# 					else:
+# 						message = {'message':"ERROR: Directory does not exist.",'status_code':404}
+# 						return Response(message,status=404)
+# 				else:
+# 					for i in range(1,len(plist)):
+# 						val = ImportDataView.find_folder(plist[i],parentfolder,all_folders)
+# 						if val != -1:
+# 							parentfolder = val
+# 							print (parentfolder.name)
+# 						else:
+# 							message = {'message':"ERROR: Directory does not exist.",'status_code':404}
+# 							return Response(message,status=404)
+# 				folder_object = val
+# 				all_projectfolders = ProjectFolders.objects.filter(project=project_object)
+# 				for item in all_projectfolders:
+# 					if item.folder_ref == folder_object:
+# 						print("Duplicate folder ref")
+# 						error_flag = 1
+# 						break
+
+# 				for item in all_projectfolders:
+# 					if item.folder_ref.name == folder_object.name:
+# 						print("Duplicate folder ref")
+# 						error_flag = 1
+# 						break
+
+# 				if error_flag ==0:
 					
-					new_projectfolder_object = ProjectFolders(project=project_object,folder_ref=folder_object)
-					print("Adding "  + new_projectfolder_object.folder_ref.name + " to " + new_projectfolder_object.project.name)
-					new_projectfolder_object.save()
+# 					new_projectfolder_object = ProjectFolders(project=project_object,folder_ref=folder_object)
+# 					print("Adding "  + new_projectfolder_object.folder_ref.name + " to " + new_projectfolder_object.project.name)
+# 					new_projectfolder_object.save()
 
-					new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added directory '+ new_projectfolder_object.folder_ref.name)
-					new_projectlogs_object.save()
+# 					new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added directory '+ new_projectfolder_object.folder_ref.name)
+# 					new_projectlogs_object.save()
 
-					message = {'message':'Imported directory.','status_code':204}
-					return Response(message,status=204)
-				else:
-					message = {'message':"ERROR: Directory exists.",'status_code':404}
-					return Response(message,status=404)
-			else:
-				#FILE
+# 					message = {'message':'Imported directory.','status_code':204}
+# 					return Response(message,status=204)
+# 				else:
+# 					message = {'message':"ERROR: Directory exists.",'status_code':404}
+# 					return Response(message,status=404)
+# 			else:
+# 				#FILE
 				
-				all_folders = user_object.user.userfolders.all()
-				all_files = user_object.user.useruploadedfiles.all()
+# 				all_folders = user_object.user.userfolders.all()
+# 				all_files = user_object.user.useruploadedfiles.all()
 
-				plist = path
-				plist = plist.split('/')
-				if path[0]=='/':
-				    plist = plist[1:]
+# 				plist = path
+# 				plist = plist.split('/')
+# 				if path[0]=='/':
+# 				    plist = plist[1:]
 				
-				print (plist)
-				parentfolder = None
-				val = None
-				for i in range(1,len(plist)-1):
-					print(plist[i],parentfolder)
-					val = ImportDataView.find_folder(plist[i],parentfolder,all_folders)
-					if val != -1:
-						parentfolder = val
-						print(parentfolder.name)
-					else:
-						message = {'message':"ERROR: Path specified is not correct.",'status_code':404}
-						return Response(message,status=404)
-				folder_object = val
-				file_object = ImportDataView.find_file(plist[-1],folder_object,all_files)
-				if file_object != -1:
-					all_projectfiles = ProjectFiles.objects.filter(project=project_object)
-					for item in all_projectfiles:
-						if item.file_ref == file_object:
-							print("duplicate ref")
-							error_flag = 1
-							break
+# 				print (plist)
+# 				parentfolder = None
+# 				val = None
+# 				for i in range(1,len(plist)-1):
+# 					print(plist[i],parentfolder)
+# 					val = ImportDataView.find_folder(plist[i],parentfolder,all_folders)
+# 					if val != -1:
+# 						parentfolder = val
+# 						print(parentfolder.name)
+# 					else:
+# 						message = {'message':"ERROR: Path specified is not correct.",'status_code':404}
+# 						return Response(message,status=404)
+# 				folder_object = val
+# 				file_object = ImportDataView.find_file(plist[-1],folder_object,all_files)
+# 				if file_object != -1:
+# 					all_projectfiles = ProjectFiles.objects.filter(project=project_object)
+# 					for item in all_projectfiles:
+# 						if item.file_ref == file_object:
+# 							print("duplicate ref")
+# 							error_flag = 1
+# 							break
 
-					for item in all_projectfiles:
-						if os.path.basename(item.file_ref.file.name) == os.path.basename(file_object.file.name):
-							print("duplicate ref")
-							error_flag = 1
-							break
+# 					for item in all_projectfiles:
+# 						if os.path.basename(item.file_ref.file.name) == os.path.basename(file_object.file.name):
+# 							print("duplicate ref")
+# 							error_flag = 1
+# 							break
 					
-					if error_flag == 0:
+# 					if error_flag == 0:
 						
-						new_projectfile_object = ProjectFiles(project=project_object,file_ref=file_object)
-						print("Adding " + new_projectfile_object.file_ref.file.name + " to " + new_projectfile_object.project.name)
-						new_projectfile_object.save()
+# 						new_projectfile_object = ProjectFiles(project=project_object,file_ref=file_object)
+# 						print("Adding " + new_projectfile_object.file_ref.file.name + " to " + new_projectfile_object.project.name)
+# 						new_projectfile_object.save()
 
-						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added file '+ os.path.basename(new_projectfile_object.file_ref.file.name))
-						new_projectlogs_object.save()
+# 						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added file '+ os.path.basename(new_projectfile_object.file_ref.file.name))
+# 						new_projectlogs_object.save()
 
-						message = {'message':'Imported file.','status_code':204}
-						return Response(message,status=204)
-					else:
-						print("here")
-						message = {'message':"ERROR: File exists.",'status_code':400}
-						return Response(message,status=404)
-				else:
-					message = {'message':"ERROR: File does not exist.",'status_code':404}
-					return Response(message,status=404)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-
-class AddContributorView(APIView):
-
-	def generate_rand(n):
-		llimit = 10**(n-1)
-		ulimit = (10**n)-1
-		return random.randint(llimit,ulimit)
+# 						message = {'message':'Imported file.','status_code':204}
+# 						return Response(message,status=204)
+# 					else:
+# 						print("here")
+# 						message = {'message':"ERROR: File exists.",'status_code':400}
+# 						return Response(message,status=404)
+# 				else:
+# 					message = {'message':"ERROR: File does not exist.",'status_code':404}
+# 					return Response(message,status=404)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 
-	def post(self,request):
-		token = self.request.data['token']
-		projectname = self.request.data['env_name']
-		username = self.request.data['username']
-		try:
-			user_object = Token.objects.get(key=token)
-			project_object = Projects.objects.get(name=projectname)
-			user_project_object = user_object.user.userprojects.get(project=project_object)
-			all_userprojects = UserProjects.objects.all()
-			error_flag=0 #0-new contributor object
+# class AddContributorView(APIView):
 
-			if user_project_object.status!='C':
-				try:
-					contributor_obj = User.objects.get(username=username)
-					for projects in all_userprojects:
-						print(project_object.pk ,projects.project.pk,projects.user.pk,projects.user.username,contributor_obj.pk,contributor_obj.username)
-						if projects.project == project_object and projects.user == contributor_obj:
-							error_flag=1
-							print("here" )
-							break
-					if error_flag==0 :
+# 	def generate_rand(n):
+# 		llimit = 10**(n-1)
+# 		ulimit = (10**n)-1
+# 		return random.randint(llimit,ulimit)
 
-						all_user_projects = contributor_obj.userprojects.all()
-						accesskey_list = []
-						for item in all_user_projects:
-							accesskey_list.append(item.access_key)
 
-						num = NewProjectView.generate_rand(4)
-						while num in accesskey_list:
-							num = generate_rand(4)
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectname = self.request.data['env_name']
+# 		username = self.request.data['username']
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			project_object = Projects.objects.get(name=projectname)
+# 			user_project_object = user_object.user.userprojects.get(project=project_object)
+# 			all_userprojects = UserProjects.objects.all()
+# 			error_flag=0 #0-new contributor object
 
-						access_key = num
-						print(access_key)
+# 			if user_project_object.status!='C':
+# 				try:
+# 					contributor_obj = User.objects.get(username=username)
+# 					for projects in all_userprojects:
+# 						print(project_object.pk ,projects.project.pk,projects.user.pk,projects.user.username,contributor_obj.pk,contributor_obj.username)
+# 						if projects.project == project_object and projects.user == contributor_obj:
+# 							error_flag=1
+# 							print("here" )
+# 							break
+# 					if error_flag==0 :
 
-						new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C',access_key=access_key)
-						new_userprojects_object.save()
-						print("Added " + new_userprojects_object.user.username + " as contributor to "+ new_userprojects_object.project.name  )
+# 						all_user_projects = contributor_obj.userprojects.all()
+# 						accesskey_list = []
+# 						for item in all_user_projects:
+# 							accesskey_list.append(item.access_key)
+
+# 						num = NewProjectView.generate_rand(4)
+# 						while num in accesskey_list:
+# 							num = generate_rand(4)
+
+# 						access_key = num
+# 						print(access_key)
+
+# 						new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C',access_key=access_key)
+# 						new_userprojects_object.save()
+# 						print("Added " + new_userprojects_object.user.username + " as contributor to "+ new_userprojects_object.project.name  )
 						
-						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added '+ new_userprojects_object.user.username + ' as contributor.' )
-						new_projectlogs_object.save()
+# 						new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' added '+ new_userprojects_object.user.username + ' as contributor.' )
+# 						new_projectlogs_object.save()
 
-						data = {'user':new_userprojects_object.user.username,'acess_key':access_key}
-						message = {'message':data,'status_code':200}
-						return Response(message,status=200)
-					else:
-						message = {'message':"ERROR: Specified user is already a contributor to this project",'status_code':404}
-						return Response(message,status=404)					
-				except User.DoesNotExist:
-					message = {'message':"ERROR: Could not find an Antarin user with the specified username",'status_code':404}
-					return Response(message,status=404)
-			else:
-				print("permission denied")
-				message = {'message':"ERROR: Permission denied",'status_code':404}
-				return Response(message,status=404)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 						data = {'user':new_userprojects_object.user.username,'acess_key':access_key}
+# 						message = {'message':data,'status_code':200}
+# 						return Response(message,status=200)
+# 					else:
+# 						message = {'message':"ERROR: Specified user is already a contributor to this project",'status_code':404}
+# 						return Response(message,status=404)					
+# 				except User.DoesNotExist:
+# 					message = {'message':"ERROR: Could not find an Antarin user with the specified username",'status_code':404}
+# 					return Response(message,status=404)
+# 			else:
+# 				print("permission denied")
+# 				message = {'message':"ERROR: Permission denied",'status_code':404}
+# 				return Response(message,status=404)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 
-class DeleteProjectView(APIView):
-	def get(self,request):
-		token = self.request.data['token']
-		projectid = self.request.data['projectid']
-		try:
-			user_object = Token.objects.get(key=token)
-			#project_object = Projects.objects.get(name=projectname)
-			user_project_object = user_object.user.userprojects.get(access_key=projectid)
-			if user_project_object.status != 'A':
-				print("Permission denied.")
-				message = {'message':'Permission denied.','status_code':400}
-				return Response(message,status=400)
-			else:
-				print("'Is an Admin. Has permissions to delete project.'")
-				message = {'message':'Is an Admin. Has permissions to delete project.','status_code':200}
-				return Response(message,status=200)
-		except UserProjects.DoesNotExist:
-			message = {'message':'You are not a part of this project. Permission denied','status_code':400}
-			return Response(message,status=400)
-		# except Projects.DoesNotExist:
-		# 	message = {'message':'Project does not exist.','status_code':404}
-		# 	return Response(message,status=404)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# class DeleteProjectView(APIView):
+# 	def get(self,request):
+# 		token = self.request.data['token']
+# 		projectid = self.request.data['projectid']
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			#project_object = Projects.objects.get(name=projectname)
+# 			user_project_object = user_object.user.userprojects.get(access_key=projectid)
+# 			if user_project_object.status != 'A':
+# 				print("Permission denied.")
+# 				message = {'message':'Permission denied.','status_code':400}
+# 				return Response(message,status=400)
+# 			else:
+# 				print("'Is an Admin. Has permissions to delete project.'")
+# 				message = {'message':'Is an Admin. Has permissions to delete project.','status_code':200}
+# 				return Response(message,status=200)
+# 		except UserProjects.DoesNotExist:
+# 			message = {'message':'You are not a part of this project. Permission denied','status_code':400}
+# 			return Response(message,status=400)
+# 		# except Projects.DoesNotExist:
+# 		# 	message = {'message':'Project does not exist.','status_code':404}
+# 		# 	return Response(message,status=404)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
-	def post(self,request):
-		token = self.request.data['token']
-		projectid = self.request.data['projectid']
-		password = self.request.data['pwd']
-		try:
-			user_object = Token.objects.get(key=token)
-			username = user_object.user.username
-			user_val = User.objects.get(username__exact=username)
-			#print (password)
-			if user_val.check_password(password):
-				print("correct password")
-				user_project_object = user_object.user.userprojects.get(access_key=projectid)
-				project_object = user_project_object.project
-				project_object.delete()
-				print("deleted project")
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectid = self.request.data['projectid']
+# 		password = self.request.data['pwd']
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			username = user_object.user.username
+# 			user_val = User.objects.get(username__exact=username)
+# 			#print (password)
+# 			if user_val.check_password(password):
+# 				print("correct password")
+# 				user_project_object = user_object.user.userprojects.get(access_key=projectid)
+# 				project_object = user_project_object.project
+# 				project_object.delete()
+# 				print("deleted project")
 				
-				# new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted project. ' )
-				# new_projectlogs_object.save()
+# 				# new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted project. ' )
+# 				# new_projectlogs_object.save()
 				
-				message = {'message':'Project deleted.','status_code':200}
-				return Response(message,status=200)
-			else:
-				print('incorrect password')
-				message = {'message':'Invalid password.','status_code':404}
-				return Response(message,status=404)
-		# except Projects.DoesNotExist:
-		# 	message = {'message':'Project does not exist.','status_code':404}
-		# 	return Response(message,status=404)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 				message = {'message':'Project deleted.','status_code':200}
+# 				return Response(message,status=200)
+# 			else:
+# 				print('incorrect password')
+# 				message = {'message':'Invalid password.','status_code':404}
+# 				return Response(message,status=404)
+# 		# except Projects.DoesNotExist:
+# 		# 	message = {'message':'Project does not exist.','status_code':404}
+# 		# 	return Response(message,status=404)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
-class LeaveProjectView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		projectid = self.request.data['projectid']
-		try:
-			user_object = Token.objects.get(key=token)
-			#project_object = Projects.objects.get(name=projectname)
-			user_project_object = user_object.user.userprojects.get(access_key=projectid)
-			project_object = user_project_object.project
-			if user_project_object.status == 'A':
-				message = {'message':'Permission denied.','status_code':400}
-				return Response(message,status=400)
-			else:
-				user_project_object.delete()
+# class LeaveProjectView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectid = self.request.data['projectid']
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			#project_object = Projects.objects.get(name=projectname)
+# 			user_project_object = user_object.user.userprojects.get(access_key=projectid)
+# 			project_object = user_project_object.project
+# 			if user_project_object.status == 'A':
+# 				message = {'message':'Permission denied.','status_code':400}
+# 				return Response(message,status=400)
+# 			else:
+# 				user_project_object.delete()
 
-				new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' left project. ' )
-				new_projectlogs_object.save()
+# 				new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' left project. ' )
+# 				new_projectlogs_object.save()
 
-				message = {'message':'Project record deleted from user account.','status_code':200}
-				return Response(message,status=200)
-		except UserProjects.DoesNotExist:
-			message = {'message':'You are not a part of this project. Permission denied','status_code':400}
-			return Response(message,status=400)
-		# except Projects.DoesNotExist:
-		# 	message = {'message':'Project does not exist.','status_code':404}
-		# 	return Response(message,status=404)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-
-class CheckLogsView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		projectname = self.request.data['env_name']
-		try:
-			user_object = Token.objects.get(key=token)
-			project_object = Projects.objects.get(name=projectname)
-			all_logs = ProjectDetailsLogger.objects.filter(project=project_object)
-			return_val = []
-			for item in all_logs:
-				logs = []
-				logs.append(item.timestamp.strftime("[%d/%B/%Y %H:%M:%S]"))
-				logs.append(item.action)
-				return_val.append(logs)
-			message = {'message': return_val,'status_code':200}
-			return Response(message,status=200)
-		except Projects.DoesNotExist:
-			message = {'message':'Project does not exist.','status_code':404}
-			return Response(message,status=404)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
-
-class NewInstanceView(APIView):
-	def generate_rand(n):
-		llimit = 10**(n-1)
-		ulimit = (10**n)-1
-		return random.randint(llimit,ulimit)
-
-	def post(self,request):
-		token = self.request.data['token']
-		projectname = self.request.data['projectname']
-		instance_name = self.request.data['instance_name']
-		ami_id = self.request.data['ami_id']
-		instance_type = self.request.data['instance_type']
-		region = self.request.data['region']
-
-		try:
-			user_object = Token.objects.get(key=token)
-			project_object = Projects.objects.get(name=projectname)
-			# key = RSAKeys.objects.filter(region=region)
-			# if not key:
-			# 	ec2_instance = boto.connect_ec2()
-			# 	keyname = region+'_new_ec2_key'
-			# 	newkey = ec2_instance.create_key_pair(keyname)
-			# 	with open(keyname+'.pem','w')as f:
-			# 		f.write(newkey.material)
-			# 	new_key_record = RSAKeys(region=region,key_name=keyname,key=f)
-			# 	new_key_record.save()
-			# print("new key record added.")
-
-			all_project_instances = project_object.projectinstances.all()
-			#all_user_instances = user_object.user.userinstances.all()
-			accesskey_list = []
-			for item in all_project_instances:
-				accesskey_list.append(item.access_key)
-
-			num = NewInstanceView.generate_rand(4)
-			while num in accesskey_list:
-				num = generate_rand(4)
-
-			access_key = num
-			print(access_key)
-
-			new_instances_object = UserInstances(user=user_object.user,project=project_object,instance_name=instance_name,ami_id=ami_id,region=region,instance_type=instance_type,access_key=access_key)
-			new_instances_object.save()
-
-			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' created cloud '+ new_instances_object.instance_name)
-			new_projectlogs_object.save()
-
-			message={'message':'New cloud details were recorded','access_key':new_instances_object.access_key,'status_code':200}
-			return Response(message,status=200)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 				message = {'message':'Project record deleted from user account.','status_code':200}
+# 				return Response(message,status=200)
+# 		except UserProjects.DoesNotExist:
+# 			message = {'message':'You are not a part of this project. Permission denied','status_code':400}
+# 			return Response(message,status=400)
+# 		# except Projects.DoesNotExist:
+# 		# 	message = {'message':'Project does not exist.','status_code':404}
+# 		# 	return Response(message,status=404)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 
-class ListInstancesView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		projectname = self.request.data['projectname']
+# class CheckLogsView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectname = self.request.data['env_name']
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			project_object = Projects.objects.get(name=projectname)
+# 			all_logs = ProjectDetailsLogger.objects.filter(project=project_object)
+# 			return_val = []
+# 			for item in all_logs:
+# 				logs = []
+# 				logs.append(item.timestamp.strftime("[%d/%B/%Y %H:%M:%S]"))
+# 				logs.append(item.action)
+# 				return_val.append(logs)
+# 			message = {'message': return_val,'status_code':200}
+# 			return Response(message,status=200)
+# 		except Projects.DoesNotExist:
+# 			message = {'message':'Project does not exist.','status_code':404}
+# 			return Response(message,status=404)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
-		try:
-			user_object = Token.objects.get(key=token)
-			project_object = Projects.objects.get(name=projectname)
-			all_instances = project_object.projectinstances.all()
-			ret_val = {}
-			for item in all_instances:
-				print(item.instance_name)
-				ret_val[item.instance_name + '[' + item.user.username + ']']= item.access_key 
-			message = {'message':ret_val,'status_code':200}
-			return Response(message,status=200)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# class NewInstanceView(APIView):
+# 	def generate_rand(n):
+# 		llimit = 10**(n-1)
+# 		ulimit = (10**n)-1
+# 		return random.randint(llimit,ulimit)
 
-class EnterInstanceView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		instance_access_id = self.request.data['access_key']
-		projectname = self.request.data['projectname']
-		print(instance_access_id)
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectname = self.request.data['projectname']
+# 		instance_name = self.request.data['instance_name']
+# 		ami_id = self.request.data['ami_id']
+# 		instance_type = self.request.data['instance_type']
+# 		region = self.request.data['region']
 
-		try:
-			if instance_access_id.isnumeric():
-				user_object = Token.objects.get(key=token)
-				project_object = Projects.objects.get(name=projectname)
-				user_instance_object = UserInstances.objects.get(access_key=instance_access_id,project=project_object)
-				data = {'id':user_instance_object.pk,'name':user_instance_object.instance_name}
-				message = {'message':data,'status_code':200}
-				return Response(message,status=200)
-			else:
-				message = {'message':'ERROR: Not a valid access key','status_code':401}
-				return Response(message,status=401)
-		except UserInstances.DoesNotExist:
-			message = {'message':'ERROR: No instance with exists with this access key','status_code':400}
-			return Response(message,status=400)
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			project_object = Projects.objects.get(name=projectname)
+# 			# key = RSAKeys.objects.filter(region=region)
+# 			# if not key:
+# 			# 	ec2_instance = boto.connect_ec2()
+# 			# 	keyname = region+'_new_ec2_key'
+# 			# 	newkey = ec2_instance.create_key_pair(keyname)
+# 			# 	with open(keyname+'.pem','w')as f:
+# 			# 		f.write(newkey.material)
+# 			# 	new_key_record = RSAKeys(region=region,key_name=keyname,key=f)
+# 			# 	new_key_record.save()
+# 			# print("new key record added.")
 
-class AddDataView(APIView):
-	def post(self,request):
-		token = self.request.data['token']
-		projectname = self.request.data['env_name']
-		filename = self.request.data['filename']
-		instance_id = self.request.data['instance_id']
-		section = self.request.data['section']
-		path = self.request.data['path']
-		packagename = self.request.data['packagename']
-		try:
-			user_object = Token.objects.get(key=token)
-			project_object = Projects.objects.get(name=projectname)
-			instance_object = UserInstances.objects.get(project=project_object,pk=int(instance_id))	
-			if section == 'package':
-				project_folder_object = None
-				all_project_folders = project_object.projectfolders.all()
-				for item in all_project_folders:
-					if item.folder_ref.name == packagename:
-						project_folder_object = item
-						break
-				if project_folder_object:
-					all_instance_folders = instance_object.instancefolders.all()
-					for item in all_instance_folders:
-						if item.project_folder_ref.folder_ref.name == packagename:
-							message = {'message':'Package with same name exists in the cloud.','status_code':400}
-							return Response(message,status=400)
+# 			all_project_instances = project_object.projectinstances.all()
+# 			#all_user_instances = user_object.user.userinstances.all()
+# 			accesskey_list = []
+# 			for item in all_project_instances:
+# 				accesskey_list.append(item.access_key)
 
-					new_instance_folder_object = InstanceFolders(instance=instance_object,project_folder_ref=project_folder_object)
-					new_instance_folder_object.save()
-					message = {'message':'Package added to cloud.','status_code':200}
-					return Response(message,status=200)
-				else:
-					message={'message':'Folder does not exist in this project','status_code':400}
-					return Response(message,status=400)
-			elif section == 'data':
-				pass
-			elif section == 'algo':
-				pass
-		except Token.DoesNotExist:
-			message = {'message':'Session token is not valid.','status_code':404}
-			return Response(message,status=404)
+# 			num = NewInstanceView.generate_rand(4)
+# 			while num in accesskey_list:
+# 				num = generate_rand(4)
+
+# 			access_key = num
+# 			print(access_key)
+
+# 			new_instances_object = UserInstances(user=user_object.user,project=project_object,instance_name=instance_name,ami_id=ami_id,region=region,instance_type=instance_type,access_key=access_key)
+# 			new_instances_object.save()
+
+# 			new_projectlogs_object = ProjectDetailsLogger(user=user_object.user,project=project_object,action=user_object.user.username + ' created cloud '+ new_instances_object.instance_name)
+# 			new_projectlogs_object.save()
+
+# 			message={'message':'New cloud details were recorded','access_key':new_instances_object.access_key,'status_code':200}
+# 			return Response(message,status=200)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
+
+
+# class ListInstancesView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectname = self.request.data['projectname']
+
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			project_object = Projects.objects.get(name=projectname)
+# 			all_instances = project_object.projectinstances.all()
+# 			ret_val = {}
+# 			for item in all_instances:
+# 				print(item.instance_name)
+# 				ret_val[item.instance_name + '[' + item.user.username + ']']= item.access_key 
+# 			message = {'message':ret_val,'status_code':200}
+# 			return Response(message,status=200)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
+
+# class EnterInstanceView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		instance_access_id = self.request.data['access_key']
+# 		projectname = self.request.data['projectname']
+# 		print(instance_access_id)
+
+# 		try:
+# 			if instance_access_id.isnumeric():
+# 				user_object = Token.objects.get(key=token)
+# 				project_object = Projects.objects.get(name=projectname)
+# 				user_instance_object = UserInstances.objects.get(access_key=instance_access_id,project=project_object)
+# 				data = {'id':user_instance_object.pk,'name':user_instance_object.instance_name}
+# 				message = {'message':data,'status_code':200}
+# 				return Response(message,status=200)
+# 			else:
+# 				message = {'message':'ERROR: Not a valid access key','status_code':401}
+# 				return Response(message,status=401)
+# 		except UserInstances.DoesNotExist:
+# 			message = {'message':'ERROR: No instance with exists with this access key','status_code':400}
+# 			return Response(message,status=400)
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
+
+# class AddDataView(APIView):
+# 	def post(self,request):
+# 		token = self.request.data['token']
+# 		projectname = self.request.data['env_name']
+# 		filename = self.request.data['filename']
+# 		instance_id = self.request.data['instance_id']
+# 		section = self.request.data['section']
+# 		path = self.request.data['path']
+# 		packagename = self.request.data['packagename']
+# 		try:
+# 			user_object = Token.objects.get(key=token)
+# 			project_object = Projects.objects.get(name=projectname)
+# 			instance_object = UserInstances.objects.get(project=project_object,pk=int(instance_id))	
+# 			if section == 'package':
+# 				project_folder_object = None
+# 				all_project_folders = project_object.projectfolders.all()
+# 				for item in all_project_folders:
+# 					if item.folder_ref.name == packagename:
+# 						project_folder_object = item
+# 						break
+# 				if project_folder_object:
+# 					all_instance_folders = instance_object.instancefolders.all()
+# 					for item in all_instance_folders:
+# 						if item.project_folder_ref.folder_ref.name == packagename:
+# 							message = {'message':'Package with same name exists in the cloud.','status_code':400}
+# 							return Response(message,status=400)
+
+# 					new_instance_folder_object = InstanceFolders(instance=instance_object,project_folder_ref=project_folder_object)
+# 					new_instance_folder_object.save()
+# 					message = {'message':'Package added to cloud.','status_code':200}
+# 					return Response(message,status=200)
+# 				else:
+# 					message={'message':'Folder does not exist in this project','status_code':400}
+# 					return Response(message,status=400)
+# 			elif section == 'data':
+# 				pass
+# 			elif section == 'algo':
+# 				pass
+# 		except Token.DoesNotExist:
+# 			message = {'message':'Session token is not valid.','status_code':404}
+# 			return Response(message,status=404)
 
 # class ImportFileView(APIView):
 # 	def post(self,request):

@@ -23,6 +23,7 @@ class See(Base):
 			if argument == 'clouds':
 				iocalls.print_clouds(message, argument)
 			if argument == 'path':
+				message = message.strip('"')
 				iocalls.print_text(message)
 		else:
 			iocalls.print_text(message)

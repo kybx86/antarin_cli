@@ -51,14 +51,20 @@ def print_file_list(message):
 	#pass
 
 def print_clouds(message, argument):
+	#message is a list with each item of the format -- cloud_name+"\t"+username(of owner)+"\t"+access_key
 	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
 	print('\n')
-	for item in range(len(message)):
-		space_entry = message[item]
-		space_entry = space_entry.split('\t')
-		space_name = space_entry[0].split(':')[1]
-		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title())) + 
-			cl.blue('{:12s}'.format(space_name[:12])))
+	
+	items = message
+	for item in items:
+		print_text(item)
+	
+	# for item in range(len(message)):
+	# 	space_entry = message[item]
+	# 	space_entry = space_entry.split('\t')
+	# 	space_name = space_entry[0].split(':')[1]
+	# 	cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title())) + 
+	# 		cl.blue('{:12s}'.format(space_name[:12])))
 		# cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(space_entry[1])))
 		# cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()) + cl.blue(space_entry[2])))
 		# cl.out('\n')

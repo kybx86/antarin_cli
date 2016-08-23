@@ -21,6 +21,7 @@ class Initialize(Base):
 			else:
 				accesskey = None
 				packagename = self.option_dict['<packagename>'] #returns a list
+				print(packagename,type(packagename))
 				if config.space_env(): 	
 					if self.option_dict['--cloud']:
 						if self.option_dict['--cloud'].isdigit():

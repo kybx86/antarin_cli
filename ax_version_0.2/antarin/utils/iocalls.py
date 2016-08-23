@@ -38,17 +38,17 @@ def print_specify_accesskey():
 	print_text(message)
 
 def print_log(message):
-	pass
-	# print_text_bold('\nProject log:\n')
-	# for item in message:
-	# 	print_text('\t%s %s' %(item[0], item[1]))
+	
+	print_text_bold('\nProject log:\n')
+	for item in message:
+		cl.out(cl.blue('\t{0} {1}\n').format(item[0], item[1]))
+		# the log could be formated a lot better. 
 
 def print_file_list(message):
 	cl.out(cl.blue(cl.bold('\nMy files:\n')))
 	for item in range(len(message)):
 		cl.out(cl.blue('\n\t' + message[item]))
 	cl.out('\n')
-	#pass
 
 def print_clouds(message, argument):
 	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
@@ -59,9 +59,6 @@ def print_clouds(message, argument):
 		space_name = space_entry[0].split(':')[1]
 		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title())) + 
 			cl.blue('{:12s}'.format(space_name[:12])))
-		# cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(space_entry[1])))
-		# cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()) + cl.blue(space_entry[2])))
-		# cl.out('\n')
 
 def print_spaces(message, argument):
 	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
@@ -83,7 +80,7 @@ def print_summary(message,env):
 		space_name = summary['projectname'].split(':')[1]
 		admin = summary['admin'].split('(')
 		
-		cl.out(cl.blue(cl.bold('\nSpace details\n')))
+		cl.out(cl.blue(cl.bold('\nSpace details:\n')))
 		cl.out(cl.blue(cl.bold('\n\tSpace name: ')) + cl.blue(space_name))
 		cl.out(cl.blue(cl.bold('\n\tAdmin: ') + cl.blue(admin[0].title()) + 
 			cl.blue(' -> ') + cl.blue(admin[1][:-1])))
@@ -92,20 +89,20 @@ def print_summary(message,env):
 		for item in range(len(summary['contributors'])):
 			usr = summary['contributors'][item][0]
 			usr_perms = summary['contributors'][item][1]
-			cl.out(cl.blue("\t\t{0} \t{1}").format(usr.title(), usr_perms))
-			print('\n')
-		cl.out(cl.blue(cl.bold('\nProject files: \n')))
+			cl.out(cl.blue("\n\t\t{0} \t{1}").format(usr.title(), usr_perms))
+		print('\n')
+		cl.out(cl.blue(cl.bold('\tProject files: \n')))
 		for item in range(len(summary['file_list'])):
 			filename = summmary['file_list'][item][0]
 			owner = summmary['file_list'][item][1]
-			cl.out(cl.blue("\t\t{0} \t{1}").format(owner.title(), filename))
-			print('\n')
-		cl.out(cl.blue(cl.bold('\nProject folders: \n')))
+			cl.out(cl.blue("\n\t\t{0} \t{1}").format(owner.title(), filename))
+		print('\n')
+		cl.out(cl.blue(cl.bold('\tProject folders: \n')))
 		for item in range(len(summary['folder_list'])):
 			filename = summary['folder_list'][item][0]
 			owner = summary['folder_list'][item][1].split('(')[0]
-			cl.out(cl.blue("\t\t{0} \t{1}").format(owner.title(), filename))
-			print('\n')
+			cl.out(cl.blue("\n\t\t{0} \t{1}").format(owner.title(), filename))
+		print('\n')
 
 	if env == 'filesystem':
 		cl.out(cl.blue(cl.bold('\nAccount\n')))
@@ -116,6 +113,11 @@ def print_summary(message,env):
 			cl.blue('{0} / {1}').format(summary['data_storage_used'], summary['data_storage_available']))
 		# can add more to summary: 'status bar': spaces, clouds running, etc...
 		print('\n')
+
+def print_enter(message, arg):
+	cl.out(cl.blue('\nEntered {0}: {1}\n').format(arg.title(), message['spacename'].split(':')[1]))
+
+
 
 def get_user_auth_details():
 	userdata = {}

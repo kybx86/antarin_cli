@@ -95,11 +95,11 @@ class Base(object):
 	def display_env(self):
 		value = self.get_env().strip()
 		if value == 'filesystem':
-			message = 'FILE SYSTEM'
+			message = 'enviroment: Filesystem'
 		elif value == 'space':
-			message = 'SPACE'
+			message = 'enviroment: Space'
 		elif value == 'cloud':
-			message = 'CLOUD'
+			message = 'enviroment: Cloud'
 		iocalls.print_text(message)
 
 	def display_help(self):

@@ -8,14 +8,17 @@ from ..utils import apicalls,iocalls
 class Enter(Base):
 
 	def response_handler(self,payload,argument):
+
 		message = payload[1]['message']
 		if payload[0]:
 			if argument == 'folder':
 				self.config.update_config_dir(message)
 			if argument == 'space':
 				self.config.update_config_space(message)
+				iocalls.print_enter(message, argument)
 			if argument == 'cloud':
 				self.config.update_config_cloud(message)
+				iocalls.print_enter(message, argument)
 		else:
 			iocalls.print_text(message)
 

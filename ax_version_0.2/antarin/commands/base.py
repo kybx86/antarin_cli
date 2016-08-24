@@ -2,10 +2,15 @@
 	Base class for all antarinX commands
 """
 
-import os,sys,json
+#from __future__ import division 
+
+import os, sys, json, time
+from ..__main__ import __doc__
 from ..config import Config
 from ..utils import iocalls,apicalls
-from ..__main__ import __doc__
+from ..utils import _color as cl
+
+
 
 commands = ['login','see','enter','delete','new','upload','add','exit','run','initialize','sleep','logout']
 
@@ -73,9 +78,7 @@ class Base(object):
 				if payload[0]:
 					token = payload[1]['key']
 					self.config.update(userdata['username'],token)
-					iocalls.print_text('\nantarinX login succesful!\n')
-					iocalls.print_text('Logged in as: %s' %userdata['username'])
-					iocalls.print_text('Session Token: %s' %token)
+					iocalls.print_login(userdata['username'], token)
 					break
 				else:
 					iocalls.print_text('Invalid username and/or password\n')
@@ -99,7 +102,7 @@ class Base(object):
 		elif value == 'space':
 			message = 'enviroment: Space'
 		elif value == 'cloud':
-			message = 'enviroment: Cloud'
+			message = 'enviroment: C'
 		iocalls.print_text(message)
 
 	def display_help(self):
@@ -157,20 +160,63 @@ class Base(object):
 				else:
 					iocalls.print_text(payload[1]['message'])
 				self.system_exit()
-	
-	def send_upload_request(self,api_endpoint,argval,filename=None):
+
+	def get_size(self, file=None, num_bytes=None):
+
+		if file is not None and num_bytes is None:
+			file_size = os.stat(file).st_size
+		elif num_bytes is not None:
+			file_size = num_bytes
+		if file_size >0 and file_size <1e3:
+			file_size *= 1
+			unit = 'bytes'
+		elif file_size >= 0 and file_size < 1e6:
+			file_size *= 1e-3
+			unit = 'KB'
+		elif file_size >= 1e6 and file_size < 1e9:
+			file_size *= 1e-6
+			unit = 'MB'
+		elif file_size >= 1e9 and file_size < 1e12:
+			file_size *= 1e-9
+			unit = 'GB'
+		elif file_size >= 1e12 and file_size < 1e15:
+			file_size *= 1e-12
+			unit = 'TB'
+		return file_size, unit 
+
+	def get_time(self, time_elapsed):
+		if time_elapsed >= 0 and time_elapsed <60:
+			time = time_elapsed
+			unit = 'seconds'
+		elif time_elapsed >= 60:
+			time = time_elapsed / 60
+			unit = 'minutes'
+		elif time_elapsed >= 3600:
+			time = time_elapsed / 60
+			time /= 60
+			unit = 'hours' 
+		return time, unit
+
+	def send_upload_request(self, api_endpoint, argval, filename=None):
 		config_data_val = dict(self.config.get_values())
 		config_data_val['env'] = self.get_env().strip()
 		config_data_val['argval'] = argval
 		config_data_val['flag'] = 'file'
 		if filename:
-			config_data_val['newfilename'] = filename	
-		payload = apicalls.api_send_request(api_endpoint,'POST',config_data_val,argval)
+			config_data_val['newfilename'] = filename
+		file_size, unit = self.get_size(file=argval, num_bytes=None)
+		cl.out(cl.blue('\nUploading 1/1 files | Size {0:.2f} {1}:\t{2} ...\n').format(file_size, unit, argval))
+		time_initial = time.time()
+		payload = apicalls.api_send_request(api_endpoint, 'POST', config_data_val, argval)
+		time_elapsed = time.time() - time_initial
+		time_elapsed, unit = self.get_time(time_elapsed)
+
 		if payload[0]:
 			if not filename:
-				iocalls.print_text('Uploaded file: %s'%argval)
+				cl.out(cl.blue('\nUploaded file: {0}\n').format(argval))
 			else:
-				iocalls.print_text('Uploaded file: %s'%argval+' as '+filename)
+				cl.out(cl.blue('\nUploaded file: {0} as {1}\n').format(argval,filename))
+			cl.out(cl.blue('Time elapsed: {0:.2f} {1}\n').format(time_elapsed,unit))
 			self.system_exit()
 		return payload
 
@@ -179,7 +225,7 @@ class Base(object):
 		while True:
 			if not payload[0] and (payload[1]['message']['status_code'] == 400): #duplicate file name
 				try:
-					iocalls.print_text("\nError: a file with the name already exists in this location.")
+					iocalls.print_text("Error: a file with the name already exists in this location.")
 					while True:
 						if iocalls.get_user_choice_rename():
 							new_filename = iocalls.get_new_filename()
@@ -239,24 +285,57 @@ class Base(object):
 			iocalls.print_text(payload[1])
 			self.system_exit()
 
+	def get_walk_counts(self, os_walk):
+		# Args: generator tuple from native os.walk
+
+		# bfs = list(os_walk)
+		bfs = os_walk
+		file_counter = 0
+		dir_counter = 1
+		bytes_counter = 0
+		for i in range(len(bfs)):
+			dir_counter  += len(bfs[i][1])
+			file_counter += len(bfs[i][2]) #also counts .hidden files
+			for file in range(len(bfs[i][2])):
+				file_path = os.path.join(bfs[i][0], bfs[i][2][file])
+				num_bytes = os.stat(file_path).st_size
+				bytes_counter += num_bytes
+
+		return file_counter, dir_counter, bytes_counter
+
 	def folder_upload(self,api_endpoint,filename):
 		if filename[-1] == '/':
 			filename = filename[:len(filename)-1]
+
 		parentdir = os.path.abspath(os.path.join(filename, os.pardir))
-		result = os.walk(filename)
+		result = list(os.walk(filename)) # generator to list ->for multiple usages
+		num_files, num_dirs, num_bytes = self.get_walk_counts(result)
+		folder_size, unit = self.get_size(file=None, num_bytes=num_bytes)
+		cl.out(cl.blue('\nUploading folder: {0} ...\n').format(filename))
+		cl.out(cl.blue('\nFolder size: {0:.2f} {1}').format(folder_size ,unit))
+		print()
+		bytes_uploaded = 0
+		time_initial = time.time()
 		for root, dirs, files in result:
 			pdir = os.path.abspath(os.path.join(root, os.pardir))
 			pdir = pdir[len(parentdir):]
 			foldername = os.path.basename(root)
-			print('Creating directory: ' + os.path.basename(root))
-			value = self.folder_upload_send_request(api_endpoint,'create',foldername,pdir)
-			files = [f for f in files if f[0] != '.']
+			value = self.folder_upload_send_request(api_endpoint, 'create', foldername, pdir)			
+			# files = [f for f in files if f[0] != '.'] #keeping .files is important, in some cases
+			files = [f for f in files] 
 			for item in files:
-				print('Uploading file: '+ os.path.basename(item))
 				argval = os.path.join(root,item)
-				self.folder_upload_send_request(api_endpoint,'upload',None,None,value,argval)
-			print('\n')
-
+				bytes_uploaded += os.stat(argval).st_size
+				self.folder_upload_send_request(api_endpoint, 'upload', None, None, value, argval)
+				percentage = round((bytes_uploaded / num_bytes)*100)					
+				cl.out(cl.blue('\rUploaded: {0:.1f}% | {1} / {2} {3:.60s}').format(percentage, bytes_uploaded, num_bytes, 'bytes'))
+				sys.stdout.flush()
+		# print
+		time_elapsed = time.time() - time_initial
+		time_elapsed, unit = self.get_time(time_elapsed)
+		cl.out(cl.blue('\nTime elapsed: {0:.2f} {1}').format(time_elapsed,unit))
+		cl.out(cl.blue('\nUpload complete!\n'))
+		# print('\n')
 	
 
 

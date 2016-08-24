@@ -18,8 +18,7 @@ class Enter(Base):
 				iocalls.print_enter(message, argument)
 			if argument == 'cloud':
 				self.config.update_config_cloud(message)
-				print(message['name'])
-				#iocalls.print_enter(message, argument)
+				iocalls.print_enter(message, argument)
 		else:
 			iocalls.print_text(message)
 

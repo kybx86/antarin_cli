@@ -7,6 +7,7 @@ import os
 import sys
 import getpass
 from . import _color as cl
+from . import time_conversion as tc 
 
 def print_text(message, newline=None):
 
@@ -52,7 +53,8 @@ def print_log(message):
 	
 	print_text_bold('\nProject log:\n')
 	for item in message:
-		cl.out(cl.blue('\t{0} {1}\n').format(item[0], item[1]))
+		time = tc.utc_to_local(item[0])
+		cl.out(cl.blue('\t{0} | {1}\n').format(time, item[1]))
 		# the log could be formated a lot better. 
 
 def print_file_list(message):

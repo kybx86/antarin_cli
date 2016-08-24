@@ -8,12 +8,8 @@ from ..utils import apicalls,iocalls
 class Delete(Base):
 
 	def response_handler(self, payload):
-		# print('hello')
-		# print(payload[1]['message'])
 		message = payload[1]['message']
 		iocalls.print_text(message)
-
-
 
 	def check_env_argument(self,argument):
 		if (argument == '-i') or (argument == 'space' and self.config.file_system_env()) or \

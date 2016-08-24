@@ -7,7 +7,7 @@ import os
 import sys
 import getpass
 from . import _color as cl
-from . import time_conversion as tc 
+from . import utilities as ut
 
 def print_text(message, newline=None):
 
@@ -53,7 +53,7 @@ def print_log(message):
 	
 	print_text_bold('\nProject log:\n')
 	for item in message:
-		time = tc.utc_to_local(item[0])
+		time = ut.utc_to_local(item[0])
 		cl.out(cl.blue('\t{0} | {1}\n').format(time, item[1]))
 		# the log could be formated a lot better. 
 
@@ -66,28 +66,30 @@ def print_file_list(message):
 def print_clouds(message, argument):
 	cl.out(cl.blue(cl.bold("\n{0}:").format(argument.title())))
 	print('\n')	
+	size = ut.check_name_size(message, dtype='cloud')
 	for item in range(len(message)):
 		cloud_entry = message[item]
 		cloud_entry = cloud_entry.split('\t')
 		cloud_name = cloud_entry[0]
-		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title()[:-1])) + 
-			cl.blue('{:12s}'.format(cloud_name[:12])))
-		cl.out(cl.blue(cl.bold('\tOwner:\t') + cl.blue(cloud_entry[1])))
-		cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()[:-1]) + 
+		cl.out(cl.blue(cl.bold("\t{0} name: ").format(argument.title()[:-1])) + 
+			cl.blue('{0:{1}s}'.format(cloud_name[:size], size)))
+		cl.out(cl.blue(cl.bold('\t| Owner: ') + cl.blue(cloud_entry[1])))
+		cl.out(cl.blue(cl.bold('\t| {0} ID: ').format(argument.title()[:-1]) + 
 			cl.blue(cloud_entry[2])))
 		cl.out('\n')
 
 def print_spaces(message, argument):
 	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
 	print('\n')
+	size = ut.check_name_size(message, dtype='space')
 	for item in range(len(message)):
 		space_entry = message[item]
 		space_entry = space_entry.split('\t')
 		space_name = space_entry[0].split(':')[1]
-		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title()[:-1])) + 
-			cl.blue('{:12s}'.format(space_name[:12])))
-		cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(space_entry[1])))
-		cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()[:-1]) + 
+		cl.out(cl.blue(cl.bold("\t{0} name: ").format(argument.title()[:-1])) + 
+			cl.blue("{0:{1}s}".format(space_name[:size], size)))
+		cl.out(cl.blue(cl.bold('\t| Permissions: ') + cl.blue(space_entry[1])))
+		cl.out(cl.blue(cl.bold('\t| {0} ID ').format(argument.title()[:-1]) + 
 			cl.blue(space_entry[2])))
 		cl.out('\n')
 
@@ -106,7 +108,7 @@ def print_summary(message,env):
 		for item in range(len(summary['contributors'])):
 			usr = summary['contributors'][item][0]
 			usr_perms = summary['contributors'][item][1]
-			cl.out(cl.blue("\n\t\t{0} \t{1}").format(usr.title(), usr_perms))
+			cl.out(cl.blue("\n\t\t{0} - {1}").format(usr.title(), usr_perms))
 		print('\n')
 		cl.out(cl.blue(cl.bold('\tProject files: \n')))
 		for item in range(len(summary['file_list'])):
@@ -130,7 +132,6 @@ def print_summary(message,env):
 			cl.blue('{0} / {1}').format(summary['data_storage_used'], summary['data_storage_available']))
 		# can add more to summary: 'status bar': spaces, clouds running, etc...
 		print('\n')
-
 
 def print_enter(message, arg):
 	if arg == 'space':
@@ -180,8 +181,7 @@ def get_user_choice():
 def get_password():
 	pwd = getpass.getpass(cl.blue('Enter your antarinX password:(will be hidden as you type) '))
 	return pwd
-
-		
+	
 def get_user_choice_rename():
 	try:
 		user_input = str(raw_input(cl.blue("Do you want to rename the file? (yes/no): ")))

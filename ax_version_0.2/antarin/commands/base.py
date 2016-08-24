@@ -9,6 +9,8 @@ from ..__main__ import __doc__
 from ..config import Config
 from ..utils import iocalls,apicalls
 from ..utils import _color as cl
+from ..utils import utilities as ut
+
 
 
 
@@ -33,7 +35,6 @@ class Base(object):
 
 	def response_handler(self):
 		raise NotImplementedError('An implementation of this method has to be provided.')
-
 
 	def get_arguments(self):
 		"""
@@ -86,7 +87,6 @@ class Base(object):
 			print('\n')
 			self.system_exit()
 			
-
 	def get_env(self):
 		if self.config.file_system_env():
 			return 'filesystem'
@@ -166,42 +166,6 @@ class Base(object):
 					iocalls.print_text(payload[1]['message'])
 				self.system_exit()
 
-	def get_size(self, file=None, num_bytes=None):
-
-		if file is not None and num_bytes is None:
-			file_size = os.stat(file).st_size
-		elif num_bytes is not None:
-			file_size = num_bytes
-		if file_size >0 and file_size <1e3:
-			file_size *= 1
-			unit = 'bytes'
-		elif file_size >= 0 and file_size < 1e6:
-			file_size *= 1e-3
-			unit = 'KB'
-		elif file_size >= 1e6 and file_size < 1e9:
-			file_size *= 1e-6
-			unit = 'MB'
-		elif file_size >= 1e9 and file_size < 1e12:
-			file_size *= 1e-9
-			unit = 'GB'
-		elif file_size >= 1e12 and file_size < 1e15:
-			file_size *= 1e-12
-			unit = 'TB'
-		return file_size, unit 
-
-	def get_time(self, time_elapsed):
-		if time_elapsed >= 0 and time_elapsed <60:
-			time = time_elapsed
-			unit = 'seconds'
-		elif time_elapsed >= 60:
-			time = time_elapsed / 60
-			unit = 'minutes'
-		elif time_elapsed >= 3600:
-			time = time_elapsed / 60
-			time /= 60
-			unit = 'hours' 
-		return time, unit
-
 	def send_upload_request(self, api_endpoint, argval, filename=None):
 		config_data_val = dict(self.config.get_values())
 		config_data_val['env'] = self.get_env().strip()
@@ -209,12 +173,12 @@ class Base(object):
 		config_data_val['flag'] = 'file'
 		if filename:
 			config_data_val['newfilename'] = filename
-		file_size, unit = self.get_size(file=argval, num_bytes=None)
+		file_size, unit = ut.get_size(file=argval, num_bytes=None)
 		cl.out(cl.blue('\nUploading 1/1 files | Size {0:.2f} {1}:\t{2} ...\n').format(file_size, unit, argval))
 		time_initial = time.time()
 		payload = apicalls.api_send_request(api_endpoint, 'POST', config_data_val, argval)
 		time_elapsed = time.time() - time_initial
-		time_elapsed, unit = self.get_time(time_elapsed)
+		time_elapsed, unit = ut.get_time(time_elapsed)
 
 		if payload[0]:
 			if not filename:
@@ -315,7 +279,7 @@ class Base(object):
 		parentdir = os.path.abspath(os.path.join(filename, os.pardir))
 		result = list(os.walk(filename)) # generator to list ->for multiple usages
 		num_files, num_dirs, num_bytes = self.get_walk_counts(result)
-		folder_size, unit = self.get_size(file=None, num_bytes=num_bytes)
+		folder_size, unit = ut.get_size(file=None, num_bytes=num_bytes)
 		cl.out(cl.blue('\nUploading folder: {0} ...\n').format(filename))
 		cl.out(cl.blue('\nFolder size: {0:.2f} {1}').format(folder_size ,unit))
 		print()
@@ -335,9 +299,8 @@ class Base(object):
 				percentage = round((bytes_uploaded / num_bytes)*100)					
 				cl.out(cl.blue('\rUploaded: {0:.0f}% | {1} / {2} {3:.60s}').format(percentage, bytes_uploaded, num_bytes, 'bytes'))
 				sys.stdout.flush()
-		# print
 		time_elapsed = time.time() - time_initial
-		time_elapsed, unit = self.get_time(time_elapsed)
+		time_elapsed, unit = ut.get_time(time_elapsed)
 		cl.out(cl.blue('\nTime elapsed: {0:.2f} {1}').format(time_elapsed,unit))
 		cl.out(cl.blue('\nUpload complete!\n'))
 		# print('\n')

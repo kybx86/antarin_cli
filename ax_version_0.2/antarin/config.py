@@ -16,7 +16,7 @@ from .utils import iocalls
 URL = 'http://127.0.0.1:8000' # -- Localhost
 #URL = 'http://http://webapp-test.us-west-2.elasticbeanstalk.com' # -- EB server
 
-file_name = '.'+'axconfig'+'.ini'
+file_name = '.'+'antarinx'+'.ini'
 config_file_path = os.path.join(os.path.expanduser('~'),file_name)
 
 section_name = 'user_details'

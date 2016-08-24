@@ -113,3 +113,16 @@ def instance_not_running():
 	return_dict['status_code'] = 400
 	return_dict['message'] = message + "Cloud not in running state."
 	return return_dict
+
+
+def no_data_folder():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "'data' folder not found in package."
+	return return_dict
+
+def no_requirements_file():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "'requirements.txt' file not found in package."
+	return return_dict

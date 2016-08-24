@@ -26,13 +26,13 @@ urlpatterns = [
 	url(r'^passwordreset/success/$',antarin_views.password_reset_success),
 	url(r'^passwordreset/activation/(?P<key>.+)$', antarin_views.password_key_activation),
 	url(r'^passwordreset/redirect/$', antarin_views.password_reset_redirect),
-	url(r'^rest-auth/', include('rest_auth.urls')),
+	
 	# url(r'^rest-summary/',antarin_views.UserSummaryView.as_view()),
 	# url(r'^rest-ls/',antarin_views.ListFilesView.as_view()),
 	# url(r'^rest-fileupload/$',antarin_views.UploadFileView.as_view()),
 	# #url(r'^rest-filedelete/$',antarin_views.DeleteFileView.as_view()),
 	# #url(r'^rest-filedownload/',antarin_views.DownloadFileView.as_view()),
-	url(r'^rest-logout/$',antarin_views.LogoutView.as_view()),
+	
 	# url(r'^rest-mkdir/$',antarin_views.CreateDirectoryView.as_view()),
 	# url(r'^rest-cd/$',antarin_views.ChangeDirectoryView.as_view()),
 	# url(r'^rest-pwd/$',antarin_views.CurrentWorkingDirectoryView.as_view()),
@@ -54,7 +54,8 @@ urlpatterns = [
 	# url(r'^rest-adddata/$',antarin_views.AddDataView.as_view()),
 	# url(r'^rest-initialisesession/$',antarin_views.InitialiseSessionView.as_view()),
 	# url(r'^rest-runcommand/$',antarin_views.RunCommandView.as_view()),
-
+	url(r'^rest-auth/', include('rest_auth.urls')),
+	url(r'^rest-logout/$',antarin_views.LogoutView.as_view()),
 	url(r'^see/$',antarin_views.SeeView.as_view()),
 	url(r'^enter/$',antarin_views.EnterView.as_view()),
 	url(r'^new/$',antarin_views.NewView.as_view()),
@@ -64,6 +65,8 @@ urlpatterns = [
 	url(r'^initialize/$',antarin_views.InitializeView.as_view()),
 	url(r'^run/$',antarin_views.RunView.as_view()),
 	url(r'^sleep/$',antarin_views.SleepView.as_view()),
+	url(r'^clone/$',antarin_views.CloneView.as_view()),
+	url(r'^merge/$',antarin_views.MergeView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

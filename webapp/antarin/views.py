@@ -1658,14 +1658,20 @@ class InitializeView(APIView):
 class RunView(APIView):
 
 	def setup_instance(key_path,commands): 
+		env.warn_only = True
 		output = []
 		try:
 			env.user = 'ubuntu'
 			env.key_filename = key_path
 			for command in commands:
 				print(command)
+				value = run(command,capture=True)
+				if value.stderr != "":
+					output_text = "Error while executing command %s : %s" %(command, value.stderr)
+					break
 				output.append(run(command))
 		finally:
+			print("disconenct worked")
 			disconnect_all()
 		return output
 
@@ -1679,6 +1685,9 @@ class RunView(APIView):
 			shell_command = self.request.data['shell_command']
 			commands = []
 
+			data_flag = False
+			requirements_flag = False
+			
 			project_object = Projects.objects.get(name=projectname)
 			accesskey = None
 			if 'argval' in self.request.data:
@@ -1692,17 +1701,39 @@ class RunView(APIView):
 			all_instance_packages = instance_object.instancefolders.all()
 			instance_package_object = None
 
+			print('dns name = '+ str(instance_object.dns_name))
+			print('\n')
+
 			for item in all_instance_packages:
 				if item.project_folder_ref.folder_ref.name == packagename:
 					instance_package_object = item
 					break
-			print('dns name = '+ str(instance_object.dns_name))
-			print('\n')
 			if instance_package_object:
+				package_folder = instance_package_object.project_folder_ref.folder_ref
+				folders = package_folder.parentfoldername.all()
+				files = package_folder.foldername.all()
+				for item in folders:
+					if item.name == 'data':
+						data_flag = True
+						break
+				for item in files:
+					if os.path.basename(item.file.name) == 'requirements.txt':
+						requirements_flag = True
+						break
+
+				if data_flag == False:
+					message = api_exceptions.no_data_folder()
+					return Response(message,status=400)
+
+				if requirements_flag == False:
+					message = api_exceptions.no_requirements_file()
+					return Response(message,status=400)
+
 				if instance_object.is_active == True:
 					commands.append(shell_command)
 					#host = list(instance_object.dns_name)
 					output = execute(RunCommandView.setup_instance,key_path,commands,hosts = instance_object.dns_name)
+					print(output)
 					output_text = output[instance_object.dns_name]
 					for item in output_text:
 						print(item)
@@ -1714,7 +1745,9 @@ class RunView(APIView):
 			else:
 				message = api_exceptions.package_DoesNotExist()
 				return Response(message,status=400)
-		#except System1
+		except SystemExit:
+			message = "error"
+			return Response(message,status=400)
 		except UserInstances.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)
@@ -1752,6 +1785,85 @@ class SleepView(APIView):
 			else:
 				message = api_exceptions.instance_not_running()
 				return Response(message,status=400)
+		except UserInstances.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+			return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+class CloneView(APIView):
+
+	def generate_rand(n):
+		llimit = 10**(n-1)
+		ulimit = (10**n)-1
+		return random.randint(llimit,ulimit)
+
+	def post(self,request):
+		token = self.request.data['token']
+		try:
+			user_object = Token.objects.get(key = token)
+			accesskey = self.request.data['argval']
+			projectname = self.request.data['spacename']
+			project_object = Projects.objects.get(name=projectname)
+			
+			instance_object = project_object.projectinstances.get(access_key=int(accesskey))
+			all_project_instances = project_object.projectinstances.all()
+
+			accesskey_list = []
+			for item in all_project_instances:
+				accesskey_list.append(item.access_key)
+
+			num = NewView.generate_rand(4)
+			while num in accesskey_list:
+				num = generate_rand(4)
+
+			access_key = num
+			print(access_key)
+
+			all_instance_folders = instance_object.instancefolders.all()
+			cloned_object = instance_object
+			cloned_object.access_key = num
+			cloned_object.instance_name = instance_object.instance_name + '(cloned)'
+			cloned_object.user = user_object.user
+			cloned_object.pk = None
+			cloned_object.project = instance_object.project
+			
+			print(all_instance_folders)
+			cloned_object.save()
+			cloned_object.instancefolders = all_instance_folders
+			#cloned_object.save()
+
+			# user_instance_object = UserInstances.objects.get(pk=int(instance_pk))
+			# all_instance_folders = user_instance_object.instancefolders.all()
+
+			print(cloned_object.pk,cloned_object.access_key,cloned_object.user.username,cloned_object.instancefolders.all())
+			#print(instance_object.pk,instance_object.access_key,instance_object.user.username,instance_object.instancefolders.all())
+			message = {'message': cloned_object.access_key,'status_code':200}
+			return Response(message,status=200)
+
+		except UserInstances.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+			return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+class MergeView(APIView):
+
+	def post(self,request):
+		token = self.request.data['token']
+		try:
+			user_object = Token.objects.get(key = token)
+			projectname = self.request.data['spacename']
+			project_object = Projects.objects.get(name=projectname)
+			source_access_key = self.request.data['source_id']
+			destination_access_key = self.request.data['destination_id']
+			source_instance_object = project_object.projectinstances.get(access_key=int(source_accesskey))
+			destination_instance_object = project_object.projectinstances.get(access_key=int(destination_accesskey))
+
+			all_source_instance_packages = source_instance_object.instancefolders.all()
+
 		except UserInstances.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)

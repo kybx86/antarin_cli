@@ -8,8 +8,12 @@ import sys
 import getpass
 from . import _color as cl
 
-def print_text(message):
-	cl.out(cl.blue('\n' + message + '\n'))
+def print_text(message, newline=None):
+
+	if newline is None:
+		cl.out(cl.blue('\n' + message + '\n'))
+	elif newline is False:
+		cl.out(cl.blue('\n' + message))
 
 def print_text_bold(message):
 	print(cl.blue(cl.bold(message)))
@@ -37,6 +41,13 @@ def print_specify_accesskey():
 	message = 'Error: Please specify accesskey of the cloud.'
 	print_text(message)
 
+def print_login(message, token):
+
+	cl.out(cl.blue('\nantarinX login succesful!'))
+	cl.out(cl.blue('\nLogged in as: {0}').format(message))
+	cl.out(cl.blue('\nSession token: {0}').format(token))
+	print()
+
 def print_log(message):
 	
 	print_text_bold('\nProject log:\n')
@@ -45,29 +56,24 @@ def print_log(message):
 		# the log could be formated a lot better. 
 
 def print_file_list(message):
-	cl.out(cl.blue(cl.bold('\nMy files:\n')))
+	cl.out(cl.blue(cl.bold('\nFiles:\n')))
 	for item in range(len(message)):
 		cl.out(cl.blue('\n\t' + message[item]))
 	cl.out('\n')
 
 def print_clouds(message, argument):
-	#message is a list with each item of the format -- cloud_name+"\t"+username(of owner)+"\t"+access_key
-	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
-	print('\n')
-	
-	items = message
-	for item in items:
-		print_text(item)
-	
-	# for item in range(len(message)):
-	# 	space_entry = message[item]
-	# 	space_entry = space_entry.split('\t')
-	# 	space_name = space_entry[0].split(':')[1]
-	# 	cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title())) + 
-	# 		cl.blue('{:12s}'.format(space_name[:12])))
-		# cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(space_entry[1])))
-		# cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()) + cl.blue(space_entry[2])))
-		# cl.out('\n')
+	cl.out(cl.blue(cl.bold("\n{0}:").format(argument.title())))
+	print('\n')	
+	for item in range(len(message)):
+		cloud_entry = message[item]
+		cloud_entry = cloud_entry.split('\t')
+		cloud_name = cloud_entry[0]
+		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title()[:-1])) + 
+			cl.blue('{:12s}'.format(cloud_name[:12])))
+		cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(cloud_entry[1])))
+		cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()[:-1]) + 
+			cl.blue(cloud_entry[2])))
+		cl.out('\n')
 
 def print_spaces(message, argument):
 	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
@@ -76,10 +82,10 @@ def print_spaces(message, argument):
 		space_entry = message[item]
 		space_entry = space_entry.split('\t')
 		space_name = space_entry[0].split(':')[1]
-		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title())) + 
+		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title()[:-1])) + 
 			cl.blue('{:12s}'.format(space_name[:12])))
 		cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(space_entry[1])))
-		cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()) + 
+		cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()[:-1]) + 
 			cl.blue(space_entry[2])))
 		cl.out('\n')
 
@@ -125,8 +131,11 @@ def print_summary(message,env):
 
 def print_enter(message, arg):
 	cl.out(cl.blue('\nEntered {0}: {1}\n').format(arg.title(), message['name'].split(':')[1]))
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 3f6e779d90cc6472fdd80a2fab523f9d24f45847
 
 def get_user_auth_details():
 	userdata = {}

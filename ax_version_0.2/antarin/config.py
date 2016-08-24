@@ -125,8 +125,7 @@ class Config(cparser.SafeConfigParser):
 		self.write_to_config('id',str(id_val))
 
 	def update_config_space(self,message):
-
-		spacename = message['spacename']
+		spacename = message['name']
 		self.write_to_config('space','1')
 		self.write_to_config('spacename',spacename)
 

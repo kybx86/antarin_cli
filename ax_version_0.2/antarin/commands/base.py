@@ -109,7 +109,7 @@ class Base(object):
 		help_text = __doc__
 		iocalls.print_text(help_text)
 
-	def send_request(self,api_endpoint,argument,argval=None,cloud_data=None,pwd=None,packagename=None,shell_command=None,packagelist=None):
+	def send_request(self,api_endpoint,argument,argval=None,cloud_data=None,pwd=None,packagename=None,shell_command=None,packagelist=None,source_id=None,destination_id=None):
 		config_data_val = dict(self.config.get_values())
 		config_data_val['argument'] = argument
 		config_data_val['env'] = self.get_env().strip()
@@ -126,6 +126,9 @@ class Base(object):
 			config_data_val['shell_command'] = shell_command
 		if packagelist:
 			config_data_val['packages'] = json.dumps(packagelist)
+		if source_id and destination_id:
+			config_data_val['source_id'] = source_id
+			config_data_val['destination_id'] = destination_id
 		payload  = apicalls.api_send_request(api_endpoint,'POST',config_data_val)
 		
 		return payload

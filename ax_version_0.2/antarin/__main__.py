@@ -12,6 +12,7 @@ Usage:
 	ax exit [space|cloud]
 	ax initialize <packagename>... [--cloud=<id>]
 	ax run <shell_command> <packagename> [<id>]
+	ax clone <id>
 	ax sleep [<id>]
 	ax logout
 

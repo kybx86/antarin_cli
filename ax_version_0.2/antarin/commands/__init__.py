@@ -11,3 +11,4 @@ from .add import Add
 from .initialize import Initialize
 from .run import Run
 from .sleep import Sleep
+from .clone import Clone

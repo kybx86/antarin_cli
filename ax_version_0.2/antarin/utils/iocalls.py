@@ -124,7 +124,7 @@ def print_summary(message,env):
 		print('\n')
 
 def print_enter(message, arg):
-	cl.out(cl.blue('\nEntered {0}: {1}\n').format(arg.title(), message['spacename'].split(':')[1]))
+	cl.out(cl.blue('\nEntered {0}: {1}\n').format(arg.title(), message['name'].split(':')[1]))
 
 
 

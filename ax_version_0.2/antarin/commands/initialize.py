@@ -20,8 +20,7 @@ class Initialize(Base):
 				self.system_exit()
 			else:
 				accesskey = None
-				packagename = self.option_dict['<packagename>'] #returns a list
-				print(packagename,type(packagename))
+				packages = self.option_dict['<packagename>'] #returns a list
 				if config.space_env(): 	
 					if self.option_dict['--cloud']:
 						if self.option_dict['--cloud'].isdigit():
@@ -32,6 +31,6 @@ class Initialize(Base):
 					else:
 						iocalls.print_specify_accesskey()
 						self.system_exit()
-				payload = self.send_request(self.endpoint,None,accesskey,None,None,packagename)
+				payload = self.send_request(self.endpoint,None,accesskey,None,None,None,None,packages)
 				self.response_handler(payload)
 			

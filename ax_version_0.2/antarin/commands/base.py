@@ -102,7 +102,7 @@ class Base(object):
 		elif value == 'space':
 			message = 'enviroment: Space'
 		elif value == 'cloud':
-			message = 'enviroment: C'
+			message = 'enviroment: Cloud'
 		iocalls.print_text(message)
 
 	def display_help(self):
@@ -136,8 +136,10 @@ class Base(object):
 			value = argument
 		if value == 'space':
 			self.config.quit_space()
+			iocalls.print_text('Exited space enviroment.')
 		elif value == 'cloud':
 			self.config.quit_cloud()
+			iocalls.print_text('Exited cloud enviroment.')
 
 	def has_permissions(self,api_endpoint,argval):
 		config_data_val = dict(self.config.get_values())
@@ -154,9 +156,8 @@ class Base(object):
 			if iocalls.get_user_choice():
 				pwd = iocalls.get_password()
 				payload = self.send_request(api_endpoint,argument,argval,None,pwd)
-				print(payload)
 				if payload[0]:
-					iocalls.print_text("\nProject deleted from antarinX")
+					iocalls.print_text("Project deleted.")
 				else:
 					iocalls.print_text(payload[1]['message'])
 				self.system_exit()
@@ -328,7 +329,7 @@ class Base(object):
 				bytes_uploaded += os.stat(argval).st_size
 				self.folder_upload_send_request(api_endpoint, 'upload', None, None, value, argval)
 				percentage = round((bytes_uploaded / num_bytes)*100)					
-				cl.out(cl.blue('\rUploaded: {0:.1f}% | {1} / {2} {3:.60s}').format(percentage, bytes_uploaded, num_bytes, 'bytes'))
+				cl.out(cl.blue('\rUploaded: {0:.0f}% | {1} / {2} {3:.60s}').format(percentage, bytes_uploaded, num_bytes, 'bytes'))
 				sys.stdout.flush()
 		# print
 		time_elapsed = time.time() - time_initial

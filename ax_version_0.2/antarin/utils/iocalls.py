@@ -70,7 +70,7 @@ def print_clouds(message, argument):
 		cloud_name = cloud_entry[0]
 		cl.out(cl.blue(cl.bold("\t{0} name:\t").format(argument.title()[:-1])) + 
 			cl.blue('{:12s}'.format(cloud_name[:12])))
-		cl.out(cl.blue(cl.bold('\tPermissions:\t') + cl.blue(cloud_entry[1])))
+		cl.out(cl.blue(cl.bold('\tOwner:\t') + cl.blue(cloud_entry[1])))
 		cl.out(cl.blue(cl.bold('\t{0} ID\t').format(argument.title()[:-1]) + 
 			cl.blue(cloud_entry[2])))
 		cl.out('\n')
@@ -130,7 +130,11 @@ def print_summary(message,env):
 		print('\n')
 
 def print_enter(message, arg):
-	cl.out(cl.blue('\nEntered {0}: {1}\n').format(arg.title(), message['name'].split(':')[1]))
+	if arg == 'space':
+		cl.out(cl.blue('\nEntered {0}: {1}\n').format(arg.title(), message['name'].split(':')[1]))
+	elif arg == 'cloud':
+		cl.out(cl.blue('\nEntered {0}: {1}\n').format(arg.title(), message['name']))
+		
 
 def get_user_auth_details():
 	userdata = {}

@@ -15,7 +15,7 @@ class Enter(Base):
 				self.config.update_config_dir(message)
 			if argument == 'space':
 				self.config.update_config_space(message)
-				#iocalls.print_enter(message, argument)
+				iocalls.print_enter(message, argument)
 			if argument == 'cloud':
 				self.config.update_config_cloud(message)
 				iocalls.print_enter(message, argument)

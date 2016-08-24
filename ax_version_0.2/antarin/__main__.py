@@ -13,6 +13,7 @@ Usage:
 	ax initialize <packagename>... [--cloud=<id>]
 	ax run <shell_command> <packagename> [<id>]
 	ax clone <id>
+	ax merge <source_id> <destination_id>
 	ax sleep [<id>]
 	ax logout
 

@@ -1859,10 +1859,26 @@ class MergeView(APIView):
 			project_object = Projects.objects.get(name=projectname)
 			source_access_key = self.request.data['source_id']
 			destination_access_key = self.request.data['destination_id']
-			source_instance_object = project_object.projectinstances.get(access_key=int(source_accesskey))
-			destination_instance_object = project_object.projectinstances.get(access_key=int(destination_accesskey))
+			source_instance_object = project_object.projectinstances.get(access_key=int(source_access_key))
+			destination_instance_object = project_object.projectinstances.get(access_key=int(destination_access_key))
 
 			all_source_instance_packages = source_instance_object.instancefolders.all()
+			all_destination_instance_packages = destination_instance_object.instancefolders.all()
+			destination_package_names = [i.project_folder_ref.folder_ref.name for i in all_destination_instance_packages]
+			print(destination_package_names)
+			
+			for package_object in all_source_instance_packages:
+				print(package_object.project_folder_ref.folder_ref.name)
+				temp = str(package_object.project_folder_ref.folder_ref.name)
+				if package_object.project_folder_ref.folder_ref.name in destination_package_names:
+					foldername = temp + "_copy"
+				new_destination_package_object = InstanceFolders(instance=destination_instance_object,project_folder_ref=package_object.project_folder_ref)
+				new_destination_package_object.project_folder_ref.folder_ref.name = foldername
+				new_destination_package_object.save()
+				print(package_object.project_folder_ref.folder_ref.name,new_destination_package_object.project_folder_ref.folder_ref.name)
+
+			message = {'message': 'Merge successful','status_code':200}
+			return Response(message,status=200)
 
 		except UserInstances.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()

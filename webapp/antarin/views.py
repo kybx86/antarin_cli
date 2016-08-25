@@ -1870,6 +1870,7 @@ class MergeView(APIView):
 			for package_object in all_source_instance_packages:
 				print(package_object.project_folder_ref.folder_ref.name)
 				temp = str(package_object.project_folder_ref.folder_ref.name)
+				foldername = package_object.project_folder_ref.folder_ref.name
 				if package_object.project_folder_ref.folder_ref.name in destination_package_names:
 					foldername = temp + "_copy"
 				new_destination_package_object = InstanceFolders(instance=destination_instance_object,project_folder_ref=package_object.project_folder_ref)

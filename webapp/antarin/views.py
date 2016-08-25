@@ -621,10 +621,10 @@ class NewView(APIView):
 			for item in all_user_projects:
 				accesskey_list.append(item.access_key)
 
-			num = NewView.generate_rand(4)
+			num = NewView.generate_rand(3)
 			while num in accesskey_list:
 				print("NEW")
-				num = NewView.generate_rand(4)
+				num = NewView.generate_rand(3)
 
 			access_key = num
 			print(access_key)
@@ -666,9 +666,9 @@ class NewView(APIView):
 		for item in all_project_instances:
 			accesskey_list.append(item.access_key)
 
-		num = NewView.generate_rand(4)
+		num = NewView.generate_rand(3)
 		while num in accesskey_list:
-			num = generate_rand(4)
+			num = generate_rand(3)
 
 		access_key = num
 		print(access_key)
@@ -1283,9 +1283,9 @@ class AddView(APIView):
 					for item in all_user_projects:
 						accesskey_list.append(item.access_key)
 
-					num = AddView.generate_rand(4)
+					num = AddView.generate_rand(3)
 					while num in accesskey_list:
-						num = generate_rand(4)
+						num = generate_rand(3)
 
 					access_key = num
 					print(access_key)
@@ -1505,6 +1505,7 @@ class InitializeView(APIView):
 		while True:
 			response = c.describe_instance_status(InstanceIds=ids)
 			#print ('.')
+			print(time.time()-start_time)
 			if response['InstanceStatuses'][0]['InstanceStatus']['Details'][0]['Status'] == 'passed' and response['InstanceStatuses'][0]['SystemStatus']['Details'][0]['Status']=='passed':
 				break
 			time.sleep(1)
@@ -1814,9 +1815,10 @@ class CloneView(APIView):
 			for item in all_project_instances:
 				accesskey_list.append(item.access_key)
 
-			num = NewView.generate_rand(4)
+			access_key_length = 3
+			num = NewView.generate_rand(access_key_length)
 			while num in accesskey_list:
-				num = generate_rand(4)
+				num = NewView.generate_rand(access_key_length)
 
 			access_key = num
 			print(access_key)

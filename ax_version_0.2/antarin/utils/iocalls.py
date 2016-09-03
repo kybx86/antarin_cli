@@ -112,8 +112,8 @@ def print_summary(message,env):
 		print('\n')
 		cl.out(cl.blue(cl.bold('\tProject files: \n')))
 		for item in range(len(summary['file_list'])):
-			filename = summmary['file_list'][item][0]
-			owner = summmary['file_list'][item][1]
+			filename = summary['file_list'][item][0]
+			owner = summary['file_list'][item][1]
 			cl.out(cl.blue("\n\t\t{0} \t{1}").format(owner.title(), filename))
 		print('\n')
 		cl.out(cl.blue(cl.bold('\tProject folders: \n')))

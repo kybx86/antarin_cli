@@ -245,6 +245,8 @@ def userHomepage(request):
 # 		except Token.DoesNotExist:
 # 			return None
 
+
+"""
 class SeeView(APIView):
 	def list_all_spaces(user_object):
 		return_val = []
@@ -1491,13 +1493,13 @@ class InitializeView(APIView):
 				host_list.append(instance.public_dns_name)
 				ids.append(instance.instance_id)
 				break
-			time.sleep(5.0)
+			time.sleep(1.0)
 			instances[0].load()
 		print ('\nInstance launched.Public DNS:', instance.public_dns_name)
 		print ('Connecting to instance.')
 		while instance.state['Name'] != 'running':
 			print ('.',end='')
-			time.sleep(5)
+			time.sleep(1)
 			instance.load()
 		print ('Instance in Running state')
 		print ('Initializing instance')
@@ -1509,7 +1511,8 @@ class InitializeView(APIView):
 			if response['InstanceStatuses'][0]['InstanceStatus']['Details'][0]['Status'] == 'passed' and response['InstanceStatuses'][0]['SystemStatus']['Details'][0]['Status']=='passed':
 				break
 			time.sleep(1)
-		time.sleep(5)
+		
+		#time.sleep(5)
 		end_time = time.time()
 		elapsed_time  = (end_time - start_time)/60
 		print( "ELAPSED TIME = " + str(elapsed_time) + "minutes")
@@ -1902,7 +1905,7 @@ class LogoutView(APIView):
 			print('here')
 			message = api_exceptions.invalid_session_token()
 			return Response(message,status=404)
-
+"""
 ### ax0.1 CLI views---
 # class ListFilesView(APIView):
 # 	def post(self,request):

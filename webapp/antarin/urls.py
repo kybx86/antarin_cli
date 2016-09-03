@@ -10,6 +10,7 @@ from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
 from antarin import views as antarin_views
+from antarin import api_views as api_views
 from antarin import forms as antarin_forms
 from rest_framework.authtoken import views
 
@@ -55,18 +56,18 @@ urlpatterns = [
 	# url(r'^rest-initialisesession/$',antarin_views.InitialiseSessionView.as_view()),
 	# url(r'^rest-runcommand/$',antarin_views.RunCommandView.as_view()),
 	url(r'^rest-auth/', include('rest_auth.urls')),
-	url(r'^rest-logout/$',antarin_views.LogoutView.as_view()),
-	url(r'^see/$',antarin_views.SeeView.as_view()),
-	url(r'^enter/$',antarin_views.EnterView.as_view()),
-	url(r'^new/$',antarin_views.NewView.as_view()),
-	url(r'^delete/$',antarin_views.DeleteView.as_view()),
-	url(r'^upload/$',antarin_views.UploadView.as_view()),
-	url(r'^add/$',antarin_views.AddView.as_view()),
-	url(r'^initialize/$',antarin_views.InitializeView.as_view()),
-	url(r'^run/$',antarin_views.RunView.as_view()),
-	url(r'^sleep/$',antarin_views.SleepView.as_view()),
-	url(r'^clone/$',antarin_views.CloneView.as_view()),
-	url(r'^merge/$',antarin_views.MergeView.as_view()),
+	url(r'^rest-logout/$',api_views.LogoutView.as_view()),
+	url(r'^new/$',api_views.NewView.as_view()),
+	url(r'^upload/$',api_views.UploadView.as_view()),
+	url(r'^see/$',api_views.SeeView.as_view()),
+	url(r'^enter/$',api_views.EnterView.as_view()),
+	url(r'^delete/$',api_views.DeleteView.as_view()),
+	url(r'^add/$',api_views.AddView.as_view()),
+	url(r'^initialize/$',api_views.InitializeView.as_view()),
+	url(r'^run/$',api_views.RunView.as_view()),
+	url(r'^sleep/$',api_views.SleepView.as_view()),
+	url(r'^clone/$',api_views.CloneView.as_view()),
+	url(r'^merge/$',api_views.MergeView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

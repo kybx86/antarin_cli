@@ -126,3 +126,9 @@ def no_requirements_file():
 	return_dict['status_code'] = 400
 	return_dict['message'] = message + "'requirements.txt' file not found in package."
 	return return_dict
+
+def wrong_path_specified():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "Path specified is not correct."
+	return return_dict

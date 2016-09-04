@@ -68,6 +68,7 @@ urlpatterns = [
 	url(r'^sleep/$',api_views.SleepView.as_view()),
 	url(r'^clone/$',api_views.CloneView.as_view()),
 	url(r'^merge/$',api_views.MergeView.as_view()),
+	url(r'^download/$',api_views.DownloadView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

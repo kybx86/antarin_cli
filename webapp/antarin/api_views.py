@@ -1157,11 +1157,16 @@ class AddView(APIView):
 	def find_file(filename,parentfolder,all_files):
 		file_flag = 0
 		for item in all_files:
-			#print(item.file_ref.folder,parentfolder.folder_ref,item.file_ref.file.name,filename)
-			if item.file_ref.folder == parentfolder.folder_ref and os.path.basename(item.file_ref.file.name) == filename:
-				file_object = item
-				file_flag = 1
-				break
+			if parentfolder is not None:
+				if item.file_ref.folder == parentfolder.folder_ref and os.path.basename(item.file_ref.file.name) == filename:
+					file_object = item
+					file_flag = 1
+					break
+			else:
+				if item.file_ref.folder == parentfolder and os.path.basename(item.file_ref.file.name) == filename:
+					file_object = item
+					file_flag = 1
+					break
 		if file_flag == 0:
 			return -1
 		return file_object
@@ -1851,3 +1856,84 @@ class MergeView(APIView):
 		except Token.DoesNotExist:
 			message = api_exceptions.invalid_session_token()
 			return Response(message,status=404)
+
+
+class DownloadView(APIView):
+	def post(self,request):
+		token = self.request.data['token']
+		argval = self.request.data['argval'].strip()
+		env = self.request.data['env'].strip()
+		file_object = None
+		found = False
+		try:
+			user_object = Token.objects.get(key=token)
+			
+			if env == 'filesystem':
+				#look for filename in userfiles
+				dir_id = self.request.data['id']
+				if dir_id:
+					user_folder_object = UserFolders.objects.get(pk=int(dir_id))
+					antarin_folder_object = user_folder_object.folder_ref
+				else:
+					antarin_folder_object = None
+				all_user_files = user_object.user.user_files.all()
+				for item in all_user_files:
+					if item.file_ref.folder == antarin_folder_object and os.path.basename(item.file_ref.file.name) == argval:
+						file_object = item.file_ref
+						found = True
+						break
+			
+			elif env == 'space':
+				#look for filename in projectfiles
+				spacename = self.request.data['spacename'].strip()
+				project_object = AntarinProjects.objects.get(name=spacename)
+				all_project_files = project_object.project.all()
+				for item in all_project_files:
+					if os.path.basename(item.file_ref.file.name) == argval:
+						file_object = item.file_ref
+						found = True
+						break
+
+			elif env == 'cloud':
+				#look for filename in cloudfiles
+				cloud_id = self.request.data['cloud_id']
+				cloud_object = AntarinProjectClouds.objects.get(pk=int(cloud_id))
+				all_cloud_files = cloud_object.cloud.all()
+				for item in all_cloud_files:
+					if os.path.basename(item.file_ref.file.name) == argval:
+						file_object = item.file_ref
+						found = True
+						break
+			
+			if not found:
+				message = api_exceptions.file_DoesNotExist()
+				return Response(message,status=400)
+
+			# conn = boto.connect_s3(settings.AWS_ACCESS_KEY_ID,settings.AWS_SECRET_ACCESS_KEY)
+			# bucket = conn.get_bucket(settings.AWS_STORAGE_BUCKET_NAME)
+			# bucket_list = bucket.list()
+			# key = bucket.get_key("media/"+file_object.file.name)
+			# url = key.generate_url(0, query_auth=False, force_http=True)
+			print (file_object.file.url)
+			# filepath = os.path.join(os.path.expanduser('~'),file_object.file.name)
+			# print(filepath)
+			# print("media/"+file_object.file.name)
+			# key.get_contents_to_filename(filepath)
+			# files = {
+			# 	'file': (os.path.basename(filepath), open(filepath, 'rb')),
+			# 	}
+			# return Response(files,status=200)
+			message = {'message':file_object.file.url,'status_code':200}
+			return Response(message,status=200)
+		except AntarinProjects.DoesNotExist:
+			message = api_exceptions.project_DoesNotExist()
+			return Response(message,status=400)
+		except AntarinProjectClouds.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+			return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
+
+
+

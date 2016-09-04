@@ -13,3 +13,4 @@ from .run import Run
 from .sleep import Sleep
 from .clone import Clone
 from .merge import Merge
+from .download import Download

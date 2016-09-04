@@ -8,6 +8,7 @@ Usage:
 	ax delete ((space|cloud) <id> | -i <item>)
 	ax new (folder|space|cloud) <name>
 	ax upload <item>
+	ax download <filename>
 	ax add (--env <packagename> |(--data|--code) <packagename> <item> | -i <item> | contributor <username>)
 	ax exit [space|cloud]
 	ax initialize <packagename>... [--cloud=<id>]

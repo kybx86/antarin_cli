@@ -44,9 +44,11 @@ class Add(Base):
 						value = self.option_dict['<username>']
 					if argument == '-i':
 						value = self.option_dict['<item>']
-					payload = self.send_request(self.endpoint,argument,value)
-					self.response_handler(payload,argument,value)
-				
+						if value.startswith('~antarin'):
+							payload = self.send_request(self.endpoint,argument,value)
+							self.response_handler(payload,argument,value)
+						else:
+							iocalls.print_not_absolute_path()
 				if argument[0:2] == '--':
 					packagename =  self.option_dict['<packagename>']
 					value = None

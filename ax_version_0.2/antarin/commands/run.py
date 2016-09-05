@@ -21,6 +21,10 @@ class Run(Base):
 				accesskey = None
 				packagename = self.option_dict['<packagename>']
 				shell_command = self.option_dict['<shell_command>']
+				if not shell_command.startswith('python'):
+					iocalls.print_not_valid_shell_command()
+					self.system_exit()
+					
 				if config.space_env(): 	
 					if self.option_dict['<id>']:
 						if self.option_dict['<id>'].isdigit():

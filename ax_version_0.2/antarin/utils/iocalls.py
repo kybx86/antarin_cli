@@ -30,6 +30,10 @@ def print_not_inside_cloud_message():
 	message = 'Error: You are not inside a cloud environment. Please try this command after entering a cloud--see "ax enter <cloud>"'
 	print_text('\n'+ message)
 
+def print_not_absolute_path():
+	message = 'Error: Please provide the absolute path of file/folder/package.'
+	print_text('\n'+ message)
+
 def print_not_num_text():
 	message = 'Error: Not a valid argument value. Accepted value is a 4 digit number.'
 	print_text(message)
@@ -42,6 +46,10 @@ def print_specify_accesskey():
 	message = 'Error: Please specify accesskey of the cloud.'
 	print_text(message)
 
+def print_not_valid_shell_command():
+	message = 'Error: Not a valid shell command. Please make sure its in the format "python <file_path>"'
+	print_text(message)
+	
 def print_login(message, token):
 
 	cl.out(cl.blue('\nantarinX login succesful!'))
@@ -148,17 +156,76 @@ def get_user_auth_details():
 	userdata['password'] = getpass.getpass(cl.blue(cl.bold('Password:(will be hidden as you type) ')))
 	return userdata
 
-def get_cloud_data():
-	#TODO --> set default values when user entered value is empty
-	cloud_data = {}
+def get_ami_val():
+	l = ['1']
 	try:
-		cloud_data['ami_id'] = str(raw_input(cl.blue(cl.bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
-		cloud_data['instance_type'] = str(raw_input(cl.blue(cl.bold('Instance Type (t2.micro): '))))
-		cloud_data['region'] = str(raw_input(cl.blue(cl.bold('Region (us-west-2):'))))
+		cl.out(cl.blue(cl.bold('\nMachine Image: ')))
+		cl.out(cl.blue('\n\t 1. AntarinX Linux AMI'))
+		val = str(raw_input(cl.blue(cl.bold('\nEnter the option number: '))))
 	except NameError:
-		cloud_data['ami_id'] = str(input(cl.blue(cl.bold('Machine Image ID (AntarinX Linux AMI - ami-bd01cbdd): '))))
-		cloud_data['instance_type'] = str(input(cl.blue(cl.bold('Instance Type (t2.micro): '))))
-		cloud_data['region'] = str(input(cl.blue(cl.bold('Region (us-west-2):'))))
+		val = str(input(cl.blue(cl.bold('\nEnter the option number: '))))
+
+	if not val.isdigit() or val not in l:
+		print_text("Invalid response.")
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os._exit(0)
+	if val == '1':
+		ami_id = 'ami-bd01cbdd'
+
+	return ami_id
+
+def get_instance_type_val():
+	l = ['1','2','3']
+	try:
+		cl.out(cl.blue(cl.bold('\nInstance Type: ')))
+		cl.out(cl.blue('\n\t 1. t2.micro'))
+		cl.out(cl.blue('\n\t 2. c4.large'))
+		cl.out(cl.blue('\n\t 3. c3.large'))
+		val = str(raw_input(cl.blue(cl.bold('\nEnter the option number: '))))
+	except NameError:
+		val = str(input(cl.blue(cl.bold('\nEnter the option number: '))))
+
+	if not val.isdigit() or val not in l:
+		print_text("Invalid response.")
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os._exit(0)
+	if val == '1':
+		instance_type = 't2.micro'
+	elif val == '2':
+		instance_type = 'c4.large'
+	elif val == '3':
+		instance_type = 'c3.large'
+	return instance_type
+
+def get_region_val():
+	l = ['1']
+	try:
+		cl.out(cl.blue(cl.bold('\nRegion: ')))
+		cl.out(cl.blue('\n\t 1. us-west-2'))
+		val = str(raw_input(cl.blue(cl.bold('\nEnter the option number: '))))
+	except NameError:
+		val = str(input(cl.blue(cl.bold('\nEnter the option number: '))))
+
+	if not val.isdigit() or val not in l:
+		print_text("Invalid response.")
+		try:
+			sys.exit(0)
+		except SystemExit:
+			os._exit(0)
+	if val == '1':
+		region = 'us-west-2'
+
+	return region
+
+def get_cloud_data():
+	cloud_data = {}
+	cloud_data['ami_id'] = get_ami_val()
+	cloud_data['instance_type'] = get_instance_type_val()
+	cloud_data['region'] = get_region_val()
 	return cloud_data
 
 def get_user_choice():

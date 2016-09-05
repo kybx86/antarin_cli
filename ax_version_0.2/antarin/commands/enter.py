@@ -12,7 +12,12 @@ class Enter(Base):
 		message = payload[1]['message']
 		if payload[0]:
 			if argument == 'folder':
-				self.config.update_config_dir(message)
+				if self.config.file_system_env():
+					self.config.update_config_dir(message)
+				if self.config.space_env():
+					self.config.update_space_dir(message)
+				if self.config.cloud_env():
+					self.config.update_cloud_dir(message)
 			if argument == 'space':
 				self.config.update_config_space(message)
 				iocalls.print_enter(message, argument)
@@ -31,11 +36,12 @@ class Enter(Base):
 			argument = argument.strip()
 			
 			if argument == 'folder':
-				if self.config.file_system_env():
-					value = self.option_dict['<name>']
-				else:
-					iocalls.print_not_valid_argument()
-					self.system_exit()
+				value = self.option_dict['<name>']
+				# if self.config.file_system_env():
+				# 	value = self.option_dict['<name>']
+				# else:
+				# 	iocalls.print_not_valid_argument()
+				# 	self.system_exit()
 
 			else:
 				if (argument == 'space' and self.config.file_system_env()) or (argument == 'cloud' and self.config.space_env()): 

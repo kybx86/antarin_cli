@@ -11,7 +11,11 @@ class New(Base):
 		message = payload[1]['message']
 		if payload[0]:
 			text = 'Created ' + argument
-			iocalls.print_text(text + ': ' + value)
+			if argument == 'folder':
+				iocalls.print_text(text + ': ' + value)
+			else:
+				access_key = payload[1]['message']['access_key']
+				iocalls.print_text(text + ': ' + value + ' with ID: '+ str(access_key))
 		else:
 			iocalls.print_text(message)
 

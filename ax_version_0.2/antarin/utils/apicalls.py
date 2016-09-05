@@ -34,7 +34,7 @@ def api_send_request(api_endpoint,method=None,config_data=None,file=None):
 		sys.exit(1)
 
 	message = json.loads(connection.text)
-	#print(message)
+
 	if str(connection.status_code)[0] == '2': # --success
 		return True,message
 	elif str(connection.status_code)[0] == '4': # --failure

@@ -104,8 +104,10 @@ class Config(cparser.SafeConfigParser):
 		self.write_to_config('id','')
 		self.write_to_config('space','')
 		self.write_to_config('spacename','')
+		self.write_to_config('spacedir_id','')
 		self.write_to_config('cloud','')
 		self.write_to_config('cloud_id','')
+		self.write_to_config('clouddir_id','')
 
 	def update(self,username,token):
 		self.write_to_config('username',username)
@@ -129,8 +131,17 @@ class Config(cparser.SafeConfigParser):
 		self.write_to_config('space','1')
 		self.write_to_config('spacename',spacename)
 
-	def update_config_cloud(self,message):
+	def update_space_dir(self,message):
+		message = json.loads(message)
+		dir_val = message['dir_val']
+		self.write_to_config('spacedir_id',str(dir_val))
 
+	def update_cloud_dir(self,message):
+		message = json.loads(message)
+		dir_val = message['dir_val']
+		self.write_to_config('clouddir_id',str(dir_val))
+
+	def update_config_cloud(self,message):
 		cloud_id = message['id']
 		self.write_to_config('cloud','1')
 		self.write_to_config('cloud_id',str(cloud_id))
@@ -138,11 +149,14 @@ class Config(cparser.SafeConfigParser):
 	def quit_space(self):
 		self.write_to_config('space','0')
 		self.write_to_config('spacename','')
+		self.write_to_config('spacedir_id','')
 		self.write_to_config('cloud','0')
 		self.write_to_config('cloud_id','')
+		self.write_to_config('clouddir_id','')
 
 	def quit_cloud(self):
 		self.write_to_config('cloud','0')
 		self.write_to_config('cloud_id','')
+		self.write_to_config('clouddir_id','')
 
 

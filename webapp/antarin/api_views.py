@@ -15,6 +15,7 @@ from fabric.exceptions import NetworkError
 from fabric.state import connections
 from antarin import api_exceptions
 from antarin.models import *
+from django.db import IntegrityError
 
 #S3 Bucket details
 conn = S3Connection(settings.AWS_ACCESS_KEY_ID , settings.AWS_SECRET_ACCESS_KEY)
@@ -149,7 +150,8 @@ class NewView(APIView):
 		new_projectlogs_object = AntarinProjectLogs(user=user_object.user,project=project_object,action=user_object.user.username + ' created cloud '+ new_cloud_object.cloud_name)
 		new_projectlogs_object.save()
 
-		message={'message':'New cloud details were recorded','access_key':new_cloud_object.access_key,'status_code':200}
+		data = {'access_key':new_cloud_object.access_key}
+		message={'message':data,'status_code':200}
 		return message
 
 	def post(self,request):
@@ -503,7 +505,7 @@ class SeeView(APIView):
 
 		return message
 
-	def show_files(user_object,env,spacename,cloud_id,dir_id):
+	def show_files(user_object,env,spacename,cloud_id,dir_id,spacedir_id,clouddir_id):
 
 		if env == 'filesystem':
 			pk = dir_id
@@ -529,14 +531,23 @@ class SeeView(APIView):
 				list_val=[]
 				projectname = spacename
 				project_object = AntarinProjects.objects.get(name=projectname)
-				all_projectfiles = project_object.project.all()
-				all_projectfolders = project_object.project_ref.all()
+				if spacedir_id == '':
+					all_projectfiles = project_object.project.all()
+					all_projectfolders = project_object.project_ref.all()
 
-				for item in all_projectfiles:
-					list_val.append(os.path.basename(item.file_ref.file.name))
+					for item in all_projectfiles:
+						list_val.append(os.path.basename(item.file_ref.file.name))
 
-				for item in all_projectfolders:
-					list_val.append("/"+item.folder_ref.name)
+					for item in all_projectfolders:
+						list_val.append("/"+item.folder_ref.name)
+					
+				else:
+					folder_object = AntarinFolders.objects.get(pk=int(spacedir_id))
+					for item in folder_object.parent_folder_reference.all():
+						list_val.append("/"+item.name)
+						
+					for item in folder_object.parent_folder_ref.all():
+						list_val.append(os.path.basename(item.file.name))
 				
 				message = {'message':list_val,'status_code':200}
 
@@ -549,8 +560,16 @@ class SeeView(APIView):
 			all_cloud_folders = antarin_cloud_object.cloud_ref.all()
 
 			list_val = []
-			for item in all_cloud_folders:
-				list_val.append("/" + item.folder_ref.name)
+			if clouddir_id == '':
+				for item in all_cloud_folders:
+					list_val.append("/" + item.folder_ref.name)
+			else:
+				folder_object = AntarinFolders.objects.get(pk=int(clouddir_id))
+				for item in folder_object.parent_folder_reference.all():
+					list_val.append("/"+item.name)
+					
+				for item in folder_object.parent_folder_ref.all():
+					list_val.append(os.path.basename(item.file.name))
 
 			message = {'message':list_val, 'status_code':200}
 
@@ -597,7 +616,9 @@ class SeeView(APIView):
 				if argument == 'summary':	
 					return_val = SeeView.show_summary(user_object,env,spacename,cloud_id)
 				if argument == 'files':
-					return_val = SeeView.show_files(user_object,env,spacename,cloud_id,dir_id)
+					spacedir_id = self.request.data['spacedir_id']
+					clouddir_id = self.request.data['clouddir_id']
+					return_val = SeeView.show_files(user_object,env,spacename,cloud_id,dir_id,spacedir_id,clouddir_id)
 
 				message = {'message':return_val['message']}
 				
@@ -677,6 +698,102 @@ class EnterView(APIView):
 					message = api_exceptions.folder_DoesNotExist()
 		return message
 
+	def enter_folder_space(user_object,argval,spacedir_id,spacename):
+		foldername = argval
+		pk = spacedir_id
+		project_object = AntarinProjects.objects.get(name=spacename)
+		if foldername == '..':
+			if pk == '':
+				data = {'dir_val':''}
+			else:
+				folder_object = AntarinFolders.objects.get(pk=int(pk))
+				if folder_object.parentfolder is not None:
+					return_id = folder_object.parentfolder.pk
+				else:
+					return_id = ''
+				data = {'dir_val':return_id}
+			message = {'message':json.dumps(data),'status_code':200}
+		else:
+			found = False
+			if pk == '':
+				project_folders = project_object.project_ref.all()
+				for item in project_folders:
+					if item.folder_ref.name == foldername:
+						found = True
+						project_folder_object = item
+						break
+				if found:
+					antarin_folder_object = project_folder_object.folder_ref
+					return_id = antarin_folder_object.pk
+					data = {'dir_val':return_id}
+					message = {'message':json.dumps(data),'status_code':200}
+				else:
+					message = api_exceptions.folder_DoesNotExist()
+			else:
+				folder_object = AntarinFolders.objects.get(pk=int(pk))
+				all_folders_inside_currdir = folder_object.parent_folder_reference.all()
+				for item in all_folders_inside_currdir:
+					if item.name == foldername:
+						found = True
+						return_folder_object = item
+						break
+				if found:
+					return_id = return_folder_object.pk
+					data = {'dir_val':return_id}
+					message = {'message':json.dumps(data),'status_code':200}
+				else:
+					message = api_exceptions.folder_DoesNotExist()
+				
+		return message
+
+	def enter_folder_cloud(user_object,argval,clouddir_id,spacename,cloud_id):
+		foldername = argval
+		pk = clouddir_id
+		cloud_object = AntarinProjectClouds.objects.get(pk=int(cloud_id))
+		if foldername == '..':
+			if pk == '':
+				data = {'dir_val':''}
+			else:
+				folder_object = AntarinFolders.objects.get(pk=int(pk))
+				if folder_object.parentfolder is not None:
+					return_id = folder_object.parentfolder.pk
+				else:
+					return_id = ''
+				data = {'dir_val':return_id}
+			message = {'message':json.dumps(data),'status_code':200}
+		else:
+			found = False
+			if pk == '':
+				cloud_folders = cloud_object.cloud_ref.all()
+				for item in cloud_folders:
+					if item.folder_ref.name == foldername:
+						found = True
+						cloud_folder_object = item
+						break
+				if found:
+					antarin_folder_object = cloud_folder_object.folder_ref
+					return_id = antarin_folder_object.pk
+					data = {'dir_val':return_id}
+					message = {'message':json.dumps(data),'status_code':200}
+				else:
+					message = api_exceptions.folder_DoesNotExist()
+			else:
+				folder_object = AntarinFolders.objects.get(pk=int(pk))
+				all_folders_inside_currdir = folder_object.parent_folder_reference.all()
+				for item in all_folders_inside_currdir:
+					if item.name == foldername:
+						found = True
+						return_folder_object = item
+						break
+				if found:
+					return_id = return_folder_object.pk
+					data = {'dir_val':return_id}
+					message = {'message':json.dumps(data),'status_code':200}
+				else:
+					message = api_exceptions.folder_DoesNotExist()
+				
+		return message
+
 	def enter_project(user_object,spacename,access_key):
 		projectid = int(access_key)
 		project_flag=0
@@ -710,11 +827,22 @@ class EnterView(APIView):
 		token = self.request.data['token']
 		argument = self.request.data['argument'].strip()
 		argval = self.request.data['argval'].strip()
+		env = self.request.data['env'].strip()
 		try:
 			user_object = Token.objects.get(key=token)
 			if argument == 'folder':
-				dir_id = self.request.data['id']
-				return_val = EnterView.enter_folder(user_object,argval,dir_id)
+				if env == 'filesystem':
+					dir_id = self.request.data['id']
+					return_val = EnterView.enter_folder(user_object,argval,dir_id)
+				if env == 'space':
+					spacedir_id = self.request.data['spacedir_id']
+					spacename = self.request.data['spacename'].strip()
+					return_val = EnterView.enter_folder_space(user_object,argval,spacedir_id,spacename)
+				if env == 'cloud':
+					clouddir_id = self.request.data['clouddir_id']
+					cloud_id = self.request.data['cloud_id']
+					spacename = self.request.data['spacename'].strip()
+					return_val = EnterView.enter_folder_cloud(user_object,argval,clouddir_id,spacename,cloud_id)
 				message = {'message':return_val['message']}
 				print(message)
 				if return_val['status_code'] == 200:
@@ -1566,7 +1694,7 @@ class RunView(APIView):
 				if value.stderr != "":
 					output_text = "Error while executing command %s : %s" %(command, value.stderr)
 					break
-				output.append(run(command))
+				output.append(value)
 		finally:
 			print("disconenct worked")
 			disconnect_all()
@@ -1631,7 +1759,7 @@ class RunView(APIView):
 					commands.append(shell_command)
 					#host = list(instance_object.dns_name)
 					output = execute(RunView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
-					print(output)
+					#print(output)
 					output_text = output[cloud_object.dns_name]
 					for item in output_text:
 						print(item)
@@ -1887,23 +2015,43 @@ class DownloadView(APIView):
 				#look for filename in projectfiles
 				spacename = self.request.data['spacename'].strip()
 				project_object = AntarinProjects.objects.get(name=spacename)
-				all_project_files = project_object.project.all()
-				for item in all_project_files:
-					if os.path.basename(item.file_ref.file.name) == argval:
-						file_object = item.file_ref
-						found = True
-						break
+				spacedir_id = self.request.data['spacedir_id']
+				if spacedir_id == '':
+					all_project_files = project_object.project.all()
+					for item in all_project_files:
+						if os.path.basename(item.file_ref.file.name) == argval:
+							file_object = item.file_ref
+							found = True
+							break
+				else:
+					folder_object = AntarinFolders.objects.get(pk=int(spacedir_id))
+					all_files = folder_object.parent_folder_ref.all()
+					for item in all_files:
+						if os.path.basename(item.file.name) == argval:
+							file_object = item
+							found = True
+							break
 
 			elif env == 'cloud':
 				#look for filename in cloudfiles
 				cloud_id = self.request.data['cloud_id']
 				cloud_object = AntarinProjectClouds.objects.get(pk=int(cloud_id))
-				all_cloud_files = cloud_object.cloud.all()
-				for item in all_cloud_files:
-					if os.path.basename(item.file_ref.file.name) == argval:
-						file_object = item.file_ref
-						found = True
-						break
+				clouddir_id = self.request.data['clouddir_id']
+				if clouddir_id == '':
+					all_cloud_files = cloud_object.cloud.all()
+					for item in all_cloud_files:
+						if os.path.basename(item.file_ref.file.name) == argval:
+							file_object = item.file_ref
+							found = True
+							break
+				else:
+					folder_object = AntarinFolders.objects.get(pk=int(clouddir_id))
+					all_files = folder_object.parent_folder_ref.all()
+					for item in all_files:
+						if os.path.basename(item.file.name) == argval:
+							file_object = item
+							found = True
+							break
 			
 			if not found:
 				message = api_exceptions.file_DoesNotExist()

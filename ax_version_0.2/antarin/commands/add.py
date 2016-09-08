@@ -14,20 +14,14 @@ class Add(Base):
 			if argument == 'contributor':
 				text = 'Added ' + value + ' as contributor to this space.'
 			elif argument == '-i':
-				text = 'Added ' + value + ' to this space.'
-			elif argument[0:2] == '--':
-				if value:
-					text = 'Added ' + value + ' to this cloud.'
-				else:
-					text = 'Added package to this cloud.'
+				text = 'Added ' + value 
 			iocalls.print_text(text)
 		else:
 			iocalls.print_text(message['message'])
 
 	def check_env_argument(self,argument):
-		if (argument=='-i' and self.config.space_env()) or \
-		(argument=='contributor' and self.config.space_env()) or\
-		(argument[0:2] == '--' and self.config.cloud_env()):
+		if (argument=='-i' and (self.config.space_env() or self.config.cloud_env())) or \
+		(argument=='contributor' and self.config.space_env()):
 			return True
 		else:
 			return False
@@ -39,22 +33,17 @@ class Add(Base):
 		if config.auth():
 			argument = self.get_arguments()[0]
 			if not self.config.file_system_env() and Add.check_env_argument(self,argument):
-				if argument == 'contributor' or argument == '-i':
-					if argument == 'contributor':
-						value = self.option_dict['<username>']
-					if argument == '-i':
-						value = self.option_dict['<item>']
-						if value.startswith('~antarin'):
-							payload = self.send_request(self.endpoint,argument,value)
-							self.response_handler(payload,argument,value)
-						else:
-							iocalls.print_not_absolute_path()
-				if argument[0:2] == '--':
-					packagename =  self.option_dict['<packagename>']
-					value = None
-					if '<item>' in self.option_dict:
-						value = self.option_dict['<item>']
-					payload = self.send_request(self.endpoint,argument,value,None,None,packagename)
+				if argument == 'contributor':
+					value = self.option_dict['<username>']
+					payload = self.send_request(self.endpoint,argument,value)
 					self.response_handler(payload,argument,value)
+				
+				if argument == '-i':
+					value = self.option_dict['<item>']
+					if value.startswith('~antarin') or value.startswith('~space'):
+						payload = self.send_request(self.endpoint,argument,value)
+						self.response_handler(payload,argument,value)
+					else:
+						iocalls.print_not_absolute_path()
 			else:
 				iocalls.print_not_valid_argument()

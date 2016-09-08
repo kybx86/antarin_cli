@@ -49,7 +49,14 @@ def print_specify_accesskey():
 def print_not_valid_shell_command():
 	message = 'Error: Not a valid shell command. Please make sure its in the format "python <file_path>"'
 	print_text(message)
-	
+
+def print_run_output(message):
+	if type(message) is list:
+		for item in message:
+			print_text(item)
+	else:
+		print_text(message)
+
 def print_login(message, token):
 
 	cl.out(cl.blue('\nantarinX login succesful!'))

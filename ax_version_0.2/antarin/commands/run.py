@@ -7,7 +7,8 @@ from ..utils import apicalls,iocalls
 class Run(Base):
 
 	def response_handler(self,payload):
-		print(payload[1])
+		message = payload[1]['message']
+		iocalls.print_run_output(message)
 
 	def run(self):
 		config = self.config
@@ -24,7 +25,7 @@ class Run(Base):
 				if not shell_command.startswith('python'):
 					iocalls.print_not_valid_shell_command()
 					self.system_exit()
-					
+
 				if config.space_env(): 	
 					if self.option_dict['<id>']:
 						if self.option_dict['<id>'].isdigit():

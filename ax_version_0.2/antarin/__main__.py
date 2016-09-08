@@ -9,9 +9,9 @@ Usage:
 	ax new (folder|space|cloud) <name>
 	ax upload <item>
 	ax download <filename>
-	ax add (--env <packagename> |(--data|--code) <packagename> <item> | -i <item> | contributor <username>)
+	ax add ( -i <item> | contributor <username>)
 	ax exit [space|cloud]
-	ax initialize <packagename>... [--cloud=<id>]
+	ax initialize <packagename> [--cloud=<id>]
 	ax run <shell_command> <packagename> [<id>]
 	ax clone <id>
 	ax merge <source_id> <destination_id>

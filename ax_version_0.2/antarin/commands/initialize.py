@@ -8,7 +8,8 @@ from ..utils import apicalls,iocalls
 class Initialize(Base):
 
 	def response_handler(self,payload):
-		print(payload[1])
+		message = payload[1]['message']
+		iocalls.print_text(message)
 
 	def run(self):
 		config = self.config
@@ -20,7 +21,7 @@ class Initialize(Base):
 				self.system_exit()
 			else:
 				accesskey = None
-				packages = self.option_dict['<packagename>'] #returns a list
+				package = self.option_dict['<packagename>']
 				if config.space_env(): 	
 					if self.option_dict['--cloud']:
 						if self.option_dict['--cloud'].isdigit():
@@ -31,6 +32,6 @@ class Initialize(Base):
 					else:
 						iocalls.print_specify_accesskey()
 						self.system_exit()
-				payload = self.send_request(self.endpoint,None,accesskey,None,None,None,None,packages)
+				payload = self.send_request(self.endpoint,None,accesskey,None,None,package)
 				self.response_handler(payload)
 			

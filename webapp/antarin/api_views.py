@@ -1,5 +1,5 @@
 import hashlib,random,json,boto,os
-import boto3,sys,time
+import boto3,sys,time,copy
 from django.utils import timezone
 from django.conf import settings
 from hurry.filesize import size
@@ -47,46 +47,44 @@ class NewView(APIView):
 	def new_folder(user_object,value,id_val):
 		pk = id_val
 		foldername = value
-		if pk != "":
-			user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-			antarin_folder_object = user_folder_object.folder_ref
-		else:
-			antarin_folder_object = None
 
-		all_user_folders = user_object.user.user_folders.all()
-		#all_files_in_currdir = user_object.user.all_antarin_files.filter(folder=antarin_folder_object)
-		
-		dup_name_flag = 0
-		for item in all_user_folders:
-			if item.folder_ref.parentfolder==antarin_folder_object and item.folder_ref.name == foldername:
-				dup_name_flag = 1
+		if pk != "":
+			folder_object = user_object.user.user_folders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+		dup_name_flag = False
+		all_folders_inside_currdir = user_object.user.user_folders.filter(parentfolder=folder_object)
+		for  item in all_folders_inside_currdir:
+			if item.foldername == foldername:
+				dup_name_flag = True
 				break
 		if dup_name_flag:
 			message = api_exceptions.folder_exists()
 			return message
-
-		new_antarin_folder_object = AntarinFolders(user=user_object.user,name=foldername,parentfolder=antarin_folder_object)
-		new_antarin_folder_object.save()
-		new_user_folder_object = UserFolders(user=user_object.user,folder_ref=new_antarin_folder_object)
-		new_user_folder_object.save()
-		data = {'id':new_user_folder_object.pk}
-		print(data)
-		message = {'message':json.dumps(data),'status_code':200}		
+		
+		new_folder_object = UserFolders(user=user_object.user,foldername=foldername,parentfolder=folder_object)
+		new_folder_object.save()
+		
+		data = {'id':new_folder_object.pk}
+		message = {'message':json.dumps(data),'status_code':200}	
+		print(message)	
 		return message
 
+
 	def new_project(user_object,argval):
-		projectname = argval
+		spacename = argval
 		try:
-			projectname = user_object.user.username + ':' + projectname
+			spacename = user_object.user.username + ':' + spacename
 			
 			#create project object
-			new_project_object = AntarinProjects(name=projectname)
-			new_project_object.save()
+			new_space_object = AntarinSpaces(name=spacename)
+			new_space_object.save()
 			
 			#generate accesskey
-			all_user_projects = user_object.user.user_projects.all()
+			all_user_spaces = user_object.user.user_spaces.all()
 			accesskey_list = []
-			for item in all_user_projects:
+			for item in all_user_spaces:
 				accesskey_list.append(item.access_key)
 
 			num = NewView.generate_rand(3)
@@ -96,32 +94,32 @@ class NewView(APIView):
 			access_key = num
 
 			#create userprojects object
-			new_userprojects_object = UserProjects(user=user_object.user,project=new_project_object,status='A',access_key=access_key)
-			new_userprojects_object.save()
+			new_userspaces_object = UserSpaces(user=user_object.user,space=new_space_object,status='A',access_key=access_key)
+			new_userspaces_object.save()
 			
 			#add to logs
-			new_projectlogs_object = AntarinProjectLogs(user=user_object.user,project=new_project_object,action=user_object.user.username + ' created '+ projectname)
-			new_projectlogs_object.save()
+			new_spacelog_object = AntarinSpaceLogs(user=user_object.user,space=new_space_object,action=user_object.user.username + ' created '+ spacename)
+			new_spacelog_object.save()
 			
-			data = {'projectname':new_project_object.name,'access_key':access_key}
+			data = {'spacename':new_space_object.name,'access_key':access_key}
 			message = {'message':data,'status_code':200}
 			return message
+		
 		except IntegrityError:
 			message = api_exceptions.project_exists()
 			return message
 		
 
 	def new_cloud(user_object,spacename,argval,ami_id,instance_type,region):
-		projectname = spacename
 		instance_name = argval
 
-		project_object = AntarinProjects.objects.get(name=projectname)
-		all_project_clouds = project_object.project_clouds.all()
+		space_object = AntarinSpaces.objects.get(name=spacename)
+		all_space_clouds = space_object.space_clouds.all()
 		
-		dup_name_flag = 0
-		for  item in all_project_clouds:
+		dup_name_flag = False
+		for  item in all_space_clouds:
 			if item.cloud_name == instance_name:
-				dup_name_flag = 1
+				dup_name_flag = True
 				break
 				print("duplicate names")
 		
@@ -130,7 +128,7 @@ class NewView(APIView):
 			return message
 
 		accesskey_list = []
-		for item in all_project_clouds:
+		for item in all_space_clouds:
 			accesskey_list.append(item.access_key)
 
 		num = NewView.generate_rand(3)
@@ -140,15 +138,11 @@ class NewView(APIView):
 		access_key = num
 		print(access_key)
 
-		new_cloud_object = AntarinProjectClouds(project=project_object,cloud_name=instance_name,ami_id=ami_id,region=region,instance_type=instance_type,access_key=access_key)
-		#new_instances_object = UserInstances(user=user_object.user,project=project_object,instance_name=instance_name,ami_id=ami_id,region=region,instance_type=instance_type,access_key=access_key)
+		new_cloud_object = AntarinClouds(user=user_object.user,space=space_object,cloud_name=instance_name,ami_id=ami_id,region=region,instance_type=instance_type,access_key=access_key)
 		new_cloud_object.save()
 
-		new_user_cloud_object = UserClouds(user=user_object.user,cloud=new_cloud_object)
-		new_user_cloud_object.save()
-
-		new_projectlogs_object = AntarinProjectLogs(user=user_object.user,project=project_object,action=user_object.user.username + ' created cloud '+ new_cloud_object.cloud_name)
-		new_projectlogs_object.save()
+		new_spacelogs_object = AntarinSpaceLogs(user=user_object.user,space=space_object,action=user_object.user.username + ' created cloud '+ new_cloud_object.cloud_name)
+		new_spacelogs_object.save()
 
 		data = {'access_key':new_cloud_object.access_key}
 		message={'message':data,'status_code':200}
@@ -188,49 +182,46 @@ class NewView(APIView):
 class UploadView(APIView):
 
 	def calculate_used_data_storage(all_files):
-		#print(all_files)
 		total_val = 0
 		for file in all_files:
-			total_val = total_val + file.file.size
+			total_val = total_val + file.file_ref.file.size
 		return size(total_val)
 
 	def add_file(user_object,file_object,filename,id_val):
+
 		pk = id_val
 
 		filename = os.path.basename(filename)
-		if pk != "":
-			user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-			antarin_folder_object = user_folder_object.folder_ref
-		else:
-			antarin_folder_object = None
 
-		all_user_files = user_object.user.user_files.all()
-		#all_files_in_currdir = user_object.user.all_antarin_files.filter(folder=antarin_folder_object)
+		if pk!="":
+			folder_object = user_object.user.user_folders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+		all_files_in_currdir = user_object.user.user_files.filter(parentfolder=folder_object)
 		
-		dup_name_flag = 0
-		for item in all_user_files:
-			if item.file_ref.folder==antarin_folder_object and os.path.basename(item.file_ref.file.file.name) == filename:
-				dup_name_flag = 1
+		dup_name_flag = False
+		for item in all_files_in_currdir:
+			if os.path.basename(item.file_ref.file.file.name) == filename:
+				dup_name_flag = True
 				break
+
 		if dup_name_flag:
 			message = api_exceptions.file_exists()
 			return message
 
-		antarin_files = AntarinFiles()
-		antarin_files.user = user_object.user
-		antarin_files.file = file_object
-		antarin_files.file.name = filename
-		antarin_files.folder = antarin_folder_object
+		antarin_file_object = AntarinFiles(file=file_object)
+		antarin_file_object.save()
+
+		user_files_object = UserFiles(user=user_object.user,file_ref=antarin_file_object,parentfolder=folder_object)
+		user_files_object.save()
 		
-		all_files = user_object.user.all_antarin_files.all()
+		all_files = user_object.user.user_files.all()
 		used_data_storage = UploadView.calculate_used_data_storage(all_files)
 		user_object.user.userprofile.data_storage_used = str(used_data_storage)
 		user_object.user.save()
 		user_object.user.userprofile.save()
-		antarin_files.save()
 		
-		user_files_object = UserFiles(user=user_object.user,file_ref=antarin_files)
-		user_files_object.save()
 		#catch error when save didn't work fine and return status 400
 		print("\n")
 		message = {'message':"File upload successful.",'status_code':200}
@@ -241,53 +232,47 @@ class UploadView(APIView):
 		pk = id_val
 		
 		filename = os.path.basename(filename)
-		if pk != "":
-			user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-			antarin_folder_object = user_folder_object.folder_ref
-		else:
-			
-			antarin_folder_object = None
 
-		antarin_files = AntarinFiles()
-		antarin_files.user = user_object.user
-		antarin_files.file = file_object
-		antarin_files.file.name = filename
-		antarin_files.folder = antarin_folder_object
+		if pk!="":
+			folder_object = user_object.user.user_folders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+		antarin_file_object = AntarinFiles(file=file_object)
+		antarin_file_object.save()
+
+		user_files_object = UserFiles(user=user_object.user,file_ref=antarin_file_object,parentfolder=folder_object)
+		user_files_object.save()
 		
-		all_files = user_object.user.all_antarin_files.all()
+		all_files = user_object.user.user_files.all()
 		used_data_storage = UploadView.calculate_used_data_storage(all_files)
 		user_object.user.userprofile.data_storage_used = str(used_data_storage)
 		user_object.user.save()
 		user_object.user.userprofile.save()
-		antarin_files.save()
-		
-		user_files_object = UserFiles(user=user_object.user,file_ref=antarin_files)
-		user_files_object.save()
 		#catch error when save didn't work fine and return status 400
 		print("\n")
 		message = {'message':"File upload successful.",'status_code':200}
 		return message
 
 	def get_parentdir_id(user_object,parentpath,id_val):
+		
 		if parentpath[0] == '/':
 			parentpath = parentpath[1:]
 		l = parentpath.split('/')
+		
 		if id_val:
 			id_val = int(id_val)
 			for item in l:
-				user_folder_object = user_object.user.user_folders.get(pk=int(id_val))
-				antarin_folder_object = user_folder_object.folder_ref
-				next_folder_object = antarin_folder_object.parent_folder_reference.get(name=item)
-				id_val = user_object.user.user_folders.get(folder_ref=next_folder_object).pk
-				#id_val = next_folder_object.pk
+				folder_object = user_object.user.user_folders.get(pk=id_val)
+				next_folder_object = folder_object.all_folders.get(foldername=item)
+				id_val = next_folder_object.pk
 		else:
-			antarin_folder_object = AntarinFolders.objects.get(user=user_object.user,name=l[0],parentfolder=None)
-			id_val = user_object.user.user_folders.get(folder_ref=antarin_folder_object).pk
+			folder_object = user_object.user.user_folders.get(name=l[0],parentfolder=None)
+			id_val = folder_object.pk
 			for item in l[1:]:
-				next_folder_object = antarin_folder_object.parent_folder_reference.get(name=item)
-				id_val = user_object.user.user_folders.get(folder_ref=next_folder_object).pk
-				user_folder_object = user_object.user.user_folders.get(pk=id_val)
-				antarin_folder_object = user_folder_object.folder_ref
+				next_folder_object = folder_object.all_folders.get(foldername=item)
+				id_val = next_folder_object.pk
+				folder_object = user_object.user.user_folders.get(pk=id_val)
 
 		return str(id_val)
 
@@ -296,19 +281,18 @@ class UploadView(APIView):
 
 		if not parentdir:
 			if pk != "":
-				user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-				antarin_folder_object = user_folder_object.folder_ref
+				folder_object = user_object.user.user_folders.get(pk=int(pk))
 			else:
-				antarin_folder_object = None
+				folder_object = None
 
-			all_user_folders = user_object.user.user_folders.all()
-			#all_files_in_currdir = user_object.user.all_antarin_files.filter(folder=antarin_folder_object)
-			
-			dup_name_flag = 0
-			for item in all_user_folders:
-				if item.folder_ref.parentfolder==antarin_folder_object and item.folder_ref.name == foldername:
-					dup_name_flag = 1
+			dup_name_flag = False
+			all_folders_inside_currdir = user_object.user.user_folders.filter(parentfolder=folder_object)
+			for  item in all_folders_inside_currdir:
+				if item.foldername == foldername:
+					dup_name_flag = True
 					break
+					print("duplicate names")
+			
 			if dup_name_flag:
 				message = api_exceptions.folder_exists()
 				return message
@@ -316,18 +300,13 @@ class UploadView(APIView):
 		if parentdir:
 			print(parentdir)
 			value = UploadView.get_parentdir_id(user_object,parentdir,id_val)
-			user_folder_object = user_object.user.user_folders.get(pk=int(value))
-			antarin_folder_object = user_folder_object.folder_ref
+			print('value = '+value)
+			folder_object = user_object.user.user_folders.get(pk=int(value))
 
-		new_antarin_folder_object = AntarinFolders(user=user_object.user,name=foldername,parentfolder=antarin_folder_object)
-		new_antarin_folder_object.save()
-		new_user_folder_object = UserFolders(user=user_object.user,folder_ref=new_antarin_folder_object)
-		new_user_folder_object.save()
-
-		print(new_antarin_folder_object.pk,new_user_folder_object.pk,new_user_folder_object.folder_ref)
-
-		data = {'id':new_user_folder_object.pk}
-		print(data)
+		new_folder_object = UserFolders(user=user_object.user,foldername=foldername,parentfolder=folder_object)
+		new_folder_object.save()
+		
+		data = {'id':new_folder_object.pk}
 		message = {'message':data,'status_code':200}		
 		return message
 
@@ -391,44 +370,93 @@ class UploadView(APIView):
 class SeeView(APIView):
 	def list_all_spaces(user_object):
 		return_val = []
-		all_user_projects = user_object.user.user_projects.all()
-		#print(all_user_projects)
-		for project in all_user_projects:
-			if project.status == 'A':
+		all_user_spaces = user_object.user.user_spaces.all()
+		for space in all_user_spaces:
+			if space.status == 'A':
 				status = 'Admin'
 			else:
 				status = 'Contributor'
-			return_val.append(project.project.name+"\t"+status+"\t"+str(project.access_key))
+			return_val.append(space.space.name+"\t"+status+"\t"+str(space.access_key))
 		return return_val
 
-	def show_current_directory(user_object,id_val):
-		pk = id_val
-		return_val = '~antarin'
-		if pk != "":
-			path_val = []
-			string_val = ""
-			user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-			antarin_folder_object = user_folder_object.folder_ref
-			#folder_object = user_object.user.userfolders.get(pk=int(pk))
-			while antarin_folder_object.parentfolder is not None:
-				path_val.append(antarin_folder_object.name)
-				antarin_folder_object = antarin_folder_object.parentfolder
-			path_val.append(antarin_folder_object.name)
-			for i in range(len(path_val)-1,-1,-1):
-				string_val = string_val + "/" + path_val[i]
+	def show_current_directory(user_object,id_val,env,spacename,cloud_id,spacedir_id,clouddir_id):
+		if env == 'filesystem':
+			pk = id_val
+			return_val = '~antarin'
 			
-			return_val = return_val + string_val
-			return_val = return_val.strip('"')
+			if pk != "":
+				path_val = []
+				string_val = ""
+				folder_object = user_object.user.user_folders.get(pk=int(pk))
+				
+				while folder_object.parentfolder is not None:
+					path_val.append(folder_object.foldername)
+					folder_object = folder_object.parentfolder
+				
+				path_val.append(folder_object.foldername)
+				
+				for i in range(len(path_val)-1,-1,-1):
+					string_val = string_val + "/" + path_val[i]
+				
+				return_val = return_val + string_val
+				return_val = return_val.strip('"')
+		
+		if env == 'space':
+			pk = spacedir_id
+			return_val = '~space'
+
+			space_object = AntarinSpaces.objects.get(name=spacename)
+
+			if pk != "":
+				path_val = []
+				string_val = ""
+				folder_object = space_object.space_folders.get(pk=int(pk))
+				
+				while folder_object.parentfolder is not None:
+					path_val.append(folder_object.foldername)
+					folder_object = folder_object.parentfolder
+				
+				path_val.append(folder_object.foldername)
+				
+				for i in range(len(path_val)-1,-1,-1):
+					string_val = string_val + "/" + path_val[i]
+				
+				return_val = return_val + string_val
+				return_val = return_val.strip('"')
+
+
+		if env == 'cloud':
+			pk = clouddir_id
+			return_val = '~cloud'
+
+			cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
+
+			if pk != "":
+				path_val = []
+				string_val = ""
+				folder_object = cloud_object.cloud_folders.get(pk=int(pk))
+				
+				while folder_object.parentfolder is not None:
+					path_val.append(folder_object.foldername)
+					folder_object = folder_object.parentfolder
+				
+				path_val.append(folder_object.foldername)
+				
+				for i in range(len(path_val)-1,-1,-1):
+					string_val = string_val + "/" + path_val[i]
+				
+				return_val = return_val + string_val
+				return_val = return_val.strip('"')
+
 		return return_val
 
 	def show_project_log(user_object,spacename):
-		projectname = spacename
 		try:
-			project_object = AntarinProjects.objects.get(name=projectname)
-			all_logs = AntarinProjectLogs.objects.filter(project=project_object)
+			space_object = AntarinSpaces.objects.get(name=spacename)
+			all_log = AntarinSpaceLogs.objects.filter(space=space_object)
 			return_val = []
 			
-			for item in all_logs:
+			for item in all_log:
 				logs = []
 				logs.append(item.timestamp.strftime("[%d/%B/%Y %H:%M:%S]"))
 				logs.append(item.action)
@@ -436,25 +464,25 @@ class SeeView(APIView):
 			
 			message = {'message': return_val,'status_code':200}
 
-		except Projects.DoesNotExist:
+		except AntarinSpaces.DoesNotExist:
 			message = api_exceptions.project_DoesNotExist()
 		
 		return message
 
 	def show_clouds(user_object,spacename):
-		projectname = spacename
+		
 		try:
-			project_object = AntarinProjects.objects.get(name=projectname)
-			all_clouds = project_object.project_clouds.all()
+			space_object = AntarinSpaces.objects.get(name=spacename)
+			all_clouds = space_object.space_clouds.all()
 			ret_val = []
+			
 			for item in all_clouds:
-				ret_val.append(item.cloud_name+"\t"+item.all_user_clouds.all()[0].user.username+"\t"+str(item.access_key))
-				#ret_val[item.instance_name + '[' + item.user.username + ']']= item.access_key
-			print(ret_val)
+				ret_val.append(item.cloud_name+"\t"+item.user.username+"\t"+str(item.access_key))
+			
 			message = {'message':ret_val,'status_code':200}
 
-		except AntarinProjects.DoesNotExist:
-			message = {'message':'Space does not exist.','status_code':404}
+		except AntarinSpaces.DoesNotExist:
+			message = api_exceptions.project_DoesNotExist()
 		
 		return message
 
@@ -470,32 +498,32 @@ class SeeView(APIView):
 			message = {'message':user_data,'status_code':200}
 		
 		if env == 'space':
-			projectname = spacename
+			
 			try:
-				project_object = AntarinProjects.objects.get(name=projectname)
-				all_userproject_objects = project_object.all_user_projects.all()
-				all_projectfiles = project_object.project.all()
-				all_projectfolders = project_object.project_ref.all()
+				space_object = AntarinSpaces.objects.get(name=spacename)
+				all_userspace_objects = space_object.all_user_spaces.all()
+				all_spacefiles = space_object.space_files.filter(parentfolder=None)
+				all_spacefolders = space_object.space_folders.filter(parentfolder=None)
 				
 				contributor_list=[]
 				file_list=[]
 				folder_list=[]
 				admin = ''
 
-				for item in all_userproject_objects:
+				for item in all_userspace_objects:
 					contributor_list.append((item.user.first_name+' '+item.user.last_name,item.status))
 					if item.status == 'A':
 						admin = item.user.first_name + ' '+ item.user.last_name +'('+item.user.username+')'
 
-				for item in all_projectfiles:
-					file_list.append((os.path.basename(item.file_ref.file.name),item.file_ref.user.first_name+' '+item.file_ref.user.last_name+'('+item.file_ref.user.username+')'))
+				for item in all_spacefiles:
+					file_list.append(os.path.basename(item.file_ref.file.name))
 
-				for item in all_projectfolders:
-					folder_list.append(('/'+item.folder_ref.name,item.folder_ref.user.first_name+ ' '+item.folder_ref.user.last_name+'('+item.folder_ref.user.username+')'))
+				for item in all_spacefolders:
+					folder_list.append('/'+item.foldername)
 
-				data = {'projectname':projectname,'contributors':contributor_list,'admin':admin,'file_list':file_list,'folder_list':folder_list}
+				data = {'projectname':spacename,'contributors':contributor_list,'admin':admin,'file_list':file_list,'folder_list':folder_list}
 				message = {'message':data,'status_code':200}
-			except Projects.DoesNotExist:
+			except AntarinSpaces.DoesNotExist:
 				message = api_exceptions.project_DoesNotExist()
 		
 		if env == 'cloud':
@@ -510,66 +538,63 @@ class SeeView(APIView):
 		if env == 'filesystem':
 			pk = dir_id
 			list_val = []
+
 			if pk != "":
-				user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-				antarin_folder_object = user_folder_object.folder_ref
+				folder_object = user_object.user.user_folders.get(pk=int(pk))
 			else:
-				antarin_folder_object = None
+				folder_object = None
 			
-			for item in user_object.user.user_files.all():
-				if item.file_ref.folder == antarin_folder_object:
-					list_val.append(os.path.basename(item.file_ref.file.name))
+			all_files = user_object.user.user_files.filter(parentfolder=folder_object)
+			all_folders = user_object.user.user_folders.filter(parentfolder=folder_object)
+
+			for item in all_files:
+				list_val.append(os.path.basename(item.file_ref.file.name))
 			
-			for item in user_object.user.user_folders.all():
-				if item.folder_ref.parentfolder == antarin_folder_object:
-					list_val.append("/"+item.folder_ref.name)
+			for item in all_folders:
+				list_val.append("/"+item.foldername)
 			
 			message = {'message':list_val,'status_code':200}
 
 		if env == 'space':
 			try:
 				list_val=[]
-				projectname = spacename
-				project_object = AntarinProjects.objects.get(name=projectname)
-				if spacedir_id == '':
-					all_projectfiles = project_object.project.all()
-					all_projectfolders = project_object.project_ref.all()
-
-					for item in all_projectfiles:
-						list_val.append(os.path.basename(item.file_ref.file.name))
-
-					for item in all_projectfolders:
-						list_val.append("/"+item.folder_ref.name)
-					
+				space_object = AntarinSpaces.objects.get(name=spacename)
+				if spacedir_id != '':
+					folder_object = AntarinSpaceFolders.objects.get(pk=int(spacedir_id))
 				else:
-					folder_object = AntarinFolders.objects.get(pk=int(spacedir_id))
-					for item in folder_object.parent_folder_reference.all():
-						list_val.append("/"+item.name)
-						
-					for item in folder_object.parent_folder_ref.all():
-						list_val.append(os.path.basename(item.file.name))
+					folder_object = None
 				
+				all_spacefiles = space_object.space_files.filter(parentfolder=folder_object)
+				all_spacefolders = space_object.space_folders.filter(parentfolder=folder_object)
+				
+				for item in all_spacefiles:
+					list_val.append(os.path.basename(item.file_ref.file.name))
+
+				for item in all_spacefolders:
+					list_val.append("/"+item.foldername)
+
 				message = {'message':list_val,'status_code':200}
 
-			except Projects.DoesNotExist:
+			except AntarinSpaces.DoesNotExist:
 				message = api_exceptions.project_DoesNotExist()
 
 		if env == 'cloud':
-			instance_pk = cloud_id
-			antarin_cloud_object = AntarinProjectClouds.objects.get(pk=int(instance_pk))
-			all_cloud_folders = antarin_cloud_object.cloud_ref.all()
-
 			list_val = []
-			if clouddir_id == '':
-				for item in all_cloud_folders:
-					list_val.append("/" + item.folder_ref.name)
+			cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
+
+			if clouddir_id  != '':
+				folder_object = AntarinCloudFolders.objects.get(pk=int(clouddir_id))
 			else:
-				folder_object = AntarinFolders.objects.get(pk=int(clouddir_id))
-				for item in folder_object.parent_folder_reference.all():
-					list_val.append("/"+item.name)
-					
-				for item in folder_object.parent_folder_ref.all():
-					list_val.append(os.path.basename(item.file.name))
+				folder_object = None
+
+			all_cloud_files = cloud_object.cloud_files.filter(parentfolder=folder_object)
+			all_cloud_folders = cloud_object.cloud_folders.filter(parentfolder=folder_object)
+			
+			for item in all_cloud_folders:
+				list_val.append("/"+item.foldername)
+				
+			for item in all_cloud_files:
+				list_val.append(os.path.basename(item.file_ref.file.name))
 
 			message = {'message':list_val, 'status_code':200}
 
@@ -589,7 +614,12 @@ class SeeView(APIView):
 
 			if argument == 'path':
 				id_val = self.request.data['id']
-				return_val = SeeView.show_current_directory(user_object,id_val)
+				env = self.request.data['env'].strip()
+				spacename = self.request.data['spacename'].strip()
+				cloud_id = self.request.data['cloud_id']
+				spacedir_id = self.request.data['spacedir_id']
+				clouddir_id = self.request.data['clouddir_id']
+				return_val = SeeView.show_current_directory(user_object,id_val,env,spacename,cloud_id,spacedir_id,clouddir_id)
 				message = {'message':json.dumps(return_val)}
 				return Response(message,status=200)
 
@@ -637,35 +667,23 @@ class SeeView(APIView):
 class EnterView(APIView):
 
 	def enter_folder(user_object,argval,dir_id):
+
 		pk = dir_id
 		foldername = argval
-		print(foldername)
-		print()
+
 		if pk != "":
-			user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-			antarin_folder_object = user_folder_object.folder_ref
+			folder_object = user_object.user.user_folders.get(pk=int(pk))
 		else:
-			if foldername!='..' and foldername!='~antarin':
-				try:
-					antarin_folder_object = AntarinFolders.objects.get(user=user_object.user,name=foldername,parentfolder=None)
-				except AntarinFolders.DoesNotExist:
-					message = api_exceptions.folder_DoesNotExist()
-					return message
-				user_folder_object = antarin_folder_object.all_user_folders.all()[0]
-			else:
-				antarin_folder_object = None
+			folder_object = None
 
 		if foldername == '..':
-			if antarin_folder_object is not None and antarin_folder_object.parentfolder is not None:
-				current_directory_object = antarin_folder_object.parentfolder
-				current_directory_name = current_directory_object.name
-				user_folder_object = UserFolders.objects.get(user=user_object.user,folder_ref=current_directory_object)
-				id_val = user_folder_object.pk
+			if folder_object is not None and folder_object.parentfolder is not None:
+				current_directory = folder_object.parentfolder.foldername
+				id_val = folder_object.parentfolder.pk
 			else:
-				current_directory_name = "/antarin"
+				current_directory = "/antarin"
 				id_val = ""
-
-			data = {'current_directory':current_directory_name,'id':id_val}
+			data = {'current_directory':current_directory,'id':id_val}
 			message = {'message':json.dumps(data),'status_code':200}
 		
 		elif foldername == '~antarin':
@@ -675,150 +693,113 @@ class EnterView(APIView):
 			message = {'message':json.dumps(data),'status_code':200}
 		
 		else:
-			if pk == '':
-				current_directory = foldername
-				id_val = user_folder_object.pk
-				data = {'current_directory':current_directory,'id':id_val}
+			flag = False
+			all_folders = user_object.user.user_folders.all()
+			for folder in all_folders:
+				if folder.parentfolder == folder_object and folder.foldername == foldername:
+					current_directory = folder.foldername
+					id_val = folder.pk
+					data = {'current_directory':current_directory,'id':id_val}
+					flag = True
+					break
+			if flag:
 				message = {'message':json.dumps(data),'status_code':200}
 			else:
-				flag = 0
-				all_user_folders = user_object.user.user_folders.all()
-				for folder in all_user_folders:
-					#print(folder.folder_ref.parentfolder,antarin_folder_object,folder.folder_ref.name,foldername)
-					if folder.folder_ref.parentfolder == antarin_folder_object and folder.folder_ref.name == foldername:
-						current_directory = folder.folder_ref.name
-						user_folder_object = UserFolders.objects.get(user=user_object.user,folder_ref=folder.folder_ref)
-						id_val = user_folder_object.pk
-						data = {'current_directory':current_directory,'id':id_val}
-						flag = 1
-						break
-				if flag==1:
-					message = {'message':json.dumps(data),'status_code':200}
-				else:
-					message = api_exceptions.folder_DoesNotExist()
+				message = api_exceptions.folder_DoesNotExist()
+		
 		return message
 
+
 	def enter_folder_space(user_object,argval,spacedir_id,spacename):
-		foldername = argval
+
 		pk = spacedir_id
-		project_object = AntarinProjects.objects.get(name=spacename)
-		if foldername == '..':
-			if pk == '':
-				data = {'dir_val':''}
-			else:
-				folder_object = AntarinFolders.objects.get(pk=int(pk))
-				if folder_object.parentfolder is not None:
-					return_id = folder_object.parentfolder.pk
-				else:
-					return_id = ''
-				data = {'dir_val':return_id}
-			message = {'message':json.dumps(data),'status_code':200}
+		foldername = argval
+		space_object = AntarinSpaces.objects.get(name=spacename)
+
+		if pk != "":
+			folder_object = space_object.space_folders.get(pk=int(pk))
 		else:
-			found = False
-			if pk == '':
-				project_folders = project_object.project_ref.all()
-				for item in project_folders:
-					if item.folder_ref.name == foldername:
-						found = True
-						project_folder_object = item
-						break
-				if found:
-					antarin_folder_object = project_folder_object.folder_ref
-					return_id = antarin_folder_object.pk
-					data = {'dir_val':return_id}
-					message = {'message':json.dumps(data),'status_code':200}
-				else:
-					message = api_exceptions.folder_DoesNotExist()
+			folder_object = None
+		
+		if foldername == '..':
+			if folder_object is not None and folder_object.parentfolder is not None:
+				id_val = folder_object.parentfolder.pk
 			else:
-				folder_object = AntarinFolders.objects.get(pk=int(pk))
-				all_folders_inside_currdir = folder_object.parent_folder_reference.all()
-				for item in all_folders_inside_currdir:
-					if item.name == foldername:
-						found = True
-						return_folder_object = item
-						break
-				if found:
-					return_id = return_folder_object.pk
-					data = {'dir_val':return_id}
-					message = {'message':json.dumps(data),'status_code':200}
-				else:
-					message = api_exceptions.folder_DoesNotExist()
-				
+				id_val = ""
+			data = {'dir_val':id_val}
+			message = {'message':json.dumps(data),'status_code':200}
+		
+		elif foldername == '~space':
+			id_val = ""
+			data = {'dir_val':id_val}
+			message = {'message':json.dumps(data),'status_code':200}
+		
+		else:
+			try:
+				return_folder_object = space_object.space_folders.get(parentfolder=folder_object,foldername=foldername)
+				id_val = return_folder_object.pk
+				data = {'dir_val':id_val}
+				message = {'message':json.dumps(data),'status_code':200}
+			except AntarinSpaceFolders.DoesNotExist:
+				message = api_exceptions.folder_DoesNotExist()
 		return message
 
 	def enter_folder_cloud(user_object,argval,clouddir_id,spacename,cloud_id):
-		foldername = argval
+
+
 		pk = clouddir_id
-		cloud_object = AntarinProjectClouds.objects.get(pk=int(cloud_id))
-		if foldername == '..':
-			if pk == '':
-				data = {'dir_val':''}
-			else:
-				folder_object = AntarinFolders.objects.get(pk=int(pk))
-				if folder_object.parentfolder is not None:
-					return_id = folder_object.parentfolder.pk
-				else:
-					return_id = ''
-				data = {'dir_val':return_id}
-			message = {'message':json.dumps(data),'status_code':200}
+		foldername = argval
+		cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
+
+		if pk != "":
+			folder_object = cloud_object.cloud_folders.get(pk=int(pk))
 		else:
-			found = False
-			if pk == '':
-				cloud_folders = cloud_object.cloud_ref.all()
-				for item in cloud_folders:
-					if item.folder_ref.name == foldername:
-						found = True
-						cloud_folder_object = item
-						break
-				if found:
-					antarin_folder_object = cloud_folder_object.folder_ref
-					return_id = antarin_folder_object.pk
-					data = {'dir_val':return_id}
-					message = {'message':json.dumps(data),'status_code':200}
-				else:
-					message = api_exceptions.folder_DoesNotExist()
+			folder_object = None
+		
+		if foldername == '..':
+			if folder_object is not None and folder_object.parentfolder is not None:
+				id_val = folder_object.parentfolder.pk
 			else:
-				folder_object = AntarinFolders.objects.get(pk=int(pk))
-				all_folders_inside_currdir = folder_object.parent_folder_reference.all()
-				for item in all_folders_inside_currdir:
-					if item.name == foldername:
-						found = True
-						return_folder_object = item
-						break
-				if found:
-					return_id = return_folder_object.pk
-					data = {'dir_val':return_id}
-					message = {'message':json.dumps(data),'status_code':200}
-				else:
-					message = api_exceptions.folder_DoesNotExist()
-				
+				id_val = ""
+			data = {'dir_val':id_val}
+			message = {'message':json.dumps(data),'status_code':200}
+		
+		elif foldername == '~cloud':
+			id_val = ""
+			data = {'dir_val':id_val}
+			message = {'message':json.dumps(data),'status_code':200}
+		
+		else:
+			try:
+				return_folder_object = cloud_object.cloud_folders.get(parentfolder=folder_object,foldername=foldername)
+				id_val = return_folder_object.pk
+				data = {'dir_val':id_val}
+				message = {'message':json.dumps(data),'status_code':200}
+			except AntarinCloudFolders.DoesNotExist:
+				message = api_exceptions.folder_DoesNotExist()
 		return message
 
 	def enter_project(user_object,spacename,access_key):
-		projectid = int(access_key)
-		project_flag=0
-		all_projects = user_object.user.user_projects.all()
-		for project in all_projects:
-			if project.access_key == projectid:
-				project_flag=1
-				data = {'name':project.project.name}
-				message = {'message':data,'status_code':200}
+		try:
+			user_space_object = user_object.user.user_spaces.get(access_key=int(access_key))
+			data = {'name':user_space_object.space.name}
+			message = {'message':data,'status_code':200}
 
-		if project_flag==0:
+		except UserSpaces.DoesNotExist:
 			message = api_exceptions.project_DoesNotExist()
 			
 		return message
 
 	def enter_cloud(user_object,spacename,access_key):
-		projectname = spacename
-		instance_access_id = access_key
+		
 		try:
-			project_object = AntarinProjects.objects.get(name=projectname)
-			cloud_object = AntarinProjectClouds.objects.get(access_key=instance_access_id,project=project_object)
+			space_object = AntarinSpaces.objects.get(name=spacename)
+			cloud_object = AntarinClouds.objects.get(access_key=access_key,space=space_object)
+			
 			data = {'id':cloud_object.pk,'name':cloud_object.cloud_name}
 			message = {'message':data,'status_code':200}
 			
-		except AntarinProjectClouds.DoesNotExist:
+		except AntarinClouds.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 		
 		return message			
@@ -877,84 +858,91 @@ class EnterView(APIView):
 class DeleteView(APIView):
 
 	def remove_all_files_dirs(user_object,all_files,all_folders,pk,foldername):
-		
-		if pk != "":
-			user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-			antarin_folder_object = user_folder_object.folder_ref
+	
+		if pk!='':
+			folder_object = user_object.user.user_folders.get(pk=int(pk))
 		else:
-			antarin_folder_object = None
+			folder_object = None
 
+		print ("folder object = "+str(folder_object))
+		
 		for file in all_files:
-			if file.file_ref.folder == antarin_folder_object:
+			if file.parentfolder == folder_object:
 				file.delete()
 				print("deleted file "+str(file.file_ref.file.name))
 		
 		return_list=[]
 		for item in all_folders:
-			if item.folder_ref.parentfolder == antarin_folder_object:
+			if item.parentfolder == folder_object:
 				return_list.append(item.pk)
-				return_list.append(item.folder_ref.name)
+				return_list.append(item.foldername)
 
-		user_folder_object.delete()
 		return return_list
-	
+
+
 	def delete_file(user_object,argval,id_val):
+
 		pk = id_val
 		name = argval
-		file_flag = 0 # 1 - file;0-not a file
-		
+		file_flag = False # true - file;false-not a file
+		ref_fodler=None
 		return_list=[]
 		final_list =[]
 
-		all_user_files = user_object.user.user_files.all()
-		all_user_folders = user_object.user.user_folders.all()
+		all_files = user_object.user.user_files.all()
+		all_folders = user_object.user.user_folders.all()
 
-		if pk != "":
-			user_folder_object = user_object.user.user_folders.get(pk=int(pk))
-			antarin_folder_object = user_folder_object.folder_ref
+		if pk!='':
+			folder_object = user_object.user.user_folders.get(pk=int(pk))
 		else:
-			antarin_folder_object = None
-		
-		for item in all_user_files:
-			if item.file_ref.folder == antarin_folder_object and os.path.basename(item.file_ref.file.name) == name:
-				file_flag = 1
-				item.delete()
+			folder_object = None
+
+
+		for file in user_object.user.user_files.filter(parentfolder=folder_object):
+			if os.path.basename(file.file_ref.file.name) == name:
+				file_flag = True
+				file.delete()
 				message = {'message':"File deleted.",'status_code':200}
 				return message
 
 		ref_folder = None
-		if file_flag == 0:
-			for folder in all_user_folders:
-				if folder.folder_ref.parentfolder == antarin_folder_object and folder.folder_ref.name == name:
+		if file_flag == False:
+			for folder in user_object.user.user_folders.filter(parentfolder=folder_object):
+				if folder.foldername == name:
 					ref_folder = folder
-					antarin_ref_folder = ref_folder.folder_ref
 					break
+			
 			if ref_folder is not None:
-				folder_empty_flag = 1 # 1 is empty and 0 is non-empty
-				for folder in all_user_folders:
-					if folder.folder_ref.parentfolder == antarin_ref_folder:
-						folder_empty_flag = 0
-						break	
+				folder_empty_flag = True # True is empty and False is non-empty
+				for folder in all_folders:
+					if folder.parentfolder == ref_folder:
+						folder_empty_flag = False
+						break
+
 				if folder_empty_flag:
-					for file in all_user_files:
-						if file.file_ref.folder == antarin_ref_folder:
-							folder_empty_flag = 0
+					for file in all_files:
+						if file.parentfolder == ref_folder:
+							folder_empty_flag = False
 							break
+
 				if folder_empty_flag:
 					ref_folder.delete()
 					message = {'message':'Folder deleted.','status_code':200}
 					return message
+
 				else:
 					#recursive delete
 					ref_folder_pk = ref_folder.pk
-					ref_folder_name = antarin_ref_folder.name
-					return_list = DeleteView.remove_all_files_dirs(user_object,all_user_files,all_user_folders,ref_folder_pk,ref_folder_name)
+					ref_folder_name = ref_folder.foldername
+					return_list = DeleteView.remove_all_files_dirs(user_object,all_files,all_folders,ref_folder_pk,ref_folder_name)
 					if return_list:
+						#print(return_list)
 						final_list.extend(return_list)
 						n = len(return_list)
 						i = 0
 						while i < n:
-							val = DeleteView.remove_all_files_dirs(user_object,all_user_files,all_user_folders,return_list[i],return_list[i+1])
+						#for i in range(0,len(return_list),2):
+							val = DeleteView.remove_all_files_dirs(user_object,all_files,all_folders,return_list[i],return_list[i+1])
 							if val:
 								return_list.extend(val)
 								final_list.extend(val)
@@ -964,139 +952,340 @@ class DeleteView(APIView):
 					print("\n")
 					print ("final_list"+str(final_list))
 					
+					folder_object = user_object.user.user_folders.get(pk=int(ref_folder_pk))
+					print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
+					folder_object.delete()
 					message = {'message':"Folder deleted.",'status_code':200}
-					return message
+					return message				
+						
 			else:
 				message = api_exceptions.file_DoesNotExist()
 				return message
 
-	def delete_project_file(user_object,argval,spacename):
-		projectname = spacename
-		name = argval
 
-		project_object = AntarinProjects.objects.get(name=projectname)
-		project_files = AntarinProjectFiles.objects.filter(project=project_object)
+	def remove_all_files_dirs_space(user_object,spacename,all_files,all_folders,pk,foldername):
+	
+		space_object = AntarinSpaces.objects.get(name=spacename)
 
-		file_object = None
-		found = 0
-		is_owner = 0
-		for item in project_files: #check if file exists in projectFiles
-			if os.path.basename(item.file_ref.file.name) == name:
-				file_object = item
-				antarin_file_object = item.file_ref
-				found = 1
-				break
-
-		if found and antarin_file_object.user == user_object.user:
-			is_owner = 1
-		
-		if found and is_owner:
-			project_files_object = AntarinProjectFiles.objects.get(project=project_object,file_ref=antarin_file_object)
-			project_files_object.delete()
-
-			new_projectlogs_object = AntarinProjectLogs(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
-			new_projectlogs_object.save()
-
-			message = {'message':"File removed.",'status_code':200}
-			return message
-
-		if found and is_owner == 0:
-			message = api_exceptions.permission_denied()
-			return message
-
-		if not found:
-			project_folders = AntarinProjectFolders.objects.filter(project=project_object)
+		if pk!='':
+			folder_object = space_object.space_folders.get(pk=int(pk))
+		else:
 			folder_object = None
-			found = 0
-			is_owner = 0
-			for item in project_folders: #check if file exists in projectFolders
-				if item.folder_ref.name == name:
-					antarin_folder_object = item.folder_ref
-					found = 1
+
+		print ("folder object = "+str(folder_object))
+		
+		for file in all_files:
+			if file.parentfolder == folder_object:
+				if file.added_by.username == user_object.user.username:
+					file.delete()
+					print("deleted file "+str(file.file_ref.file.name))
+				else:
+					message = api_exceptions.permission_denied()
+					return message
+				
+		
+		return_list=[]
+		for item in all_folders:
+			if item.parentfolder == folder_object:
+				return_list.append(item.pk)
+				return_list.append(item.foldername)
+
+		return return_list
+
+	def delete_project_file(user_object,argval,spacename,spacedir_id):
+
+		pk = spacedir_id
+		name = argval
+		file_flag = False # true - file;false-not a file
+		ref_fodler=None
+		return_list=[]
+		final_list =[]
+
+		space_object = AntarinSpaces.objects.get(name=spacename)
+
+		all_files = space_object.space_files.all()
+		all_folders = space_object.space_folders.all()
+
+		if pk!='':
+			folder_object = space_object.space_folders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+
+		for file in space_object.space_files.filter(parentfolder=folder_object):
+			if os.path.basename(file.file_ref.file.name) == name:
+				file_flag = True
+				if file.added_by.username == user_object.user.username:
+					
+					new_spacelog_object = AntarinSpaceLogs(user=user_object.user,space=space_object,action=user_object.user.username + ' deleted file '+ os.path.basename(file.file_ref.file.name))
+					new_spacelog_object.save()
+
+					file.delete()
+					message = {'message':"File deleted.",'status_code':200}
+				else:
+					message = api_exceptions.permission_denied()
+				return message
+
+		ref_folder = None
+		if file_flag == False:
+			for folder in space_object.space_folders.filter(parentfolder=folder_object):
+				if folder.foldername == name:
+					ref_folder = folder
 					break
+			
+			if ref_folder is not None:
+				folder_empty_flag = True # True is empty and False is non-empty
+				for folder in all_folders:
+					if folder.parentfolder == ref_folder:
+						folder_empty_flag = False
+						break
 
-			if found and antarin_folder_object.user == user_object.user:
-				is_owner = 1
+				if folder_empty_flag:
+					for file in all_files:
+						if file.parentfolder == ref_folder:
+							folder_empty_flag = False
+							break
 
-			if found == 0:
+				if folder_empty_flag:
+					if ref_folder.added_by.username == user_object.user.username:
+						new_spacelog_object = AntarinSpaceLogs(user=user_object.user,space=space_object,action=user_object.user.username + ' deleted folder '+ ref_folder.foldername)
+						new_spacelog_object.save()
+
+						ref_folder.delete()
+						message = {'message':'Folder deleted.','status_code':200}
+					else:
+						message = api_exceptions.permission_denied()
+					return message
+
+				else:
+					#recursive delete
+					ref_folder_pk = ref_folder.pk
+					ref_folder_name = ref_folder.foldername
+					return_list = DeleteView.remove_all_files_dirs_space(user_object,spacename,all_files,all_folders,ref_folder_pk,ref_folder_name)
+					if return_list:
+						#print(return_list)
+						final_list.extend(return_list)
+						n = len(return_list)
+						i = 0
+						while i < n:
+						#for i in range(0,len(return_list),2):
+							val = DeleteView.remove_all_files_dirs_space(user_object,spacename,all_files,all_folders,return_list[i],return_list[i+1])
+							if val:
+								return_list.extend(val)
+								final_list.extend(val)
+								print(return_list,len(return_list))
+							i = i + 2
+							n = len(return_list)
+					print("\n")
+					print ("final_list"+str(final_list))
+					
+					folder_object = space_object.space_folders.get(pk=int(ref_folder_pk))
+					print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
+					new_spacelog_object = AntarinSpaceLogs(user=user_object.user,space=space_object,action=user_object.user.username + ' deleted folder '+ folder_object.foldername)
+					new_spacelog_object.save()
+
+					folder_object.delete()
+					message = {'message':"Folder deleted.",'status_code':200}
+					return message				
+						
+			else:
 				message = api_exceptions.file_DoesNotExist()
 				return message
-			if is_owner == 0:
-				message = api_exceptions.permission_denied()
-				return message
-			if found and is_owner:
-				project_folder_object = AntarinProjectFolders.objects.get(project=project_object,folder_ref=antarin_folder_object)
-				project_folder_object.delete()
+
+	def remove_all_files_dirs_cloud(user_object,cloud_id,all_files,all_folders,pk,foldername):
+	
+		cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
+
+		if pk!='':
+			folder_object = cloud_object.cloud_folders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+		print ("folder object = "+str(folder_object))
+		
+		for file in all_files:
+			if file.parentfolder == folder_object:
+				if cloud_object.user.username == user_object.user.username:
+					file.delete()
+					print("deleted file "+str(file.file_ref.file.name))
+				else:
+					message = api_exceptions.permission_denied()
+					return message
 				
-				new_projectlogs_object = AntarinProjectLogs(user=user_object.user,project=project_object,action=user_object.user.username + ' deleted '+ name)
-				new_projectlogs_object.save()
-
-				message = {'message':"Directory removed.",'status_code':200}
-				return message
-
-	def delete_cloud_file(user_object,argval,cloud_id):
-		foldername = argval
-		cloud_object = AntarinProjectClouds.objects.get(pk=int(cloud_id))
-
-		all_cloud_files = cloud_object.cloud.all()
-		all_cloud_folders = cloud_object.cloud_ref.all()
 		
-		name = argval
+		return_list=[]
+		for item in all_folders:
+			if item.parentfolder == folder_object:
+				return_list.append(item.pk)
+				return_list.append(item.foldername)
 
-		found = 0
-		is_owner = 0
-		file_object = None
-		folder_object = None
-		for item in all_cloud_files: 
-			if os.path.basename(item.file_ref.file.name) == name:
-				file_object = item
-				antarin_file_object = item.file_ref
-				found = 1
-				break
+		return return_list
 
-		if found and antarin_file_object.user == user_object.user:
-			is_owner = 1
-		
-		if found and is_owner:
-			cloud_file_object = CloudFiles.objects.get(cloud=cloud_object,file_ref=antarin_file_object)
-			cloud_file_object.delete()
-
-			message = {'message':"File removed.",'status_code':200}
-			return message
-
-		if found and is_owner == 0:
-			message = api_exceptions.permission_denied()
-			return message
-
-		if not found:
-			found = 0
-			is_owner = 0
-			for item in all_cloud_folders: 
-				if item.folder_ref.name == name:
-					antarin_folder_object = item.folder_ref
-					found = 1
+	def setup_instance(key_path,commands): 
+		env.warn_only = True
+		output = []
+		try:
+			env.user = 'ubuntu'
+			env.key_filename = key_path
+			for command in commands:
+				print(command)
+				value = run(command)
+				if value.stderr != "":
+					output_text = "Error while executing command %s : %s" %(command, value.stderr)
 					break
+				output.append(value)
+		finally:
+			disconnect_all()
+		return output
 
-			if found and antarin_folder_object.user == user_object.user:
-				is_owner = 1
+	def get_commands(folders,file_object):
+		commands = []
+		string_val = ''
 
-			if found == 0:
-				message = api_exceptions.folder_DoesNotExist()
+		for i in range(len(folders)-1,-1,-1):
+			string_val = string_val  + folders[i].foldername + "/"
+
+		commands.append('cd '+string_val+' && rm ' + os.path.basename(file_object.file_ref.file.name))
+
+		return commands
+
+	def delete_cloud_file(user_object,argval,cloud_id,clouddir_id):
+
+		pk = clouddir_id
+		name = argval
+		file_flag = False # true - file;false-not a file
+		ref_fodler=None
+		return_list=[]
+		final_list =[]
+
+		cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
+
+		all_files = cloud_object.cloud_files.all()
+		all_folders = cloud_object.cloud_folders.all()
+
+		if pk!='':
+			folder_object = cloud_object.cloud_folders.get(pk=int(pk))
+		else:
+			folder_object = None
+
+
+		for file in cloud_object.cloud_files.filter(parentfolder=folder_object):
+			if os.path.basename(file.file_ref.file.name) == name:
+				file_flag = True
+				if cloud_object.user.username == user_object.user.username:
+					
+
+					if cloud_object.package_active != '':
+						folders = []
+						initialized_cloud_folder_object = AntarinCloudFolders.objects.get(pk=cloud_object.package_active)
+
+						if folder_object:
+							while folder_object.parentfolder is not None:
+								folders.append(folder_object)
+								folder_object = folder_object.parentfolder
+						folders.append(folder_object)
+
+						if initialized_cloud_folder_object in folders:
+							commands = DeleteView.get_commands(folders,file)
+							output = execute(DeleteView.setup_instance,key_path,commands,hosts=cloud_object.dns_name)
+							output_text = output[cloud_object.dns_name]
+
+					file.delete()
+
+					message = {'message':"File deleted.",'status_code':200}
+				else:
+					message = api_exceptions.permission_denied()
 				return message
-			if is_owner == 0:
-				message = api_exceptions.permission_denied()
-				return message
-			if found and is_owner:
-				cloud_folder_object = CloudFolders.objects.get(cloud=cloud_object,folder_ref=antarin_folder_object)
-				cloud_folder_object.delete()
 
-				message = {'message':"Directory removed.",'status_code':200}
-				return message
+		ref_folder = None
+		if file_flag == False:
+			for folder in cloud_object.cloud_folders.filter(parentfolder=folder_object):
+				if folder.foldername == name:
+					ref_folder = folder
+					break
+			
+			if ref_folder is not None:
+				folder_empty_flag = True # True is empty and False is non-empty
+				for folder in all_folders:
+					if folder.parentfolder == ref_folder:
+						folder_empty_flag = False
+						break
 
+				if folder_empty_flag:
+					for file in all_files:
+						if file.parentfolder == ref_folder:
+							folder_empty_flag = False
+							break
+
+				if folder_empty_flag:
+					if cloud_object.user.username == user_object.user.username:
+						ref_folder.delete()
+						message = {'message':'Folder deleted.','status_code':200}
+					else:
+						message = api_exceptions.permission_denied()
+					return message
+
+				else:
+					#recursive delete
+					ref_folder_pk = ref_folder.pk
+					ref_folder_name = ref_folder.foldername
+					return_list = DeleteView.remove_all_files_dirs_cloud(user_object,cloud_id,all_files,all_folders,ref_folder_pk,ref_folder_name)
+					if return_list:
+						#print(return_list)
+						final_list.extend(return_list)
+						n = len(return_list)
+						i = 0
+						while i < n:
+						#for i in range(0,len(return_list),2):
+							val = DeleteView.remove_all_files_dirs_cloud(user_object,cloud_id,all_files,all_folders,return_list[i],return_list[i+1])
+							if val:
+								return_list.extend(val)
+								final_list.extend(val)
+								print(return_list,len(return_list))
+							i = i + 2
+							n = len(return_list)
+					print("\n")
+					print ("final_list"+str(final_list))
+
+					folder_object = cloud_object.cloud_folders.get(pk=int(ref_folder_pk))
+
+
+					if cloud_object.package_active != '':
+						folders = []
+						initialized_cloud_folder_object = AntarinCloudFolders.objects.get(pk=cloud_object.package_active)
+
+						temp_folder_object  = folder_object
+						while temp_folder_object.parentfolder is not None and temp_folder_object.parentfolder is not initialized_cloud_folder_object:
+							folders.append(temp_folder_object)
+							temp_folder_object = temp_folder_object.parentfolder
+						folders.append(temp_folder_object)
+
+						if initialized_cloud_folder_object in folders:
+							root_path = ''
+							commands = []
+							for i in range(len(folders)-1,0,-1):
+								root_path = root_path  + folders[i].foldername + "/"
+
+							commands.append('cd '+root_path+' && rm -r ' + folder_object.foldername)
+
+							print(commands)
+							output = execute(DeleteView.setup_instance,key_path,commands,hosts=cloud_object.dns_name)
+							output_text = output[cloud_object.dns_name]
+
+					
+					print("deleting folder  " + ref_folder_name+ "   "+str(ref_folder_pk))
+					folder_object.delete()
+
+					message = {'message':"Folder deleted.",'status_code':200}
+					return message				
+						
+			else:
+				message = api_exceptions.file_DoesNotExist()
+				return message
 
 	def delete_space(user_object,argval,pwd):
 		
-		projectid = argval
+		spaceid = argval
 		password = pwd
 
 		username = user_object.user.username
@@ -1104,60 +1293,60 @@ class DeleteView(APIView):
 
 		if user_val.check_password(password):
 			
-			user_project_object = user_object.user.user_projects.get(access_key=projectid)
-			project_object = user_project_object.project
-			project_object.delete()
+			user_space_object = user_object.user.user_spaces.get(access_key=spaceid)
+			space_object = user_space_object.space
+			space_object.delete()
 			
 			message = {'message':'Project deleted.','status_code':200}
+		
 		else:
 			print('incorrect password')
 			message = api_exceptions.incorrect_password()
+		
 		return message
 
 	def delete_cloud(user_object,argval,spacename):
-		projectname = spacename
 
-		project_object = AntarinProjects.objects.get(name=projectname)
-		all_clouds = project_object.project_clouds.all()
-
-		found = False
-		has_permissions = False
-		for item in all_clouds:
-			if item.access_key == int(argval):
-				found = True
-				break
+		space_object = AntarinSpaces.objects.get(name=spacename)
 		
-		if found:
-			user_cloud_object = item.all_user_clouds.all()[0]
+		try:
+			user_cloud_object = space_object.space_clouds.get(access_key=int(argval))
+
+			has_permissions = False
+			
 			if user_cloud_object.user.username == user_object.user.username:
 				has_permissions = True
 
-		if not found:
-			message = api_exceptions.instance_DoesNotExist()
-			return message
-		if not has_permissions:
-			message = api_exceptions.permission_denied()
-			return message
+			if not has_permissions:
+				message = api_exceptions.permission_denied()
+				return message
+			
+			new_spacelogs_object = AntarinSpaceLogs(user=user_object.user,space=space_object,action=user_object.user.username + ' deleted cloud : '+  user_cloud_object.cloud_name)
+			new_spacelogs_object.save()
+
+			user_cloud_object.delete()
+
+			message = {'message':'Cloud deleted.','status_code':200}
 		
-		cloud_object = item
-		cloud_object.delete()
-		message = {'message':'Cloud deleted.','status_code':200}
+		except AntarinClouds.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+
 		return message
 
 	def get(self,request):
 		token = self.request.data['token']
-		projectid = self.request.data['argval'].strip()
+		spaceid = self.request.data['argval'].strip()
 
 		try:
 			user_object = Token.objects.get(key=token)
-			user_project_object = user_object.user.user_projects.get(access_key=projectid)
-			if user_project_object.status != 'A':
+			user_space_object = user_object.user.user_spaces.get(access_key=spaceid)
+			if user_space_object.status != 'A':
 				message = api_exceptions.permission_denied()
 				return Response(message,status=400)
 			else:
-				message = {'message':'Has permissions','status_code':200}
+				message = {'message':'Has permission','status_code':200}
 				return Response(message,status=200)
-		except UserProjects.DoesNotExist:
+		except UserSpaces.DoesNotExist:
 			message = api_exceptions.project_DoesNotExist()
 			return Response(message,status=404)
 		except Token.DoesNotExist:
@@ -1197,11 +1386,13 @@ class DeleteView(APIView):
 					
 				elif env == 'space':
 					spacename = self.request.data['spacename']
-					return_val = DeleteView.delete_project_file(user_object,argval,spacename)
+					spacedir_id = self.request.data['spacedir_id']
+					return_val = DeleteView.delete_project_file(user_object,argval,spacename,spacedir_id)
 					
 				elif env == 'cloud':
 					cloud_id = self.request.data['cloud_id']
-					return_val = DeleteView.delete_cloud_file(user_object,argval,cloud_id)
+					clouddir_id = self.request.data['clouddir_id']
+					return_val = DeleteView.delete_cloud_file(user_object,argval,cloud_id,clouddir_id)
 
 				message = {'message':return_val['message']}
 				if return_val['status_code'] == 200:
@@ -1222,21 +1413,18 @@ class AddView(APIView):
 		return random.randint(llimit,ulimit)
 
 	def add_contributor(user_object,username,spacename):
-		projectname = spacename
-		project_object = AntarinProjects.objects.get(name=projectname)
-		user_project_object = user_object.user.user_projects.get(project=project_object)
-		all_userprojects = UserProjects.objects.all()
-		error_flag=0 #0-new contributor object
+		space_object = AntarinSpaces.objects.get(name=spacename)
+		user_space_object = user_object.user.user_spaces.get(space=space_object)
 
-		if user_project_object.status!='C':
+		if user_space_object.status!='C':
 			try:
 				contributor_obj = User.objects.get(username=username)
-				contributor_project_object = UserProjects.objects.filter(project=project_object,user=contributor_obj)
+				contributor_space_object = UserSpaces.objects.filter(space=space_object,user=contributor_obj)
 				
-				if not contributor_project_object:
-					all_user_projects = contributor_obj.user_projects.all()
+				if not contributor_space_object:
+					all_user_spaces = contributor_obj.user_spaces.all()
 					accesskey_list = []
-					for item in all_user_projects:
+					for item in all_user_spaces:
 						accesskey_list.append(item.access_key)
 
 					num = AddView.generate_rand(3)
@@ -1245,19 +1433,20 @@ class AddView(APIView):
 
 					access_key = num
 
-					new_userprojects_object = UserProjects(user=contributor_obj,project=project_object,status='C',access_key=access_key)
-					new_userprojects_object.save()
+					new_userspaces_object = UserSpaces(user=contributor_obj,space=space_object,status='C',access_key=access_key)
+					new_userspaces_object.save()
 					
-					new_projectlogs_object = AntarinProjectLogs(user=user_object.user,project=project_object,action=user_object.user.username + ' added '+ new_userprojects_object.user.username + ' as contributor.' )
-					new_projectlogs_object.save()
+					new_spacelogs_object = AntarinSpaceLogs(user=user_object.user,space=space_object,action=user_object.user.username + ' added '+ new_userspaces_object.user.username + ' as contributor.' )
+					new_spacelogs_object.save()
 
-					data = {'user':new_userprojects_object.user.username,'acess_key':access_key}
+					data = {'user':new_userspaces_object.user.username,'acess_key':access_key}
 					message = {'message':data,'status_code':200}
 					return message
 				
 				else:
 					message = api_exceptions.contributor_exists()
-					return message				
+					return message	
+
 			except User.DoesNotExist:
 				message = api_exceptions.user_DoesNotExist()
 				return message
@@ -1266,121 +1455,112 @@ class AddView(APIView):
 			return message
 
 	def find_folder(foldername,parentfolder,all_folders):
-		folder_flag = 0
+		folder_flag = False
+
 		for item in all_folders:
-			if item.folder_ref.parentfolder is not None:
-				if item.folder_ref.name == foldername and item.folder_ref.parentfolder.parentfolder == parentfolder:
-					folder_object = item
-					folder_flag = 1
-					break
-			else:
-				if item.folder_ref.name == foldername and item.folder_ref.parentfolder == parentfolder:
-					folder_object = item
-					folder_flag = 1
-					break
-		if folder_flag == 0:
+			if item.foldername == foldername and item.parentfolder == parentfolder:
+				folder_object = item
+				folder_flag = True
+				break
+		
+		if folder_flag == False:
 			return -1
+		
 		return folder_object
 
 	def find_file(filename,parentfolder,all_files):
-		file_flag = 0
+		file_flag = False
+		
 		for item in all_files:
-			if parentfolder is not None:
-				if item.file_ref.folder == parentfolder.folder_ref and os.path.basename(item.file_ref.file.name) == filename:
-					file_object = item
-					file_flag = 1
-					break
-			else:
-				if item.file_ref.folder == parentfolder and os.path.basename(item.file_ref.file.name) == filename:
-					file_object = item
-					file_flag = 1
-					break
-		if file_flag == 0:
+			if item.parentfolder == parentfolder and os.path.basename(item.file_ref.file.name) == filename:
+				file_object = item
+				file_flag = True
+				break
+		
+		if file_flag == False:
 			return -1
+		
 		return file_object
 
-	def add_to_space(user_object,spacename,item):
+	def add_all(space_object,user_object,folder_object,parentfolder=None):
+		all_files = user_object.user.user_files.filter(parentfolder=folder_object)
+		all_folders = user_object.user.user_folders.filter(parentfolder=folder_object)
+
+		space_folder_object = AntarinSpaceFolders(space=space_object,foldername=folder_object.foldername,added_by=user_object.user,parentfolder=parentfolder)
+		space_folder_object.save()
+
+		for item in all_files:
+			space_file_object = AntarinSpaceFiles(space=space_object,file_ref=item.file_ref,parentfolder=space_folder_object,added_by=user_object.user)
+			space_file_object.save()
+
+		for item in all_folders:
+			AddView.add_all(space_object,user_object,item,space_folder_object)
+
+	def add_to_space(user_object,spacename,item,spacedir_id):
+
 		path = item
-		projectname = spacename
-		project_object = AntarinProjects.objects.get(name=projectname)
+		space_object = AntarinSpaces.objects.get(name=spacename)
 		folder_flag = False
 		file_flag = False
 		path_error = False
 
+		if spacedir_id != '':
+			root_folder_object = AntarinSpaceFolders.objects.get(pk=int(spacedir_id))
+		else:
+			root_folder_object = None
+
 		all_folders = user_object.user.user_folders.all()
-		error_flag = 0
+		all_files = user_object.user.user_files.all()
+		error_flag = False
+
 		plist = path
 		plist = plist.split('/')
-		if path[0]=='/' and path[-1]=='/':
-		    plist = plist[1:-1]
-		elif path[0]=='/'and path[-1]!='/':
-		    plist = plist[1:]
-		elif path[0]!='/' and path[-1]=='/':
+		if path[-1]=='/':
 		    plist = plist[:-1]
 		print (plist)
-		parentfolder = None
-		if len(plist) == 1:
 
-			val = AddView.find_folder(plist[0],parentfolder,all_folders)
+		parentfolder = None
+
+		for i in range(1,len(plist)):
+			val = AddView.find_folder(plist[i],parentfolder,all_folders)
 			if val != -1:
-				parentfolder = val.folder_ref.parentfolder
-				print (parentfolder.name)
+				parentfolder = val
 			else:
-				message = api_exceptions.wrong_path_specified()
-				return message
-		else:
-			for i in range(1,len(plist)):
-				val = AddView.find_folder(plist[i],parentfolder,all_folders)
-				if val != -1:
-					parentfolder = val.folder_ref.parentfolder
-					if parentfolder:
-						print (parentfolder.name)
-				else:
-					path_error = True
+				path_error = True
 		
 		if not path_error:
 			folder_object = val
-			all_projectfolders = AntarinProjectFolders.objects.filter(project=project_object)
-			for item in all_projectfolders:
-				if item.folder_ref == folder_object.folder_ref or item.folder_ref.name == folder_object.folder_ref.name:
-					print("Duplicate folder ref")
-					error_flag = 1
+			all_spacefolders = AntarinSpaceFolders.objects.filter(space=space_object,parentfolder=root_folder_object)
+			
+			for item in all_spacefolders:
+				if item.foldername == folder_object.foldername:
+					error_flag = True
 					break
 
-			if error_flag ==0:
-				
-				new_projectfolder_object = AntarinProjectFolders(project=project_object,folder_ref=folder_object.folder_ref)
-				print("Adding "  + new_projectfolder_object.folder_ref.name + " to " + new_projectfolder_object.project.name)
-				new_projectfolder_object.save()
+			if error_flag == False:
+				AddView.add_all(space_object,user_object,folder_object,root_folder_object)
 
-				new_projectlog_object = AntarinProjectLogs(user=user_object.user,project=project_object,action=user_object.user.username + ' added directory '+ new_projectfolder_object.folder_ref.name)
-				new_projectlog_object.save()
+				new_spacelog_object = AntarinSpaceLogs(user=user_object.user,space=space_object,action=user_object.user.username + ' added directory '+ folder_object.foldername)
+				new_spacelog_object.save()
+				
 				folder_flag = True
+				
 				message = {'message':'Imported directory.','status_code':200}
 				return message
+			
 			else:
 				message = api_exceptions.folder_exists()
 				return message
 
 		if not folder_flag:
-			all_folders = user_object.user.user_folders.all()
-			all_files = user_object.user.user_files.all()
-
-			plist = path
-			plist = plist.split('/')
-			if path[0]=='/':
-			    plist = plist[1:]
 			
-			print (plist)
 			parentfolder = None
 			val = None
 			for i in range(1,len(plist)-1):
 				print(plist[i],parentfolder)
 				val = AddView.find_folder(plist[i],parentfolder,all_folders)
 				if val != -1:
-					parentfolder = val.folder_ref.parentfolder
-					if parentfolder:
-						print (parentfolder.name)
+					parentfolder = val
 				else:
 					message = api_exceptions.wrong_path_specified()
 					return message
@@ -1389,21 +1569,20 @@ class AddView(APIView):
 			file_object = AddView.find_file(plist[-1],folder_object,all_files)
 			
 			if file_object != -1:
-				all_projectfiles = AntarinProjectFiles.objects.filter(project=project_object)
-				for item in all_projectfiles:
-					if item.file_ref == file_object.file_ref or os.path.basename(item.file_ref.file.name) == os.path.basename(file_object.file_ref.file.name):
+				all_spacefiles = AntarinSpaceFiles.objects.filter(space=space_object,parentfolder=root_folder_object)
+				for item in all_spacefiles:
+					if os.path.basename(item.file_ref.file.name) == os.path.basename(file_object.file_ref.file.name):
 						print("duplicate ref")
-						error_flag = 1
+						error_flag = True
 						break
 
-				if error_flag == 0:
+				if error_flag == False:
 					
-					new_projectfile_object = AntarinProjectFiles(project=project_object,file_ref=file_object.file_ref)
-					print("Adding " + new_projectfile_object.file_ref.file.name + " to " + new_projectfile_object.project.name)
-					new_projectfile_object.save()
+					new_spacefile_object = AntarinSpaceFiles(space=space_object,file_ref=file_object.file_ref,parentfolder=root_folder_object,added_by=user_object.user)
+					new_spacefile_object.save()
 
-					new_projectlogs_object = AntarinProjectLogs(user=user_object.user,project=project_object,action=user_object.user.username + ' added file '+ os.path.basename(new_projectfile_object.file_ref.file.name))
-					new_projectlogs_object.save()
+					new_spacelogs_object = AntarinSpaceLogs(user=user_object.user,space=space_object,action=user_object.user.username + ' added file '+ os.path.basename(new_spacefile_object.file_ref.file.name))
+					new_spacelogs_object.save()
 
 					file_flag = True
 					message = {'message':'Imported file.','status_code':200}
@@ -1416,46 +1595,222 @@ class AddView(APIView):
 			message = api_exceptions.file_DoesNotExist()
 			return message
 
-
-	def add_to_cloud(user_object,argument,spacename,item,cloud_id,packagename):
-		projectname = spacename
-		instance_id = cloud_id
-		section = argument[2:]
-		
-		project_object = AntarinProjects.objects.get(name=projectname)
-		cloud_object = AntarinProjectClouds.objects.get(project=project_object,pk=int(instance_id))	
-		if section == 'env':
-			project_folder_object = None
-			all_project_folders = project_object.project_ref.all()
-			for item in all_project_folders:
-				if item.folder_ref.name == packagename:
-					project_folder_object = item
-					antarin_folder_object = item.folder_ref
+	def setup_instance(key_path,commands): 
+		env.warn_only = True
+		output = []
+		try:
+			env.user = 'ubuntu'
+			env.key_filename = key_path
+			for command in commands:
+				print(command)
+				value = run(command)
+				if value.stderr != "":
+					output_text = "Error while executing command %s : %s" %(command, value.stderr)
 					break
-			if project_folder_object:
-				all_cloud_folders = cloud_object.cloud_ref.all()
-				for item in all_cloud_folders:
-					if item.folder_ref.name == packagename:
-						message = api_exceptions.package_exists()
-						return message
+				output.append(value)
+		finally:
+			print("disconenct worked")
+			disconnect_all()
+		return output
 
-				new_cloud_folder_object = CloudFolders(cloud=cloud_object,folder_ref=antarin_folder_object)
-				new_cloud_folder_object.save()
-				message = {'message':'Package added to cloud.','status_code':200}
-				return message
+	def get_commands(folders,new_cloudfile_object):
+		commands = []
+		string_val = ''
+
+		for i in range(len(folders)-1,-1,-1):
+			string_val = string_val  + folders[i].foldername + "/"
+
+		commands.append('cd '+string_val+' && aws s3 cp ' + 's3://antarin-test/media/'+new_cloudfile_object.file_ref.file.name+' '+os.path.basename(new_cloudfile_object.file_ref.file.name))
+
+		return commands
+
+	def add_all_cloud(space_object,cloud_object,folder_object,parentfolder=None,add_to_cloud=None,root_path=None,commands=None,initialized_cloud_folder_object=None):
+		all_files = space_object.space_files.filter(parentfolder=folder_object)
+		all_folders = space_object.space_folders.filter(parentfolder=folder_object)
+
+		cloud_folder_object = AntarinCloudFolders(cloud=cloud_object,foldername=folder_object.foldername,parentfolder=parentfolder)
+		cloud_folder_object.save()
+
+		if root_path:
+			print('root_path = '+ root_path)
+
+		if add_to_cloud:
+			temp_root_path = root_path
+			if parentfolder:
+				folders = []
+				temp_folder_object = parentfolder
+				while temp_folder_object.parentfolder is not None and temp_folder_object.parentfolder is not initialized_cloud_folder_object:
+					folders.append(temp_folder_object)
+					temp_folder_object = temp_folder_object.parentfolder
+
+				for i in range(len(folders)-1,-1,-1):
+					temp_root_path = temp_root_path  + folders[i].foldername + "/"
+
+			commands.append('cd '+temp_root_path + ' && mkdir '+folder_object.foldername)
+
+			temp_root_path = temp_root_path + folder_object.foldername+"/"
+
+		for item in all_files:
+			cloud_file_object = AntarinCloudFiles(cloud=cloud_object,file_ref=item.file_ref,parentfolder=cloud_folder_object)
+			cloud_file_object.save()
+
+			if add_to_cloud:
+				commands.append('cd '+temp_root_path+' && aws s3 cp ' + 's3://antarin-test/media/'+cloud_file_object.file_ref.file.name+' '+os.path.basename(cloud_file_object.file_ref.file.name))
+
+		for item in all_folders:
+			if add_to_cloud:
+				AddView.add_all_cloud(space_object,cloud_object,item,cloud_folder_object,True,root_path,commands)
+			else:				
+				AddView.add_all_cloud(space_object,cloud_object,item,cloud_folder_object)
+
+		if add_to_cloud:
+			return commands
+
+	def add_to_cloud(user_object,spacename,item,cloud_id,clouddir_id):
+		path = item
+		space_object = AntarinSpaces.objects.get(name=spacename)
+		cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
+		folder_flag = False
+		file_flag = False
+		path_error = False
+
+		if clouddir_id != '':
+			root_folder_object = AntarinCloudFolders.objects.get(pk=int(clouddir_id))
+		else:
+			root_folder_object = None
+
+		all_folders = space_object.space_folders.all()
+		all_files = space_object.space_files.all()
+		error_flag = False
+
+		plist = path
+		plist = plist.split('/')
+		if path[-1]=='/':
+		    plist = plist[:-1]
+		print (plist)
+
+		parentfolder = None
+
+		for i in range(1,len(plist)):
+			val = AddView.find_folder(plist[i],parentfolder,all_folders)
+			if val != -1:
+				parentfolder = val
 			else:
-				message=api_exceptions.folder_DoesNotExist()
+				path_error = True
+		
+		if not path_error:
+			folder_object = val
+			all_cloudfolders = AntarinCloudFolders.objects.filter(cloud=cloud_object,parentfolder=root_folder_object)
+			
+			for item in all_cloudfolders:
+				if item.foldername == folder_object.foldername:
+					error_flag = True
+					break
+
+			if error_flag == False:
+
+				if cloud_object.package_active != '':
+					folders = []
+
+					try:
+						initialized_cloud_folder_object = AntarinCloudFolders.objects.get(pk=int(cloud_object.package_active))
+
+						temp_folder_object = root_folder_object
+						if root_folder_object is not None:
+							while temp_folder_object.parentfolder is not None:
+								folders.append(temp_folder_object)
+								temp_folder_object = temp_folder_object.parentfolder
+						folders.append(temp_folder_object)
+
+						if initialized_cloud_folder_object in folders:
+							root_path = ''
+
+							for i in range(len(folders)-1,-1,-1):
+								root_path = root_path  + folders[i].foldername + "/"
+
+							commands = []
+							command_list = AddView.add_all_cloud(space_object,cloud_object,folder_object,root_folder_object,True,root_path,commands,initialized_cloud_folder_object)
+							for item in command_list:
+								print(item)
+							output = execute(AddView.setup_instance,key_path,command_list,hosts=cloud_object.dns_name)
+							output_text = output[cloud_object.dns_name]
+
+					except AntarinCloudFolders.DoesNotExist:
+						message = api_exceptions.package_deleted()
+						return message
+				else:
+					AddView.add_all_cloud(space_object,cloud_object,folder_object,root_folder_object)
+				
+				folder_flag = True
+				
+				message = {'message':'Imported directory.','status_code':200}
 				return message
-		elif section == 'data':
-			message = {'message':'Method not implemented.','status_code':200}
-			return message
-		elif section == 'code':
-			message = {'message':'Method not implemented.','status_code':200}
+			
+			else:
+				message = api_exceptions.folder_exists()
+				return message
+
+		if not folder_flag:
+			
+			parentfolder = None
+			val = None
+			for i in range(1,len(plist)-1):
+				print(plist[i],parentfolder)
+				val = AddView.find_folder(plist[i],parentfolder,all_folders)
+				if val != -1:
+					parentfolder = val
+				else:
+					message = api_exceptions.wrong_path_specified()
+					return message
+			
+			folder_object = val
+			file_object = AddView.find_file(plist[-1],folder_object,all_files)
+			
+			if file_object != -1: 
+				all_spacefiles = AntarinCloudFiles.objects.filter(cloud=cloud_object,parentfolder=root_folder_object)
+				for item in all_spacefiles:
+					if os.path.basename(item.file_ref.file.name) == os.path.basename(file_object.file_ref.file.name):
+						print("duplicate ref")
+						error_flag = True
+						break
+
+				if error_flag == False:
+					
+					new_cloudfile_object = AntarinCloudFiles(cloud=cloud_object,file_ref=file_object.file_ref,parentfolder=root_folder_object)
+					new_cloudfile_object.save()
+
+					if cloud_object.package_active != '':
+						folders = []
+						initialized_cloud_folder_object = AntarinCloudFolders.objects.get(pk=cloud_object.package_active)
+
+						folder_object = root_folder_object
+						if folder_object:
+							while folder_object.parentfolder is not None:
+								folders.append(folder_object)
+								folder_object = folder_object.parentfolder
+						folders.append(folder_object)
+
+						if initialized_cloud_folder_object in folders:
+							commands = AddView.get_commands(folders,new_cloudfile_object)
+							output = execute(AddView.setup_instance,key_path,commands,hosts=cloud_object.dns_name)
+							output_text = output[cloud_object.dns_name]
+
+					file_flag = True
+					message = {'message':'Imported file.','status_code':200}
+					return message
+				else:
+					message = api_exceptions.file_exists()
+					return message
+		
+		if not folder_flag and not file_flag:
+			message = api_exceptions.file_DoesNotExist()
 			return message
 
 	def post(self,request):
 		token = self.request.data['token']
 		argument = self.request.data['argument'].strip()
+		env = self.request.data['env'].strip()
+
 		try:
 			user_object = Token.objects.get(key = token)
 			if argument == 'contributor':
@@ -1466,17 +1821,20 @@ class AddView(APIView):
 			if argument == '-i':
 				item = self.request.data['argval']
 				spacename = self.request.data['spacename']
-				return_val = AddView.add_to_space(user_object,spacename,item)
+				if env == 'space':
+					if item.startswith('~antarin'):
+						spacedir_id = self.request.data['spacedir_id']
+						return_val = AddView.add_to_space(user_object,spacename,item,spacedir_id)
+					else:
+						return_val = api_exceptions.wrong_path_specified()
 
-			if argument[0] == '-' and argument[1] == '-':
-				argument = self.request.data['argument']
-				item = None
-				if 'argval' in self.request.data:
-					item = self.request.data['argval']
-				spacename = self.request.data['spacename']
-				packagename = self.request.data['packagename']
-				cloud_id = self.request.data['cloud_id']
-				return_val = AddView.add_to_cloud(user_object,argument,spacename,item,cloud_id,packagename)
+				elif env == 'cloud':
+					if item.startswith('~space'):
+						cloud_id = self.request.data['cloud_id']
+						clouddir_id = self.request.data['clouddir_id']
+						return_val = AddView.add_to_cloud(user_object,spacename,item,cloud_id,clouddir_id)
+					else:
+						return_val = api_exceptions.wrong_path_specified()
 
 			message = {'message':return_val}
 			if return_val['status_code'] == 200:
@@ -1552,7 +1910,7 @@ class InitializeView(APIView):
 			disconnect_all()
 		return output
 
-	def add_files_to_dir(foldername,folderid,commands,parentpath=None):
+	def add_files_to_dir(cloud_object,foldername,folderid,commands,parentpath=None):
 		if parentpath:
 			commands.append('cd '+parentpath+' && mkdir '+foldername)
 			print('with cd '+ parentpath)
@@ -1562,18 +1920,19 @@ class InitializeView(APIView):
 			commands.append('mkdir '+foldername)
 			print('mkdir ' + foldername)
 			parent = foldername
-		folder_object = AntarinFolders.objects.get(pk=folderid)
-		all_files = folder_object.parent_folder_ref.all()
+		
+		folder_object = cloud_object.cloud_folders.get(pk=folderid)
+		all_files = cloud_object.cloud_files.filter(parentfolder=folder_object)
 		for item in all_files:
-			commands.append('cd '+parent+' && aws s3 cp ' + 's3://antarin-test/media/'+item.file.name+' '+os.path.basename(item.file.name))
+			commands.append('cd '+parent+' && aws s3 cp ' + 's3://antarin-test/media/'+item.file_ref.file.name+' '+os.path.basename(item.file_ref.file.name))
 			print('with cd '+ parent)
-			print('add file '+os.path.basename(item.file.name))
+			print('add file '+os.path.basename(item.file_ref.file.name))
 
 			#&& aws s3 cp '+'s3://antarin-test/media/' + item.projectfile.file_ref.file.name + ' ' + os.path.basename(item.projectfile.file_ref.file.name)
-		all_folders_list = AntarinFolders.objects.filter(parentfolder=folder_object)
+		all_folders_list = cloud_object.cloud_folders.filter(parentfolder=folder_object)
 		all_folders = []
 		for item in all_folders_list:
-			all_folders.append(item.name)
+			all_folders.append(item.foldername)
 			all_folders.append(item.pk)
 			all_folders.append(parent)
 		
@@ -1584,33 +1943,35 @@ class InitializeView(APIView):
 		#print(self.request.data)
 		try:
 			user_object = Token.objects.get(key = token)
-			projectname = self.request.data['spacename']
+			spacename = self.request.data['spacename']
 			
 			success = False
-			project_object = AntarinProjects.objects.get(name=projectname)
+			space_object = AntarinSpaces.objects.get(name=spacename)
 			accesskey = None
 			if 'argval' in self.request.data:
 				accesskey = self.request.data['argval'] 
 			if accesskey:
-				cloud_object = project_object.project_clouds.get(access_key=int(accesskey))
+				cloud_object = space_object.space_clouds.get(access_key=int(accesskey))
 			else:
 				cloud_id = self.request.data['cloud_id']
-				cloud_object = AntarinProjectClouds.objects.get(project=project_object,pk=int(cloud_id))	
+				cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))	
 
-			all_cloud_packages = cloud_object.cloud_ref.all()
-			cloud_package_object = None
-
-			packages = json.loads(self.request.data['packages'])
+			packagename = self.request.data['packagename']
 			
-			print(packages)
+			clouddir_id = self.request.data['clouddir_id']
+			if clouddir_id != '':
+				cloud_root_folder_object = AntarinCloudFolders.objects.get(pk=int(clouddir_id))
+			else:
+				cloud_root_folder_object = None
+
+			cloud_folder_object = AntarinCloudFolders.objects.get(cloud=cloud_object,parentfolder=cloud_root_folder_object,foldername=packagename)
+
 			if cloud_object.is_active == False:
-				#launch instance
 				sec_group = []
 				sec_group.append(cloud_object.security_group)
 				key_name = 'ec2test'
 
 				res = execute(InitializeView.launch_instance,cloud_object.ami_id,key_name,cloud_object.instance_type,sec_group)
-				print (res['localhost'][0])
 
 				if res['localhost'][0]:
 					dns_name = res['localhost'][0][0]
@@ -1618,50 +1979,46 @@ class InitializeView(APIView):
 					cloud_object.dns_name = res['localhost'][0][0]
 					cloud_object.instance_id = instance_id_val
 					cloud_object.is_active = True
+					print("er")
 					cloud_object.save()
-					success=True
-
-					for package in packages:
-						packagename = package
-
-						for item in all_cloud_packages:
-							if item.folder_ref.name == packagename:
-								cloud_package_object = item
-								break
-						
-						if cloud_package_object:							
-							folder_object = cloud_package_object.folder_ref
-							folder_name = folder_object.name
-							folder_id = folder_object.pk
-							commands = []
-							value = InitializeView.add_files_to_dir(folder_name,folder_id,commands)
-							all_folders = value[0]
-							final_list = []
-							commands = value[1]
-							if all_folders:
-								n = len(all_folders)
-								i = 0
-								final_list.extend(all_folders)
-								while i<n:
-									val = InitializeView.add_files_to_dir(all_folders[i],all_folders[i+1],commands,all_folders[i+2])
-									if val:
-										all_folders.extend(val[0])
-										final_list.extend(val[0])
-										commands = val[1]
-										#print(all_folders,final_list)
-									i += 3
-									n = len(all_folders)
-							for command in commands:
-								print(command)
-							#commands.append('sudo apt-get build-dep python-matplotlib')
-							commands.append('cd ' + packagename +' && sudo pip install -r requirements.txt')
-							output = execute(InitializeView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
-							#output_text = output[instance_object.dns_name[0]]
-							print(output)
-						else:
-							message = api_exceptions.package_DoesNotExist(packagename)
-							return Response(message,status=400)
+					print("her")				
+					folder_object = cloud_folder_object
+					folder_name = folder_object.foldername
+					folder_id = folder_object.pk
+					commands = []
+					value = InitializeView.add_files_to_dir(cloud_object,folder_name,folder_id,commands)
+					all_folders = value[0]
+					final_list = []
+					commands = value[1]
+					if all_folders:
+						n = len(all_folders)
+						i = 0
+						final_list.extend(all_folders)
+						while i<n:
+							val = InitializeView.add_files_to_dir(cloud_object,all_folders[i],all_folders[i+1],commands,all_folders[i+2])
+							if val:
+								all_folders.extend(val[0])
+								final_list.extend(val[0])
+								commands = val[1]
+								#print(all_folders,final_list)
+							i += 3
+							n = len(all_folders)
 					
+					for command in commands:
+						print(command)
+					
+					all_files = cloud_object.cloud_files.filter(parentfolder=folder_object)
+					for item in all_files:
+						if os.path.basename(item.file_ref.file.name) == 'requirements.txt':
+							commands.append('cd ' + packagename +' && sudo pip install -r requirements.txt')
+							break
+
+					output = execute(InitializeView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
+					print(output)
+					
+					cloud_object.package_active = str(folder_id)
+					cloud_object.save()
+
 					message = {'message': 'Cloud initilization successful.','status_code':200}
 					return Response(message,status=200)
 				
@@ -1669,11 +2026,12 @@ class InitializeView(APIView):
 					message = api_exceptions.intance_launch_error()
 					return Response(message,status=400)
 			else:
-				message = {'message': 'Instance in running state','status_code':200}
+				folder = AntarinCloudFolders.objects.get(pk=int(cloud_object.package_active))
+				message = {'message': 'Cloud has been already initialized with package : ' + folder.foldername,'status_code':200}
 				return Response(message,status=200)
 
-		except AntarinProjectClouds.DoesNotExist:
-			message = api_exceptions.instance_DoesNotExist()
+		except AntarinCloudFolders.DoesNotExist:
+			message = api_exceptions.package_DoesNotExist()
 			return Response(message,status=400)
 
 		except Token.DoesNotExist:
@@ -1705,76 +2063,49 @@ class RunView(APIView):
 		#print(self.request.data)
 		try:
 			user_object = Token.objects.get(key = token)
-			projectname = self.request.data['spacename']
+			spacename = self.request.data['spacename']
 			packagename = self.request.data['packagename']
 			shell_command = self.request.data['shell_command']
 			commands = []
-
-			data_flag = False
-			requirements_flag = False
 			
-			project_object = AntarinProjects.objects.get(name=projectname)
+			space_object = AntarinSpaces.objects.get(name=spacename)
 			accesskey = None
 			if 'argval' in self.request.data:
 				accesskey = self.request.data['argval'] 
 			if accesskey:
-				cloud_object = project_object.project_clouds.get(access_key=int(accesskey))
+				cloud_object = space_object.space_clouds.get(access_key=int(accesskey))
 			else:
 				cloud_id = self.request.data['cloud_id']
-				cloud_object = AntarinProjectClouds.objects.get(project=project_object,pk=int(cloud_id))	
+				cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))	
 
-			all_cloud_packages = cloud_object.cloud_ref.all()
-			cloud_package_object = None
-
-			print('dns name = '+ str(cloud_object.dns_name))
-			print('\n')
-
-			for item in all_cloud_packages:
-				print(item.folder_ref.name,packagename)
-				if item.folder_ref.name == packagename:
-					cloud_package_object = item
-					break
-			if cloud_package_object:
-				package_folder = cloud_package_object.folder_ref
-				folders = package_folder.parent_folder_reference.all()
-				files = package_folder.parent_folder_ref.all()
-				for item in folders:
-					if item.name == 'data':
-						data_flag = True
-						break
-				for item in files:
-					if os.path.basename(item.file.name) == 'requirements.txt':
-						requirements_flag = True
-						break
-
-				if data_flag == False:
-					message = api_exceptions.no_data_folder()
-					return Response(message,status=400)
-
-				if requirements_flag == False:
-					message = api_exceptions.no_requirements_file()
-					return Response(message,status=400)
-
-				if cloud_object.is_active == True:
-					commands.append(shell_command)
-					#host = list(instance_object.dns_name)
-					output = execute(RunView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
-					#print(output)
-					output_text = output[cloud_object.dns_name]
-					for item in output_text:
-						print(item)
-					message = {'message': output_text,'status_code':200}
-					return Response(message,status=200)
-				else:
-					message = api_exceptions.cloud_notRunning()
-					return Response(message,status=400)
+			clouddir_id = self.request.data['clouddir_id']
+			if clouddir_id != '':
+				cloud_root_folder_object = AntarinCloudFolders.objects.get(pk=int(clouddir_id))
 			else:
-				message = api_exceptions.package_DoesNotExist()
+				cloud_root_folder_object = None
+
+			folder_object = AntarinCloudFolders.objects.get(cloud=cloud_object,parentfolder=cloud_root_folder_object,foldername=packagename)
+
+			if cloud_object.is_active == True:
+				commands.append(shell_command)
+				output = execute(RunView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
+				output_text = output[cloud_object.dns_name]
+				for item in output_text:
+					print(item)
+				message = {'message': output_text,'status_code':200}
+				return Response(message,status=200)
+			
+			else:
+				message = api_exceptions.cloud_notRunning()
 				return Response(message,status=400)
+
+		except AntarinCloudFolders.DoesNotExist:
+			message = api_exceptions.package_DoesNotExist()
+			return Response(message,status=400)
 		except SystemExit:
 			message = "error"
 			return Response(message,status=400)
-		except AntarinProjectClouds.DoesNotExist:
+		except AntarinClouds.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)
 		except Token.DoesNotExist:
@@ -1787,16 +2118,16 @@ class SleepView(APIView):
 		token = self.request.data['token']
 		try:
 			user_object = Token.objects.get(key = token)
-			projectname = self.request.data['spacename']
-			project_object = AntarinProjects.objects.get(name=projectname)
+			spacename = self.request.data['spacename']
+			space_object = AntarinSpaces.objects.get(name=spacename)
 			accesskey = None
 			if 'argval' in self.request.data:
 				accesskey = self.request.data['argval'] 
 			if accesskey:
-				cloud_object = project_object.project_clouds.get(access_key=int(accesskey))
+				cloud_object = space_object.space_clouds.get(access_key=int(accesskey))
 			else:
 				cloud_id = self.request.data['cloud_id']
-				cloud_object = AntarinProjectClouds.objects.get(project=project_object,pk=int(cloud_id))
+				cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
 
 			if cloud_object.is_active == True:
 				cloud_id = []
@@ -1804,6 +2135,9 @@ class SleepView(APIView):
 				client = boto3.client('ec2')
 				response = client.stop_instances(InstanceIds=cloud_id)
 				cloud_object.is_active = False
+				cloud_object.dns_name = ''
+				cloud_object.instance_id = ''
+				cloud_object.package_active = ''
 				cloud_object.save()
 				print (response)
 				message = {'message':'Cloud stopped.','status_code':200}
@@ -1811,7 +2145,7 @@ class SleepView(APIView):
 			else:
 				message = api_exceptions.instance_not_running()
 				return Response(message,status=400)
-		except AntarinProjectClouds.DoesNotExist:
+		except AntarinClouds.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)
 		except Token.DoesNotExist:
@@ -1821,35 +2155,19 @@ class SleepView(APIView):
 
 class CloneView(APIView):
 
-	def clone_all(folder_object,user_object,root,parentfolder=None):
-		print("cloning folder "+folder_object.name)
-		
-		all_files = AntarinFiles.objects.filter(folder=folder_object)
-		all_folders = AntarinFolders.objects.filter(parentfolder=folder_object)
-		
-		cloned_folder = folder_object
-		cloned_folder.pk = None
-		cloned_folder.user = user_object.user
-		cloned_folder.name = folder_object.name
-		if root:
-			cloned_folder.parentfolder = None
-		else:
-			cloned_folder.parentfolder = parentfolder
-		cloned_folder.save()
-
+	def clone_all(new_cloud_folder_object,cloud_object,item,cloned_object):
+		print(cloud_object.cloud_name)
+		all_files = AntarinCloudFiles.objects.filter(cloud=cloud_object,parentfolder=item)
+		all_folders = AntarinCloudFolders.objects.filter(cloud=cloud_object,parentfolder=item)
+		print(all_files,all_folders)
 		for item in all_files:
-			print("cloning file "+ item.file.name)
-			cloned_file = item
-			cloned_file.file.name = item.file.name			
-			cloned_file.folder = cloned_folder
-			cloned_file.pk = None
-			cloned_file.user = user_object.user
-			cloned_file.save()
+			new_cloudfile_object = AntarinCloudFiles(cloud=cloned_object,file_ref=item.file_ref,parentfolder=new_cloud_folder_object)
+			new_cloudfile_object.save()
 
 		for item in all_folders:
-			CloneView.clone_all(item,user_object,False,cloned_folder)
-
-		return cloned_folder
+			new_cloud_folder_object = AntarinCloudFolders(cloud=cloned_object,foldername=item.foldername,parentfolder=new_cloud_folder_object)
+			new_cloud_folder_object.save()
+			CloneView.clone_all(new_cloud_folder_object,cloud_object,item,cloned_object)
 
 	def generate_rand(n):
 		llimit = 10**(n-1)
@@ -1861,14 +2179,14 @@ class CloneView(APIView):
 		try:
 			user_object = Token.objects.get(key = token)
 			accesskey = self.request.data['argval']
-			projectname = self.request.data['spacename']
-			project_object = AntarinProjects.objects.get(name=projectname)
+			spacename = self.request.data['spacename']
+			space_object = AntarinSpaces.objects.get(name=spacename)
 			
-			cloud_object = project_object.project_clouds.get(access_key=int(accesskey))
-			all_project_clouds = project_object.project_clouds.all()
+			cloud_object = space_object.space_clouds.get(access_key=int(accesskey))
+			all_space_clouds = space_object.space_clouds.all()
 
 			accesskey_list = []
-			for item in all_project_clouds:
+			for item in all_space_clouds:
 				accesskey_list.append(item.access_key)
 
 			access_key_length = 3
@@ -1878,8 +2196,12 @@ class CloneView(APIView):
 
 			access_key = num
 
-			all_cloud_folders = cloud_object.cloud_ref.all()
-			
+			cloud_object_copy = copy.deepcopy(cloud_object)
+			all_cloud_folders = cloud_object.cloud_folders.all()
+			all_cloud_files = cloud_object.cloud_files.all()
+			all_home_files = cloud_object.cloud_files.filter(parentfolder=None)
+			all_home_folders = cloud_object.cloud_folders.filter(parentfolder=None)
+
 			cloned_object = cloud_object
 			cloned_object.access_key = num
 			cloned_object.cloud_name = cloud_object.cloud_name + '(cloned)'
@@ -1887,23 +2209,25 @@ class CloneView(APIView):
 			cloned_object.instance_id = ''
 			cloned_object.dns_name = ''
 			cloned_object.is_active = False
-			cloned_object.project = cloud_object.project
+			cloned_object.space = cloud_object.space
+			cloned_object.user = user_object.user
+			cloned_object.package_active = ''
 			cloned_object.save()
 
-			new_user_cloud_object = UserClouds(cloud=cloned_object,user=user_object.user)
-			new_user_cloud_object.save()
+			for item in all_home_files:
+				new_cloudfile_object = AntarinCloudFiles(cloud=cloned_object,file_ref=item.file_ref,parentfolder=None)
+				new_cloudfile_object.save()
 
+			for item in all_home_folders:
+				new_cloud_folder_object = AntarinCloudFolders(cloud=cloned_object,foldername=item.foldername,parentfolder=None)
+				new_cloud_folder_object.save()
 
-			for item in all_cloud_folders:
-				print("cloning package "+item.folder_ref.name)
-				folder_object = CloneView.clone_all(item.folder_ref,user_object,True)
-				new_cloned_package = CloudFolders(cloud=cloned_object,folder_ref=folder_object)
-				new_cloned_package.save() 
+				CloneView.clone_all(new_cloud_folder_object,cloud_object_copy,item,cloned_object)
 			
 			message = {'message': cloned_object.access_key,'status_code':200}
 			return Response(message,status=200)
 
-		except AntarinProjectClouds.DoesNotExist:
+		except AntarinClouds.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)
 		except Token.DoesNotExist:
@@ -1912,68 +2236,47 @@ class CloneView(APIView):
 
 class MergeView(APIView):
 
-	def clone_all(folder_object,user_object,root,parentfolder=None):
-		print("cloning folder "+folder_object.name)
+	def clone_all(new_cloud_folder_object,source_cloud_object,item,destination_cloud_object):
+		all_files = AntarinCloudFiles.objects.filter(cloud=source_cloud_object,parentfolder=item)
+		all_folders = AntarinCloudFolders.objects.filter(cloud=source_cloud_object,parentfolder=item)
 		
-		all_files = AntarinFiles.objects.filter(folder=folder_object)
-		all_folders = AntarinFolders.objects.filter(parentfolder=folder_object)
-		
-		cloned_folder = folder_object
-		cloned_folder.pk = None
-		cloned_folder.user = user_object.user
-		cloned_folder.name = folder_object.name
-		if root:
-			cloned_folder.parentfolder = None
-		else:
-			cloned_folder.parentfolder = parentfolder
-		cloned_folder.save()
-
 		for item in all_files:
-			print("cloning file "+ item.file.name)
-			cloned_file = item
-			cloned_file.file.name = item.file.name			
-			cloned_file.folder = cloned_folder
-			cloned_file.pk = None
-			cloned_file.user = user_object.user
-			cloned_file.save()
+			new_cloudfile_object = AntarinCloudFiles(cloud=destination_cloud_object,file_ref=item.file_ref,parentfolder=new_cloud_folder_object)
+			new_cloudfile_object.save()
 
 		for item in all_folders:
-			CloneView.clone_all(item,user_object,False,cloned_folder)
-
-		return cloned_folder
+			new_cloud_folder_object = AntarinCloudFolders(cloud=destination_cloud_object,foldername=item.foldername,parentfolder=new_cloud_folder_object)
+			new_cloud_folder_object.save()
+			CloneView.clone_all(new_cloud_folder_object,source_cloud_object,item,destination_cloud_object)
 
 	def post(self,request):
 		token = self.request.data['token']
 		try:
 			user_object = Token.objects.get(key = token)
-			projectname = self.request.data['spacename']
+			spacename = self.request.data['spacename']
 			
-			project_object = AntarinProjects.objects.get(name=projectname)
+			space_object = AntarinSpaces.objects.get(name=spacename)
 			
 			source_access_key = self.request.data['source_id']
 			destination_access_key = self.request.data['destination_id']
 			
-			source_instance_object = project_object.project_clouds.get(access_key=int(source_access_key))
-			destination_instance_object = project_object.project_clouds.get(access_key=int(destination_access_key))
+			source_cloud_object = space_object.space_clouds.get(access_key=int(source_access_key))
+			destination_cloud_object = space_object.space_clouds.get(access_key=int(destination_access_key))
 
-			all_source_instance_packages = source_instance_object.cloud_ref.all()
-			all_destination_instance_packages = destination_instance_object.cloud_ref.all()
+			all_source_cloud_folders = source_cloud_object.cloud_folders.all()
+			all_source_cloud_files = source_cloud_object.cloud_files.all()
+			all_home_files = source_cloud_object.cloud_files.filter(parentfolder=None)
+			all_home_folders = source_cloud_object.cloud_folders.filter(parentfolder=None)
 
-			destination_package_names = [i.folder_ref.name for i in all_destination_instance_packages]
-			print(destination_package_names)
-			
-			for package_object in all_source_instance_packages:
-				print(package_object.folder_ref.name)
-				temp = str(package_object.folder_ref.name)
-				foldername = package_object.folder_ref.name
-				if package_object.folder_ref.name in destination_package_names:
-					foldername = temp + "_copy"
+			for item in all_home_files:
+				new_cloudfile_object = AntarinCloudFiles(cloud=destination_cloud_object,file_ref=item.file_ref,parentfolder=None)
+				new_cloudfile_object.save()
 
-				folder_object = MergeView.clone_all(package_object.folder_ref,user_object,True)
-				new_destination_package_object = CloudFolders(cloud=destination_instance_object,folder_ref=folder_object)
-				new_destination_package_object.folder_ref.name = foldername
-				new_destination_package_object.save()
-				print(package_object.folder_ref.name,new_destination_package_object.folder_ref.name)
+			for item in all_home_folders:
+				new_cloud_folder_object = AntarinCloudFolders(cloud=destination_cloud_object,foldername=item.foldername,parentfolder=None)
+				new_cloud_folder_object.save()
+
+				MergeView.clone_all(new_cloud_folder_object,source_cloud_object,item,destination_cloud_object)
 
 			message = {'message': 'Merge successful','status_code':200}
 			return Response(message,status=200)
@@ -2001,57 +2304,51 @@ class DownloadView(APIView):
 				dir_id = self.request.data['id']
 				if dir_id:
 					user_folder_object = UserFolders.objects.get(pk=int(dir_id))
-					antarin_folder_object = user_folder_object.folder_ref
 				else:
-					antarin_folder_object = None
-				all_user_files = user_object.user.user_files.all()
-				for item in all_user_files:
-					if item.file_ref.folder == antarin_folder_object and os.path.basename(item.file_ref.file.name) == argval:
-						file_object = item.file_ref
+					user_folder_object = None
+				
+				all_files = user_object.user.user_files.filter(parentfolder=user_folder_object)
+				for item in all_files:
+					if os.path.basename(item.file_ref.file.name) == argval:
+						file_object = item
 						found = True
 						break
 			
 			elif env == 'space':
 				#look for filename in projectfiles
 				spacename = self.request.data['spacename'].strip()
-				project_object = AntarinProjects.objects.get(name=spacename)
+				space_object = AntarinSpaces.objects.get(name=spacename)
 				spacedir_id = self.request.data['spacedir_id']
-				if spacedir_id == '':
-					all_project_files = project_object.project.all()
-					for item in all_project_files:
-						if os.path.basename(item.file_ref.file.name) == argval:
-							file_object = item.file_ref
-							found = True
-							break
+
+				if spacedir_id:
+					space_folder_object = AntarinSpaceFolders.objects.get(pk=int(spacedir_id))
 				else:
-					folder_object = AntarinFolders.objects.get(pk=int(spacedir_id))
-					all_files = folder_object.parent_folder_ref.all()
-					for item in all_files:
-						if os.path.basename(item.file.name) == argval:
-							file_object = item
-							found = True
-							break
+					space_folder_object = None
+				
+				all_files = space_object.space_files.filter(parentfolder=space_folder_object)
+				for item in all_files:
+					if os.path.basename(item.file_ref.file.name) == argval:
+						file_object = item
+						found = True
+						break
 
 			elif env == 'cloud':
 				#look for filename in cloudfiles
 				cloud_id = self.request.data['cloud_id']
-				cloud_object = AntarinProjectClouds.objects.get(pk=int(cloud_id))
+				cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
 				clouddir_id = self.request.data['clouddir_id']
-				if clouddir_id == '':
-					all_cloud_files = cloud_object.cloud.all()
-					for item in all_cloud_files:
-						if os.path.basename(item.file_ref.file.name) == argval:
-							file_object = item.file_ref
-							found = True
-							break
+				
+				if clouddir_id:
+					cloud_folder_object = AntarinCloudFolders.objects.get(pk=int(clouddir_id))
 				else:
-					folder_object = AntarinFolders.objects.get(pk=int(clouddir_id))
-					all_files = folder_object.parent_folder_ref.all()
-					for item in all_files:
-						if os.path.basename(item.file.name) == argval:
-							file_object = item
-							found = True
-							break
+					cloud_folder_object = None
+				
+				all_files = cloud_object.cloud_files.filter(parentfolder=cloud_folder_object)
+				for item in all_files:
+					if os.path.basename(item.file_ref.file.name) == argval:
+						file_object = item
+						found = True
+						break
 			
 			if not found:
 				message = api_exceptions.file_DoesNotExist()
@@ -2062,7 +2359,8 @@ class DownloadView(APIView):
 			# bucket_list = bucket.list()
 			# key = bucket.get_key("media/"+file_object.file.name)
 			# url = key.generate_url(0, query_auth=False, force_http=True)
-			print (file_object.file.url)
+			print (file_object.file_ref.file.url)
+			url = file_object.file_ref.file.url
 			# filepath = os.path.join(os.path.expanduser('~'),file_object.file.name)
 			# print(filepath)
 			# print("media/"+file_object.file.name)
@@ -2071,12 +2369,12 @@ class DownloadView(APIView):
 			# 	'file': (os.path.basename(filepath), open(filepath, 'rb')),
 			# 	}
 			# return Response(files,status=200)
-			message = {'message':file_object.file.url,'status_code':200}
+			message = {'message':url,'status_code':200}
 			return Response(message,status=200)
-		except AntarinProjects.DoesNotExist:
+		except AntarinSpaces.DoesNotExist:
 			message = api_exceptions.project_DoesNotExist()
 			return Response(message,status=400)
-		except AntarinProjectClouds.DoesNotExist:
+		except AntarinClouds.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)
 		except Token.DoesNotExist:

@@ -15,10 +15,11 @@ from antarin import forms as antarin_forms
 from rest_framework.authtoken import views
 
 urlpatterns = [
-	url(r'^$', antarin_views.login_view),
-	url(r'^accounts/login/?$',antarin_views.login_view),
-	url(r'^logout/$',auth_views.logout_then_login),
+	#url(r'^$', antarin_views.login_view),
+	#url(r'^accounts/login/?$',antarin_views.login_view),
+	#url(r'^logout/$',auth_views.logout_then_login),
 	url(r'^signup/$', antarin_views.signup),
+	url(r'^$', antarin_views.signup),
 	url(r'^signup/success/$',antarin_views.signup_success),
 	url(r'^home/$',antarin_views.userHomepage, name = "user_homepage"),
 	url(r'^activate/(?P<key>.+)$', antarin_views.activation),

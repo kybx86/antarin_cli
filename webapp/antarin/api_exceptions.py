@@ -30,7 +30,7 @@ def folder_DoesNotExist():
 def instance_DoesNotExist():
 	return_dict = {}
 	return_dict['status_code'] = 400
-	return_dict['message'] = message + "Instance does not exist. Not a valid access key"
+	return_dict['message'] = message + "Cloud does not exist. Not a valid access key"
 	return return_dict
 
 def package_DoesNotExist(packagename=None):
@@ -39,7 +39,7 @@ def package_DoesNotExist(packagename=None):
 	if packagename:
 		return_dict['message'] = message + "Package %s does not exist in the cloud." %packagename
 	else:
-		return_dict['message'] = message + "Package does not exist in the cloud."
+		return_dict['message'] = message + "Package does not exist in this folder of the cloud."
 	return return_dict
 
 def folder_exists():
@@ -57,13 +57,13 @@ def file_exists():
 def project_exists():
 	return_dict = {}
 	return_dict['status_code'] = 400
-	return_dict['message'] = message + "Project with the same name exists."
+	return_dict['message'] = message + "Space with the same name exists."
 	return return_dict
 
 def instance_exists():
 	return_dict = {}
 	return_dict['status_code'] = 400
-	return_dict['message'] = message + "Cloud with the same name exists in this project environment."
+	return_dict['message'] = message + "Cloud with the same name exists in this space."
 	return return_dict
 
 def permission_denied():
@@ -87,7 +87,7 @@ def user_DoesNotExist():
 def cloud_notRunning():
 	return_dict = {}
 	return_dict['status_code'] = 400
-	return_dict['message'] = message + "Cloud is not in 'running' state"
+	return_dict['message'] = message + "Cloud is not in 'running' state. Please initialize the cloud"
 	return return_dict
 
 def intance_launch_error():
@@ -131,4 +131,10 @@ def wrong_path_specified():
 	return_dict = {}
 	return_dict['status_code'] = 400
 	return_dict['message'] = message + "Path specified is not correct."
+	return return_dict
+
+def package_deleted():
+	return_dict = {}
+	return_dict['status_code'] = 400
+	return_dict['message'] = message + "The package with which the cloud was initialised does not exist."
 	return return_dict

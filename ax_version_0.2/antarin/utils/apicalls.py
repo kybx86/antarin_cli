@@ -36,7 +36,7 @@ def api_send_request(api_endpoint,method=None,config_data=None,file=None):
 		sys.exit(0)
 	except requests.exceptions.RequestException as error:
 		#log(error) --> implement a logger module
-		iocalls.print_exception_error('\nConnection Error : Could not connect to server')
+		iocalls.print_exception_error('\nConnection Error: Could not connect to server')
 		sys.exit(1)
 
 	message = json.loads(connection.text)

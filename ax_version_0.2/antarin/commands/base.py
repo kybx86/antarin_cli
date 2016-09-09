@@ -282,7 +282,7 @@ class Base(object):
 		folder_size, unit = ut.get_size(file=None, num_bytes=num_bytes)
 		cl.out(cl.blue('\nUploading folder: {0} ...\n').format(filename))
 		cl.out(cl.blue('\nFolder size: {0:.2f} {1}').format(folder_size ,unit))
-		print()
+		cl.out('\n')
 		bytes_uploaded = 0
 		time_initial = time.time()
 		for root, dirs, files in result:

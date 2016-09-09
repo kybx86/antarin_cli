@@ -2,53 +2,60 @@
 	antarinX I/O methods
 """
 # This file contains all input/ouput methods used in antarinX CLI
+from __future__ import print_function
 
 import os
 import sys
 import getpass
+
 from . import _color as cl
 from . import utilities as ut
 
 def print_text(message, newline=None):
 
-	if newline is None:
-		cl.out(cl.blue('\n' + message + '\n'))
-	elif newline is False:
-		cl.out(cl.blue('\n' + message))
+	cl.out(cl.blue("\n{}".format(message)))
+	cl.out('\n')
 
 def print_text_bold(message):
 	print(cl.blue(cl.bold(message)))
 
 def print_exception_error(message):
-	print(cl.red(message))
+	print(cl.red(message)) #red
 
 def print_not_inside_space_message():
 	message = 'Error: You are not inside a space environment. Please try this command after entering a space--see "ax enter <space>"'
-	print_text('\n'+ message)
+	cl.out(cl.blue("\n{}".format(message)))
+	cl.out('\n')
 
 def print_not_inside_cloud_message():
 	message = 'Error: You are not inside a cloud environment. Please try this command after entering a cloud--see "ax enter <cloud>"'
-	print_text('\n'+ message)
+	cl.out(cl.blue("\n{}".format(message)))
+	cl.out('\n')
 
 def print_not_absolute_path():
 	message = 'Error: Please provide the absolute path of file/folder/package.'
-	print_text('\n'+ message)
+	cl.out(cl.blue("\n{}".format(message)))
+	cl.out('\n')
 
 def print_not_num_text():
-	message = 'Error: Not a valid argument value. Accepted value is a 4 digit number.'
-	print_text(message)
+	message = 'Error: Not a valid argument value. Accepted value is a 3 digit ID number' 
+	cl.out(cl.blue("\n{}".format(message)))
+	cl.out('\n')
 
 def print_not_valid_argument():
-	message = 'This argument is not valid in the current anatrinX environment. Verify your current environment -- check "ax see env"'
-	print_text(message)
+	message = "Error: This argument is not valid in the current anatrinX environment. Verify your current environment -- check 'ax see env'"
+	cl.out(cl.blue("\n{}".format(message)))
+	cl.out('\n')
 
 def print_specify_accesskey():
 	message = 'Error: Please specify accesskey of the cloud.'
-	print_text(message)
+	cl.out(cl.blue("\n{}".format(message)))
+	cl.out('\n')
 
 def print_not_valid_shell_command():
 	message = 'Error: Not a valid shell command. Please make sure its in the format "python <file_path>"'
-	print_text(message)
+	cl.out(cl.blue("\n{}".format(message)))
+	cl.out('\n')
 
 def print_run_output(message):
 	if type(message) is list:
@@ -56,26 +63,34 @@ def print_run_output(message):
 			print_text(item)
 	else:
 		print_text(message)
+
 def print_monitor_text(message):
-	for item in message:
-		print_text(item[0] + '\t' + item[1] + '\t' + item[2])
+	
+	print("TODO: monitor {}".format(message))
+	# for item in message:
+	# 	cloudname = item[0]
+	# 	owner = item[1]
+	# 	state = item[2]
+	# 	cl.out(cl.blue())
+		# print_text(item[0] + '\t' + item[1] + '\t' + item[2])
 		
 def print_login(message, token):
 
 	cl.out(cl.blue('\nantarinX login succesful!'))
 	cl.out(cl.blue('\nLogged in as: {0}').format(message))
 	cl.out(cl.blue('\nSession token: {0}').format(token))
-	print()
+	cl.out('\n')
 
 def print_log(message):
 	
-	print_text_bold('\nProject log:\n')
+	print_text_bold('\nSpace log:\n') 
 	for item in message:
 		time = ut.utc_to_local(item[0])
 		cl.out(cl.blue('\t{0} | {1}\n').format(time, item[1]))
 		# the log could be formated a lot better. 
 
 def print_file_list(message):
+	
 	cl.out(cl.blue(cl.bold('\nFiles:\n')))
 	for item in range(len(message)):
 		cl.out(cl.blue('\n\t' + message[item]))
@@ -107,13 +122,24 @@ def print_spaces(message, argument):
 		cl.out(cl.blue(cl.bold("\t{0} name: ").format(argument.title()[:-1])) + 
 			cl.blue("{0:{1}s}".format(space_name[:size], size)))
 		cl.out(cl.blue(cl.bold('\t| Permissions: ') + cl.blue(space_entry[1])))
-		cl.out(cl.blue(cl.bold('\t| {0} ID ').format(argument.title()[:-1]) + 
+		cl.out(cl.blue(cl.bold('\t| {0} ID: ').format(argument.title()[:-1]) + 
 			cl.blue(space_entry[2])))
 		cl.out('\n')
 
 def print_summary(message,env):
 	summary = message
-	if env == 'space':
+
+	if env == 'filesystem':
+		cl.out(cl.blue(cl.bold('\nAccount\n')))
+		cl.out(cl.blue(cl.bold('\n\tUser: ')) + 
+			cl.blue('{0} {1}').format(summary['firstname'].title(), summary['lastname'].title()))
+		cl.out(cl.blue(cl.bold('\n\tAntarin ID: ')) + cl.blue(summary['username']))
+		cl.out(cl.blue(cl.bold('\n\tStorage Use: ')) + 
+			cl.blue('{0} / {1}').format(summary['data_storage_used'], summary['data_storage_available']))
+		# can add more to summary: 'status bar': spaces, clouds running, etc...
+		print('\n')
+
+	elif env == 'space':
 		space_name = summary['projectname'].split(':')[1]
 		admin = summary['admin'].split('(')
 		
@@ -128,28 +154,23 @@ def print_summary(message,env):
 			usr_perms = summary['contributors'][item][1]
 			cl.out(cl.blue("\n\t\t{0} - {1}").format(usr.title(), usr_perms))
 		print('\n')
-		cl.out(cl.blue(cl.bold('\tProject files: \n')))
+		cl.out(cl.blue(cl.bold('\tSpace files: \n')))
 		for item in range(len(summary['file_list'])):
 			filename = summary['file_list'][item][0]
 			owner = summary['file_list'][item][1]
 			cl.out(cl.blue("\n\t\t{0} \t{1}").format(owner.title(), filename))
 		print('\n')
-		cl.out(cl.blue(cl.bold('\tProject folders: \n')))
+		cl.out(cl.blue(cl.bold('\tSpace folders: \n')))
 		for item in range(len(summary['folder_list'])):
 			filename = summary['folder_list'][item][0]
 			owner = summary['folder_list'][item][1].split('(')[0]
 			cl.out(cl.blue("\n\t\t{0} \t{1}").format(owner.title(), filename))
 		print('\n')
 
-	if env == 'filesystem':
-		cl.out(cl.blue(cl.bold('\nAccount\n')))
-		cl.out(cl.blue(cl.bold('\n\tUser: ')) + 
-			cl.blue('{0} {1}').format(summary['firstname'].title(), summary['lastname'].title()))
-		cl.out(cl.blue(cl.bold('\n\tAntarin ID: ')) + cl.blue(summary['username']))
-		cl.out(cl.blue(cl.bold('\n\tStorage Use: ')) + 
-			cl.blue('{0} / {1}').format(summary['data_storage_used'], summary['data_storage_available']))
-		# can add more to summary: 'status bar': spaces, clouds running, etc...
-		print('\n')
+	elif env == 'cloud':
+		print("TODO: Cloud summary {}".format(summary))
+
+
 
 def print_enter(message, arg):
 	if arg == 'space':

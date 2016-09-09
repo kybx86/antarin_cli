@@ -19,7 +19,8 @@ blue = lambda x: colored(x, 'cyan')
 
 red  = lambda x: colored(x,'red')
 
-bold = lambda x: ('\033[1m' + x + '\033[0m')
+# bold = lambda x: ('\033[1m' + x + '\033[0m')
+bold = lambda x: ('\033[1m{}\033[0m'.format(x))
 
-out  = lambda x: sys.stdout.write(x)
+out  = lambda x: sys.stdout.write("{}".format(x))
 

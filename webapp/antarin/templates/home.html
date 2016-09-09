@@ -1,28 +1,14 @@
 {% extends "base.html" %}
 
-{% block head %}
-    {% load static from staticfiles %}
-    <script src="{% static 'js/dropzone.js' %}"></script>
-    <script type="text/javascript">
-        Dropzone.options.myDropzone = {
-            autoProcessQueue : true, 
-
-            init:function()
-            {
-                myDropzone.dictDefaultMessage = "Drop Files!"
-                myDropzone.processQueue();
-            }
-        };
-    </script>
-{% endblock %}
-
 {% block title %}UserHomepage{% endblock %}
 
 {% block header %}
             <a href = "/">
             {% load static from staticfiles %}
-              <img id="dashboard_logo" style="width:150px;height:150px;" src="{% static 'images/antarinX_logo_only_square.png' %}" alt = "antarin logo"/> 
+              <img id="dashboard_logo" style="width:100px;height:100px;" src="{% static 'images/dots_icon_350px.png' %}" alt = "antarin logo"/> 
             </a>
+
+            
             <div class="dropdown" style="float:right;">
                   <button class="dropbtn" style="color:black;background-color:white;font-family:'Helvetica Neue';">
                       {% if user.is_authenticated %}
@@ -30,53 +16,10 @@
                       {% endif %}
                   </button>
                   <div class="dropdown-content">
-                        <a href="#">Account</a>
-                        <a href="#">Data Storage {{used_data_storage}}/{{total_data_storage}}</a>
+                       <!-- <a href="#">Account</a>
+                        <a href="#">Data Storage {{used_data_storage}}/{{total_data_storage}}</a>-->
                         <a href="/logout/">Logout</a>
                   </div>
             </div>
            
 {% endblock%}
-
-{% block content %}
-
-    <ul class="menu">
-        <li><a href="#">LOAD DATA</a></li>
-        <li><a href="#">BUTTON 2 </a></li>
-        <li><a href="#">BUTTON 3 </a></li>
-    </ul>
-
-    <hr align="center"/>
-    
-    <form method="post" action = "." enctype="multipart/form-data">{% csrf_token %}
-            {{form}}
-           <br/>
-           
-    </form>
-
-    <br/><br/><br/>
-     
-     <!--
-    <form method = "post" action="{% url "user_homepage" %}" enctype="multipart/form-data" class = "dropzone" style="width:100%"> {% csrf_token %}
-        <div class="fallback">
-            <input name="file" type="file" multiple />
-        </div>
-
-        <br/><br/>
-    </form>
-    <br/><br/>
--->
-
-        <div class = "file-summary" style="width:100%;margin-right:0px;font-family:'Helvetica Neue'">
-            <table border="0">
-                {% for file in allfiles %}
-                <tr>
-                    {% load filename %}
-                    <td><a href="{{ file.file.url }}">{{file.file|filename}}</a></td>
-                    <td>{{file.file.size}}bytes </td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
-
-{% endblock %}

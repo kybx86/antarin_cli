@@ -181,70 +181,35 @@ def calculate_used_data_storage(all_files):
 This view defines the customised user homepage that is rendered on a successful user login. The @login_required decorator ensurest that this view is
 only excuted when a user is logged in.
 '''
-# @login_required
-# def userHomepage(request):
-# 	user = User.objects.get(username = request.user.username)
-# 	all_files = user.useruploadedfiles.all()
-# 	used_data_storage = calculate_used_data_storage(all_files)
-# 	user.data_storage_used = used_data_storage
-# 	user.save()
-# 	if request.method == 'POST':
-# 		form = FileUploadForm(request.POST,request.FILES)
-# 		if form.is_valid():
-# 			user_files = UserUploadedFiles()
-# 			user_files.user = user
-# 			user_files.file = request.FILES.get('file')
-# 			user_files.save()
-# 			all_files = user.useruploadedfiles.all()
-# 			used_data_storage = calculate_used_data_storage(all_files)
-# 			user.data_storage_used = used_data_storage
-# 			user.save()
-# 			message = "Files were uploaded successfully!"
-# 			variables = RequestContext(request,{'form':form,'message':message,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
-# 			return render_to_response('home.html',variables)
-# 	else:
-# 		form = FileUploadForm()
-# 	variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
-# 	return render_to_response('home.html',variables)
 
 @login_required
 def userHomepage(request):
 	user = User.objects.get(username = request.user.username)
-	all_files = user.useruploadedfiles.all()
-	used_data_storage = calculate_used_data_storage(all_files)
-	user.data_storage_used = used_data_storage
-	user.save()
-	if request.method == 'POST':
-		form = FileUploadForm(request.POST,request.FILES)
-		if form.is_valid():
-			user_files = UserUploadedFiles()
-			user_files.user = user
-			user_files.file = request.FILES.get('file')
-			user_files.folder = None
-			user_files.save()
-			all_files = user.useruploadedfiles.all()
-			used_data_storage = calculate_used_data_storage(all_files)
-			user.data_storage_used = used_data_storage
-			user.save()
-			message = "Files were uploaded successfully!"
-			variables = RequestContext(request,{'form':form,'message':message,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
-			return render_to_response('home.html',variables)
-	else:
-		form = FileUploadForm()
-	variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
+	# all_files = user.useruploadedfiles.all()
+	# used_data_storage = calculate_used_data_storage(all_files)
+	# user.data_storage_used = used_data_storage
+	# user.save()
+	# if request.method == 'POST':
+	# 	form = FileUploadForm(request.POST,request.FILES)
+	# 	if form.is_valid():
+	# 		# user_files = UserUploadedFiles()
+	# 		# user_files.user = user
+	# 		# user_files.file = request.FILES.get('file')
+	# 		# user_files.folder = None
+	# 		# user_files.save()
+	# 		# all_files = user.useruploadedfiles.all()
+	# 		# used_data_storage = calculate_used_data_storage(all_files)
+	# 		# user.data_storage_used = used_data_storage
+	# 		# user.save()
+	# 		# message = "Files were uploaded successfully!"
+	# 		#variables = RequestContext(request,{'form':form,'message':message,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
+	# 		variables = {}
+	# 		return render_to_response('home.html',variables)
+	# else:
+	# 	form = FileUploadForm()
+	#variables = RequestContext(request,{'form':form,'media_url':settings.MEDIA_URL,"allfiles":all_files,"used_data_storage":used_data_storage,"total_data_storage":user.userprofile.total_data_storage})
+	variables = RequestContext(request,{})
 	return render_to_response('home.html',variables)
-
-# class ListFilesView(APIView):
-# 	def get(self,request):
-# 		try:
-# 			user_val = Token.objects.get(key = self.request.data)
-# 			all_files = user_val.user.useruploadedfiles.all()
-# 			return_val = [file.file.name for file in all_files]
-# 			print(return_val)
-# 			return Response(return_val)
-# 		except Token.DoesNotExist:
-# 			return None
-
 
 """
 class SeeView(APIView):

@@ -267,7 +267,8 @@ class UploadView(APIView):
 				next_folder_object = folder_object.all_folders.get(foldername=item)
 				id_val = next_folder_object.pk
 		else:
-			folder_object = user_object.user.user_folders.get(name=l[0],parentfolder=None)
+			print("here")
+			folder_object = user_object.user.user_folders.get(foldername=l[0],parentfolder=None)
 			id_val = folder_object.pk
 			for item in l[1:]:
 				next_folder_object = folder_object.all_folders.get(foldername=item)
@@ -516,10 +517,11 @@ class SeeView(APIView):
 						admin = item.user.first_name + ' '+ item.user.last_name +'('+item.user.username+')'
 
 				for item in all_spacefiles:
-					file_list.append(os.path.basename(item.file_ref.file.name))
+					file_list.append((os.path.basename(item.file_ref.file.name),item.added_by.first_name+' '+item.added_by.last_name+'('+item.added_by.username.lower()+')'))
+					
 
 				for item in all_spacefolders:
-					folder_list.append('/'+item.foldername)
+					folder_list.append(('/'+item.foldername,item.added_by.first_name+' '+item.added_by.last_name+'('+item.added_by.username.lower()+')'))
 
 				data = {'projectname':spacename,'contributors':contributor_list,'admin':admin,'file_list':file_list,'folder_list':folder_list}
 				message = {'message':data,'status_code':200}

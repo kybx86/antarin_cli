@@ -22,7 +22,7 @@ config_file_path = os.path.join(os.path.expanduser('~'),file_name)
 section_name = 'user_details'
 
 __metaclass__ = type
-class Config(cparser.SafeConfigParser):
+class Config(cparser.SafeConfigParser,object):
 	def __init__(self):
 		self.file_path = config_file_path
 		self.section_name = section_name

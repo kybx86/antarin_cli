@@ -1958,6 +1958,11 @@ class InitializeView(APIView):
 				cloud_id = self.request.data['cloud_id']
 				cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))	
 
+			if cloud_object.user.username != user_object.user.username:
+				return_val = api_exceptions.permission_denied()
+				message = {'message': return_val,'status_code':400}
+				return Response(message,status=400)
+
 			packagename = self.request.data['packagename']
 			
 			clouddir_id = self.request.data['clouddir_id']
@@ -1972,7 +1977,8 @@ class InitializeView(APIView):
 				sec_group = []
 				sec_group.append(cloud_object.security_group)
 				key_name = 'ec2test'
-
+				cloud_object.status = 'Initializing'
+				cloud_object.save()
 				res = execute(InitializeView.launch_instance,cloud_object.ami_id,key_name,cloud_object.instance_type,sec_group)
 
 				if res['localhost'][0]:
@@ -2018,6 +2024,7 @@ class InitializeView(APIView):
 					output = execute(InitializeView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
 					print(output)
 					
+					cloud_object.status = 'Initialized with package : ' + packagename
 					cloud_object.package_active = str(folder_id)
 					cloud_object.save()
 
@@ -2089,11 +2096,18 @@ class RunView(APIView):
 			folder_object = AntarinCloudFolders.objects.get(cloud=cloud_object,parentfolder=cloud_root_folder_object,foldername=packagename)
 
 			if cloud_object.is_active == True:
+				cloud_object.process_running = shell_command
+				cloud_object.status = 'Exceuting process : ' + shell_command
+				cloud_object.save()
 				commands.append(shell_command)
 				output = execute(RunView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
 				output_text = output[cloud_object.dns_name]
 				for item in output_text:
 					print(item)
+
+				cloud_object.status = 'Task Complete : ' + shell_command
+				cloud_object.save()
+
 				message = {'message': output_text,'status_code':200}
 				return Response(message,status=200)
 			
@@ -2140,6 +2154,8 @@ class SleepView(APIView):
 				cloud_object.dns_name = ''
 				cloud_object.instance_id = ''
 				cloud_object.package_active = ''
+				cloud_object.process_running = ''
+				cloud_object.status = 'Standby'
 				cloud_object.save()
 				print (response)
 				message = {'message':'Cloud stopped.','status_code':200}
@@ -2283,7 +2299,7 @@ class MergeView(APIView):
 			message = {'message': 'Merge successful','status_code':200}
 			return Response(message,status=200)
 
-		except AntarinProjectClouds.DoesNotExist:
+		except AntarinClouds.DoesNotExist:
 			message = api_exceptions.instance_DoesNotExist()
 			return Response(message,status=400)
 		except Token.DoesNotExist:
@@ -2356,21 +2372,7 @@ class DownloadView(APIView):
 				message = api_exceptions.file_DoesNotExist()
 				return Response(message,status=400)
 
-			# conn = boto.connect_s3(settings.AWS_ACCESS_KEY_ID,settings.AWS_SECRET_ACCESS_KEY)
-			# bucket = conn.get_bucket(settings.AWS_STORAGE_BUCKET_NAME)
-			# bucket_list = bucket.list()
-			# key = bucket.get_key("media/"+file_object.file.name)
-			# url = key.generate_url(0, query_auth=False, force_http=True)
-			print (file_object.file_ref.file.url)
 			url = file_object.file_ref.file.url
-			# filepath = os.path.join(os.path.expanduser('~'),file_object.file.name)
-			# print(filepath)
-			# print("media/"+file_object.file.name)
-			# key.get_contents_to_filename(filepath)
-			# files = {
-			# 	'file': (os.path.basename(filepath), open(filepath, 'rb')),
-			# 	}
-			# return Response(files,status=200)
 			message = {'message':url,'status_code':200}
 			return Response(message,status=200)
 		except AntarinSpaces.DoesNotExist:
@@ -2383,5 +2385,39 @@ class DownloadView(APIView):
 			message = api_exceptions.invalid_session_token()
 			return Response(message,status=404)
 
+class MonitorView(APIView):
 
+	def post(self,request):
+		token = self.request.data['token']
+		env = self.request.data['env'].strip()
+		try:
+			user_object = Token.objects.get(key=token)
+			return_val = []
+			all_clouds=[]
+			if env == 'filesystem':
+				all_clouds = user_object.user.user_clouds.all()
+			if env == 'space':
+				spacename = self.request.data['spacename']
+				space_object = AntarinSpaces.objects.get(name=spacename)
+				all_clouds = space_object.space_clouds.all()
+			if env =='cloud':
+				cloud_id = self.request.data['cloud_id']
+				cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
+				all_clouds .append(cloud_object)
+			
+			for item in all_clouds:
+				return_val.append((item.cloud_name,item.space.name,item.status))
+
+			message = {'message':return_val,'status_code':200}
+			return Response(message,status=200)
+
+		except AntarinSpaces.DoesNotExist:
+			message = api_exceptions.project_DoesNotExist()
+			return Response(message,status=400)
+		except AntarinClouds.DoesNotExist:
+			message = api_exceptions.instance_DoesNotExist()
+			return Response(message,status=400)
+		except Token.DoesNotExist:
+			message = api_exceptions.invalid_session_token()
+			return Response(message,status=404)
 

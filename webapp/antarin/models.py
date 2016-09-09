@@ -104,6 +104,8 @@ class AntarinClouds(models.Model):
     dns_name = models.CharField(max_length=60,default='')
     is_active = models.BooleanField(default=False)
     package_active = models.CharField(max_length=100,default='')
+    process_running = models.CharField(max_length=500,default='')
+    status = models.CharField(max_length=200,default='Standby')
 
 class AntarinCloudFolders(models.Model):
     cloud = models.ForeignKey(AntarinClouds,related_name='cloud_folders')

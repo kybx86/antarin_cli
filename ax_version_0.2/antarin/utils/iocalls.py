@@ -56,7 +56,10 @@ def print_run_output(message):
 			print_text(item)
 	else:
 		print_text(message)
-
+def print_monitor_text(message):
+	for item in message:
+		print_text(item[0] + '\t' + item[1] + '\t' + item[2])
+		
 def print_login(message, token):
 
 	cl.out(cl.blue('\nantarinX login succesful!'))

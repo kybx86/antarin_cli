@@ -22,12 +22,18 @@ def api_send_request(api_endpoint,method=None,config_data=None,file=None):
 	else:
 		files = None
 	try:
+		if api_endpoint == '/initialize/':
+			requests.post(URL, data=payload,files=files,timeout=30)
+			
 		if method == 'POST':
 			connection = requests.post(URL, data=payload,files=files)
 		elif method == 'GET':
 			connection = requests.get(URL, data=payload)
 		elif method == 'PUT':
 			connection = requests.post(URL,data=payload,files=files)
+	
+	except requests.exceptions.Timeout:
+		sys.exit(0)
 	except requests.exceptions.RequestException as error:
 		#log(error) --> implement a logger module
 		iocalls.print_exception_error('\nConnection Error : Could not connect to server')

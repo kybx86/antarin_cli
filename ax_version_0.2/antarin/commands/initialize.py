@@ -32,6 +32,6 @@ class Initialize(Base):
 					else:
 						iocalls.print_specify_accesskey()
 						self.system_exit()
+				
 				payload = self.send_request(self.endpoint,None,accesskey,None,None,package)
 				self.response_handler(payload)
-			

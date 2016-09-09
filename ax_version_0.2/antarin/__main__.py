@@ -15,6 +15,7 @@ Usage:
 	ax run <shell_command> <packagename> [<id>]
 	ax clone <id>
 	ax merge <source_id> <destination_id>
+	ax monitor 
 	ax sleep [<id>]
 	ax logout
 

@@ -8,7 +8,8 @@ from ..utils import apicalls,iocalls
 class Merge(Base):
 
 	def response_handler(self,payload):
-		print(payload[1])
+		message = payload[1]['message']
+		iocalls.print_text(message)
 		
 	def run(self):
 		config = self.config

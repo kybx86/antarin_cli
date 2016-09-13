@@ -9,7 +9,7 @@ from ..utils import apicalls,iocalls
 class Download(Base):
 	def response_handler(self, payload):
 		message = payload[1]['message']
-		iocalls.print_text(message)
+		iocalls.print_download(message)
 
 	def run(self):
 		config = self.config

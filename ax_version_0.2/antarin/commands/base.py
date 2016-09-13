@@ -296,8 +296,8 @@ class Base(object):
 				argval = os.path.join(root,item)
 				bytes_uploaded += os.stat(argval).st_size
 				self.folder_upload_send_request(api_endpoint, 'upload', None, None, value, argval)
-				percentage = round((bytes_uploaded / num_bytes)*100)					
-				cl.out(cl.blue('\rUploaded: {0:.0f}% | {1} / {2} {3:.60s}').format(percentage, bytes_uploaded, num_bytes, 'bytes'))
+				percentage = (float(bytes_uploaded)/num_bytes)*100				
+				cl.out(cl.blue('\rUploaded: {0:.2f}% | {1} / {2} {3:.60s} ...').format(percentage, bytes_uploaded, num_bytes, 'bytes'))
 				sys.stdout.flush()
 		time_elapsed = time.time() - time_initial
 		time_elapsed, unit = ut.get_time(time_elapsed)

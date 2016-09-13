@@ -9,7 +9,7 @@ class Initialize(Base):
 
 	def response_handler(self,payload):
 		message = payload[1]['message']
-		iocalls.print_text(message)
+		iocalls.print_text(message) 
 
 	def run(self):
 		config = self.config
@@ -32,6 +32,7 @@ class Initialize(Base):
 					else:
 						iocalls.print_specify_accesskey()
 						self.system_exit()
-				
+						
+# def send_request(self,api_endpoint,argument=None,argval=None,cloud_data=None,pwd=None,packagename=None,shell_command=None,packagelist=None,source_id=None,destination_id=None):
 				payload = self.send_request(self.endpoint,None,accesskey,None,None,package)
 				self.response_handler(payload)

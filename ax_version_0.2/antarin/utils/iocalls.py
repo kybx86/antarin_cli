@@ -65,14 +65,32 @@ def print_run_output(message):
 		print_text(message)
 
 def print_monitor_text(message):
-	
-	print("TODO: monitor {}".format(message))
-	# for item in message:
-	# 	cloudname = item[0]
-	# 	owner = item[1]
-	# 	state = item[2]
-	# 	cl.out(cl.blue())
-		# print_text(item[0] + '\t' + item[1] + '\t' + item[2])
+
+	cl.out(cl.blue(cl.bold('\nActivity monitor:\n'))) 
+	cl.out('\n')
+
+	message = sorted(message)
+	sizes = ut.check_name_size(message, dtype='monitor')
+	for item in message:
+		cloudname = item[0]
+		owner_name = item[1].split(':')[0]
+		space_name = item[1].split(':')[1]
+		status = item[2]
+		cl.out(cl.blue(cl.bold("\tSpace: ") 
+			+ cl.blue("{0:{1}s}".format(space_name[:sizes['space_size']], sizes['space_size']))))
+		cl.out(cl.blue(cl.bold("\t| Cloud: ") 
+			+ cl.blue("{0:{1}s}".format(cloudname[:sizes['cloud_size']], sizes['cloud_size']))))
+		cl.out(cl.blue(cl.bold('\t| Owner: ') 
+			+ cl.blue("{0:{1}}".format(owner_name, sizes['owner_size']))))
+		cl.out(cl.blue(cl.bold("\t| State: ") 
+			+ cl.blue("{0:{1}s}".format(status, 15))))
+		cl.out('\n')
+
+def print_clone(message):
+	cl.out(cl.blue("\nCloned with cloud ID: {0}\n".format(message)))
+
+def print_download(message):
+	cl.out(cl.blue("\nFile for download available at:\n{0}\n".format(message)))
 		
 def print_login(message, token):
 
@@ -86,7 +104,7 @@ def print_log(message):
 	print_text_bold('\nSpace log:\n') 
 	for item in message:
 		time = ut.utc_to_local(item[0])
-		cl.out(cl.blue('\t{0} | {1}\n').format(time, item[1]))
+		cl.out(cl.blue('\t{0}'.format(time)) + cl.blue(cl.bold(' -> ')) + cl.blue('{0}\n').format(item[1]))
 		# the log could be formated a lot better. 
 
 def print_file_list(message):
@@ -170,8 +188,6 @@ def print_summary(message,env):
 	elif env == 'cloud':
 		print("TODO: Cloud summary {}".format(summary))
 
-
-
 def print_enter(message, arg):
 	if arg == 'space':
 		cl.out(cl.blue('\nEntered {0}: {1}\n').format(arg.title(), message['name'].split(':')[1]))
@@ -191,7 +207,7 @@ def get_ami_val():
 	l = ['1']
 	try:
 		cl.out(cl.blue(cl.bold('\nMachine Image: ')))
-		cl.out(cl.blue('\n\t 1. AntarinX Linux AMI'))
+		cl.out(cl.blue('\n\t 1.  AntarinX Linux AMI'))
 		val = str(raw_input(cl.blue(cl.bold('\nEnter the option number: '))))
 	except NameError:
 		val = str(input(cl.blue(cl.bold('\nEnter the option number: '))))
@@ -208,12 +224,14 @@ def get_ami_val():
 	return ami_id
 
 def get_instance_type_val():
-	l = ['1','2','3']
+	l = ['1','2','3', '4', '5']
 	try:
 		cl.out(cl.blue(cl.bold('\nInstance Type: ')))
-		cl.out(cl.blue('\n\t 1. t2.micro'))
-		cl.out(cl.blue('\n\t 2. c4.large'))
-		cl.out(cl.blue('\n\t 3. c3.large'))
+		cl.out(cl.blue('\n\t 1.  CPU = 1  | Mem = 1.00 GiB')) #t2.micro
+		cl.out(cl.blue('\n\t 2.  CPU = 2  | Mem = 3.75 GiB')) #c4.large
+		cl.out(cl.blue('\n\t 3.  CPU = 4  | Mem = 7.50 GiB')) #c4.xlarge
+		cl.out(cl.blue('\n\t 4.  CPU = 8  | Mem = 15.00 GiB')) #c4.2xlarge
+		cl.out(cl.blue('\n\t 5.  CPU = 36 | Mem = 60.00 GiB')) #c4.8xlarge 
 		val = str(raw_input(cl.blue(cl.bold('\nEnter the option number: '))))
 	except NameError:
 		val = str(input(cl.blue(cl.bold('\nEnter the option number: '))))
@@ -229,14 +247,19 @@ def get_instance_type_val():
 	elif val == '2':
 		instance_type = 'c4.large'
 	elif val == '3':
-		instance_type = 'c3.large'
+		instance_type = 'c4.xlarge'
+	elif val == '4':
+		instance_type = 'c4.2xlarge'
+	elif val == '5':
+		instance_type = 'c4.8xlarge'
+
 	return instance_type
 
 def get_region_val():
 	l = ['1']
 	try:
 		cl.out(cl.blue(cl.bold('\nRegion: ')))
-		cl.out(cl.blue('\n\t 1. us-west-2'))
+		cl.out(cl.blue('\n\t 1.  us-west-2'))
 		val = str(raw_input(cl.blue(cl.bold('\nEnter the option number: '))))
 	except NameError:
 		val = str(input(cl.blue(cl.bold('\nEnter the option number: '))))
@@ -248,8 +271,7 @@ def get_region_val():
 		except SystemExit:
 			os._exit(0)
 	if val == '1':
-		region = 'us-west-2'
-
+		region = 'us-west-2' #make sure this is being set correctly. (yes. value is correct)
 	return region
 
 def get_cloud_data():

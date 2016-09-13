@@ -10,7 +10,7 @@ class Clone(Base):
 
 	def response_handler(self,payload):
 		message = payload[1]['message']
-		iocalls.print_text(message)
+		iocalls.print_clone(message)
 
 	def run(self):
 		config = self.config

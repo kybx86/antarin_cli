@@ -71,7 +71,6 @@ class NewView(APIView):
 		print(message)	
 		return message
 
-
 	def new_project(user_object,argval):
 		spacename = argval
 		try:
@@ -109,7 +108,6 @@ class NewView(APIView):
 			message = api_exceptions.project_exists()
 			return message
 		
-
 	def new_cloud(user_object,spacename,argval,ami_id,instance_type,region):
 		instance_name = argval
 
@@ -367,6 +365,7 @@ class UploadView(APIView):
 		except Token.DoesNotExist:
 			message = api_exceptions.invalid_session_token()
 			return Response(message,status=404)
+
 
 class SeeView(APIView):
 	def list_all_spaces(user_object):
@@ -665,7 +664,6 @@ class SeeView(APIView):
 			return Response(message,status=404)
 
 
-
 class EnterView(APIView):
 
 	def enter_folder(user_object,argval,dir_id):
@@ -710,7 +708,6 @@ class EnterView(APIView):
 				message = api_exceptions.folder_DoesNotExist()
 		
 		return message
-
 
 	def enter_folder_space(user_object,argval,spacedir_id,spacename):
 
@@ -881,7 +878,6 @@ class DeleteView(APIView):
 
 		return return_list
 
-
 	def delete_file(user_object,argval,id_val):
 
 		pk = id_val
@@ -963,7 +959,6 @@ class DeleteView(APIView):
 			else:
 				message = api_exceptions.file_DoesNotExist()
 				return message
-
 
 	def remove_all_files_dirs_space(user_object,spacename,all_files,all_folders,pk,foldername):
 	
@@ -1852,7 +1847,8 @@ class InitializeView(APIView):
 
 	@hosts('localhost')
 	def launch_instance(ami,keyname,instance_type,security_group):
-		client = boto3.resource('ec2')
+		# client = boto3.resource('ec2', region_name='us-west-2') #added region 
+		client = boto3.resource('ec2') #added region 
 		host_list = []
 		ids = []	
 
@@ -1885,7 +1881,8 @@ class InitializeView(APIView):
 			instance.load()
 		print ('Instance in Running state')
 		print ('Initializing instance')
-		c = boto3.client('ec2')
+		# c = boto3.client('ec2', region_name='us-west-2') #added region
+		c = boto3.client('ec2') 
 		while True:
 			response = c.describe_instance_status(InstanceIds=ids)
 			#print ('.')
@@ -2024,11 +2021,11 @@ class InitializeView(APIView):
 					output = execute(InitializeView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
 					print(output)
 					
-					cloud_object.status = 'Initialized with package : ' + packagename
+					cloud_object.status = 'Initialized with package: ' + packagename
 					cloud_object.package_active = str(folder_id)
 					cloud_object.save()
 
-					message = {'message': 'Cloud initilization successful.','status_code':200}
+					message = {'message': 'Session initilization successful.','status_code':200}
 					return Response(message,status=200)
 				
 				else:
@@ -2036,7 +2033,7 @@ class InitializeView(APIView):
 					return Response(message,status=400)
 			else:
 				folder = AntarinCloudFolders.objects.get(pk=int(cloud_object.package_active))
-				message = {'message': 'Cloud has been already initialized with package : ' + folder.foldername,'status_code':200}
+				message = {'message': 'Session has been already initialized with package : ' + folder.foldername,'status_code':200}
 				return Response(message,status=200)
 
 		except AntarinCloudFolders.DoesNotExist:
@@ -2158,7 +2155,7 @@ class SleepView(APIView):
 				cloud_object.status = 'Standby'
 				cloud_object.save()
 				print (response)
-				message = {'message':'Cloud stopped.','status_code':200}
+				message = {'message':'Session ended.','status_code':200}
 				return Response(message,status=200)
 			else:
 				message = api_exceptions.instance_not_running()
@@ -2296,7 +2293,7 @@ class MergeView(APIView):
 
 				MergeView.clone_all(new_cloud_folder_object,source_cloud_object,item,destination_cloud_object)
 
-			message = {'message': 'Merge successful','status_code':200}
+			message = {'message': 'Merge successful!','status_code':200}
 			return Response(message,status=200)
 
 		except AntarinClouds.DoesNotExist:

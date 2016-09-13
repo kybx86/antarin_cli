@@ -6,5 +6,5 @@ global:
   default_ec2_keyname: antarin-aws
   default_platform: Python 3.4
   default_region: us-west-2
-  profile: eb-cli
+  profile: null
   sc: null

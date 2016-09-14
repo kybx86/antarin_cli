@@ -183,9 +183,13 @@ class Base(object):
 		if payload[0]:
 			if not filename:
 				cl.out(cl.blue('\nUploaded file: {0}\n').format(argval))
+				# cl.out('\n')
 			else:
 				cl.out(cl.blue('\nUploaded file: {0} as {1}\n').format(argval,filename))
-			cl.out(cl.blue('Time elapsed: {0:.2f} {1}\n').format(time_elapsed,unit))
+			cl.out(cl.blue('Time elapsed: {0:.2f} {1}').format(time_elapsed,unit))
+			cl.out(cl.blue('\nUpload complete!'))
+			cl.out('\n')
+		
 			self.system_exit()
 		return payload
 
@@ -207,6 +211,7 @@ class Base(object):
 			else:
 				iocalls.print_text(payload[1]['message'])
 				self.system_exit()
+
 
 	def tree_traversal(self,top, topdown=True, onerror=None, followlinks=False):
 		islink, join, isdir = os.path.islink, os.path.join, os.path.isdir
@@ -303,6 +308,8 @@ class Base(object):
 		time_elapsed, unit = ut.get_time(time_elapsed)
 		cl.out(cl.blue('\nTime elapsed: {0:.2f} {1}').format(time_elapsed,unit))
 		cl.out(cl.blue('\nUpload complete!\n'))
+		# cl.out('\n')		
+
 		# print('\n')
 	
 

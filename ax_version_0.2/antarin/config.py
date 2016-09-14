@@ -13,8 +13,8 @@ except ImportError:
 	import configparser as cparser # python 3.5
 from .utils import iocalls
 
-# URL = 'http://127.0.0.1:8000' # -- Localhost
-URL = 'http://webapp-test.us-west-2.elasticbeanstalk.com' # -- EB server (webapp)
+URL = 'http://127.0.0.1:8000' # -- Localhost
+# URL = 'http://webapp-test.us-west-2.elasticbeanstalk.com' # -- EB server (webapp)
 # URL = 'http://antarinx-env.us-west-2.elasticbeanstalk.com' # -- EB (antarinx-env)/not configured to webapp
 
 file_name = '.'+'antarinx'+'.ini'

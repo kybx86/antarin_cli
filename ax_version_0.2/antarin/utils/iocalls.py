@@ -73,16 +73,16 @@ def print_monitor_text(message):
 	sizes = ut.check_name_size(message, dtype='monitor')
 	for item in message:
 		cloudname = item[0]
-		owner_name = item[1].split(':')[0]
+		# space_owner = item[1].split(':')[0]
+		cloud_owner= item[3]
 		space_name = item[1].split(':')[1]
 		status = item[2]
-		cl.out(cl.blue(cl.bold("\tSpace: ") 
-			+ cl.blue("{0:{1}s}".format(space_name[:sizes['space_size']], sizes['space_size']))))
-		cl.out(cl.blue(cl.bold("\t| Cloud: ") 
+		cl.out(cl.blue(cl.bold("\tSpace: ") + cl.blue("{0:{1}s}".format(space_name[:sizes['space_size']], sizes['space_size']))))
+		cl.out(cl.blue(cl.bold("  | Cloud: ") 
 			+ cl.blue("{0:{1}s}".format(cloudname[:sizes['cloud_size']], sizes['cloud_size']))))
-		cl.out(cl.blue(cl.bold('\t| Owner: ') 
-			+ cl.blue("{0:{1}}".format(owner_name, sizes['owner_size']))))
-		cl.out(cl.blue(cl.bold("\t| State: ") 
+		cl.out(cl.blue(cl.bold("  | Owner: ") 
+			+ cl.blue("{0:{1}}".format(cloud_owner[:sizes['owner_size']], sizes['owner_size']))))
+		cl.out(cl.blue(cl.bold("  | State: ") 
 			+ cl.blue("{0:{1}s}".format(status, 15))))
 		cl.out('\n')
 
@@ -148,7 +148,7 @@ def print_summary(message,env):
 	summary = message
 
 	if env == 'filesystem':
-		cl.out(cl.blue(cl.bold('\nAccount\n')))
+		cl.out(cl.blue(cl.bold('\nAccount:\n')))
 		cl.out(cl.blue(cl.bold('\n\tUser: ')) + 
 			cl.blue('{0} {1}').format(summary['firstname'].title(), summary['lastname'].title()))
 		cl.out(cl.blue(cl.bold('\n\tAntarin ID: ')) + cl.blue(summary['username']))
@@ -175,18 +175,36 @@ def print_summary(message,env):
 		cl.out(cl.blue(cl.bold('\tSpace files: \n')))
 		for item in range(len(summary['file_list'])):
 			filename = summary['file_list'][item][0]
-			owner = summary['file_list'][item][1]
-			cl.out(cl.blue("\n\t\t{0} \t{1}").format(owner.title(), filename))
+			owner = summary['file_list'][item][1].split('(')[0]
+			cl.out(cl.blue("\n\t\t{0} |\t{1}").format(owner.title(), filename))
 		print('\n')
 		cl.out(cl.blue(cl.bold('\tSpace folders: \n')))
 		for item in range(len(summary['folder_list'])):
 			filename = summary['folder_list'][item][0]
 			owner = summary['folder_list'][item][1].split('(')[0]
-			cl.out(cl.blue("\n\t\t{0} \t{1}").format(owner.title(), filename))
+			cl.out(cl.blue("\n\t\t{0} |\t{1}").format(owner.title(), filename))
 		print('\n')
 
 	elif env == 'cloud':
-		print("TODO: Cloud summary {}".format(summary))
+
+		if message['instance_type'] == 't2.micro':
+			instance_type = 'CPU = 1  | Mem = 1.00 GiB'
+		elif message['instance_type'] == 'c4.large':
+			instance_type = 'CPU = 2  | Mem = 3.75 GiB'
+		elif message['instance_type'] == 'c4.xlarge':
+			instance_type = 'CPU = 4  | Mem = 7.50 GiB'
+		elif message['instance_type'] == 'c4.2xlarge':
+			instance_type = 'CPU = 8  | Mem = 15.00 GiB'
+		elif message['instance_type'] == 'c4.8xlarge':
+			instance_type = 'CPU = 36 | Mem = 60.00 GiB'
+
+		cl.out(cl.blue(cl.bold('\nCloud details:\n')))
+		cl.out(cl.blue(cl.bold("\n\tOwner: ")) + cl.blue("{0}".format(message['username'])))
+		cl.out(cl.blue(cl.bold("\n\tCloud name: ")) + cl.blue("{0}".format(message['cloudname'])))
+		cl.out(cl.blue(cl.bold("\n\tMachine image: ")) + cl.blue("{0} ({1})".format('AntarinX Linux AMI', message['ami'])))
+		cl.out(cl.blue(cl.bold("\n\tInstance type: ")) + cl.blue("{0}".format(instance_type)))
+		cl.out(cl.blue(cl.bold("\n\tRegion: ")) + cl.blue("{0}".format(message['region'])))
+		cl.out('\n')
 
 def print_enter(message, arg):
 	if arg == 'space':
@@ -206,7 +224,7 @@ def get_user_auth_details():
 def get_ami_val():
 	l = ['1']
 	try:
-		cl.out(cl.blue(cl.bold('\nMachine Image: ')))
+		cl.out(cl.blue(cl.bold('\nMachine image: ')))
 		cl.out(cl.blue('\n\t 1.  AntarinX Linux AMI'))
 		val = str(raw_input(cl.blue(cl.bold('\nEnter the option number: '))))
 	except NameError:
@@ -226,12 +244,12 @@ def get_ami_val():
 def get_instance_type_val():
 	l = ['1','2','3', '4', '5']
 	try:
-		cl.out(cl.blue(cl.bold('\nInstance Type: ')))
-		cl.out(cl.blue('\n\t 1.  CPU = 1  | Mem = 1.00 GiB')) #t2.micro
-		cl.out(cl.blue('\n\t 2.  CPU = 2  | Mem = 3.75 GiB')) #c4.large
-		cl.out(cl.blue('\n\t 3.  CPU = 4  | Mem = 7.50 GiB')) #c4.xlarge
-		cl.out(cl.blue('\n\t 4.  CPU = 8  | Mem = 15.00 GiB')) #c4.2xlarge
-		cl.out(cl.blue('\n\t 5.  CPU = 36 | Mem = 60.00 GiB')) #c4.8xlarge 
+		cl.out(cl.blue(cl.bold('\nInstance type: ')))
+		cl.out(cl.blue('\n\t 1.  CPU = 1  | Mem = 1.00 GiB')) 	#t2.micro
+		cl.out(cl.blue('\n\t 2.  CPU = 2  | Mem = 3.75 GiB')) 	#c4.large
+		cl.out(cl.blue('\n\t 3.  CPU = 4  | Mem = 7.50 GiB')) 	#c4.xlarge
+		cl.out(cl.blue('\n\t 4.  CPU = 8  | Mem = 15.00 GiB')) 	#c4.2xlarge
+		cl.out(cl.blue('\n\t 5.  CPU = 36 | Mem = 60.00 GiB')) 	#c4.8xlarge 
 		val = str(raw_input(cl.blue(cl.bold('\nEnter the option number: '))))
 	except NameError:
 		val = str(input(cl.blue(cl.bold('\nEnter the option number: '))))

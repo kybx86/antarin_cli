@@ -29,7 +29,7 @@ def utc_to_local(utc_string):
 def check_name_size(message, dtype): 
 
 	if dtype == 'space' or dtype == 'cloud':
-		SIZE_LIM = 15
+		SIZE_LIM = 20
 		max_size = 0
 		for item in range(len(message)):
 			entry = message[item]
@@ -46,7 +46,7 @@ def check_name_size(message, dtype):
 		else:
 			return max_size
 	elif dtype == 'monitor':
-		SIZE_LIM = 15
+		SIZE_LIM = 20
 		OWNER_SIZE_LIM = 30
 		sizes = {}
 		max_size_cloud = 0

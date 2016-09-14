@@ -133,16 +133,19 @@ def print_spaces(message, argument):
 	cl.out(cl.blue(cl.bold("\nMy {0}:").format(argument)))
 	print('\n')
 	size = ut.check_name_size(message, dtype='space')
+	PERM_LIM = 11
 	for item in range(len(message)):
 		space_entry = message[item]
 		space_entry = space_entry.split('\t')
+		permissions = space_entry[1]
 		space_name = space_entry[0].split(':')[1]
 		cl.out(cl.blue(cl.bold("\t{0} name: ").format(argument.title()[:-1])) + 
 			cl.blue("{0:{1}s}".format(space_name[:size], size)))
-		cl.out(cl.blue(cl.bold('\t| Permissions: ') + cl.blue(space_entry[1])))
-		cl.out(cl.blue(cl.bold('\t| {0} ID: ').format(argument.title()[:-1]) + 
+		cl.out(cl.blue(cl.bold('  | Permissions: ') + cl.blue("{0:{1}}".format(permissions[:PERM_LIM], PERM_LIM))))
+		cl.out(cl.blue(cl.bold('  | {0} ID: ').format(argument.title()[:-1]) + 
 			cl.blue(space_entry[2])))
 		cl.out('\n')
+		# "{0:{1}}"
 
 def print_summary(message,env):
 	summary = message
@@ -301,9 +304,9 @@ def get_cloud_data():
 
 def get_user_choice():
 	try:
-		user_input = str(raw_input(cl.blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
+		user_input = str(raw_input(cl.blue("\nAre you sure you want to delete this space and all the data associated with it? (yes/no) ")))
 	except NameError:
-		user_input = str(input(cl.blue("\nAre you sure you want to delete this project and all the data associated with it? (yes/no) ")))
+		user_input = str(input(cl.blue("\nAre you sure you want to delete this space and all the data associated with it? (yes/no) ")))
 	
 	user_input = user_input.strip()
 	if user_input.strip() == "yes":

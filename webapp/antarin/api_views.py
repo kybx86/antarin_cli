@@ -1309,7 +1309,7 @@ class DeleteView(APIView):
 			space_object = user_space_object.space
 			space_object.delete()
 			
-			message = {'message':'Project deleted.','status_code':200}
+			message = {'message':'Space deleted.','status_code':200}
 		
 		else:
 			print('incorrect password')

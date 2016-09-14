@@ -528,9 +528,24 @@ class SeeView(APIView):
 				message = api_exceptions.project_DoesNotExist()
 		
 		if env == 'cloud':
-			cloud_id = cloud_id
-			#cloud summary
-			message = {'message':'cloud summary','status_code':200}
+
+			try:
+
+				space_object = AntarinSpaces.objects.get(name=spacename)
+				cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
+
+				
+				cloud_summary = {'username':user_object.user.username,
+								'cloudname': cloud_object.cloud_name,
+								 'ami': cloud_object.ami_id,
+								 'instance_type': cloud_object.instance_type,
+								 'region': cloud_object.region
+						}
+
+				message = {'message': cloud_summary,'status_code':200}
+
+			except AntarinSpaces.DoesNotExist:
+				message = api_exceptions.project_DoesNotExist()			
 
 		return message
 
@@ -2021,7 +2036,7 @@ class InitializeView(APIView):
 					output = execute(InitializeView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
 					print(output)
 					
-					cloud_object.status = 'Initialized with package: ' + packagename
+					cloud_object.status = 'Initialized package: ' + packagename
 					cloud_object.package_active = str(folder_id)
 					cloud_object.save()
 
@@ -2094,7 +2109,7 @@ class RunView(APIView):
 
 			if cloud_object.is_active == True:
 				cloud_object.process_running = shell_command
-				cloud_object.status = 'Exceuting process : ' + shell_command
+				cloud_object.status = 'Executing process : ' + shell_command
 				cloud_object.save()
 				commands.append(shell_command)
 				output = execute(RunView.setup_instance,key_path,commands,hosts = cloud_object.dns_name)
@@ -2387,6 +2402,8 @@ class MonitorView(APIView):
 	def post(self,request):
 		token = self.request.data['token']
 		env = self.request.data['env'].strip()
+
+
 		try:
 			user_object = Token.objects.get(key=token)
 			return_val = []
@@ -2400,10 +2417,11 @@ class MonitorView(APIView):
 			if env =='cloud':
 				cloud_id = self.request.data['cloud_id']
 				cloud_object = AntarinClouds.objects.get(pk=int(cloud_id))
-				all_clouds .append(cloud_object)
+				all_clouds.append(cloud_object)
 			
 			for item in all_clouds:
-				return_val.append((item.cloud_name,item.space.name,item.status))
+				# print(item.user.username)
+				return_val.append((item.cloud_name,item.space.name,item.status, item.user.username))
 
 			message = {'message':return_val,'status_code':200}
 			return Response(message,status=200)
